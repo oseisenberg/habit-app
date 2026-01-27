@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Habit Tracker</title>
     <style>
         * {
@@ -16,6 +18,8 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
+            padding-bottom: 100px;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .container {
@@ -26,62 +30,15 @@
         h1 {
             color: white;
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 10px;
             font-size: 2rem;
         }
 
-        .add-habit {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .add-habit-row {
-            display: flex;
-            gap: 10px;
-        }
-
-        .add-habit input[type="text"] {
-            flex: 1;
-            padding: 15px;
-            border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            outline: none;
-        }
-
-        .add-habit-row input[type="number"] {
-            width: 60px;
-            padding: 15px 10px;
-            border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            outline: none;
+        .date-header {
+            color: white;
             text-align: center;
-        }
-
-        .recurrence-label {
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.95rem;
-        }
-
-        .add-habit button {
-            padding: 15px 25px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .add-habit button:hover {
-            background: #45a049;
+            margin-bottom: 20px;
+            opacity: 0.9;
         }
 
         .habits-list {
@@ -89,6 +46,7 @@
             border-radius: 15px;
             padding: 20px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            min-height: 200px;
         }
 
         .habit-item {
@@ -116,15 +74,15 @@
         }
 
         .habit-checkbox {
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
             cursor: pointer;
             accent-color: #667eea;
         }
 
         .habit-info {
             flex: 1;
-            min-width: 150px;
+            min-width: 120px;
         }
 
         .habit-name {
@@ -144,19 +102,12 @@
             align-items: center;
         }
 
-        .habit-streak {
-            background: #667eea;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-        }
-
         .habit-status {
             padding: 5px 10px;
             border-radius: 20px;
             font-size: 0.75rem;
             font-weight: 500;
+            white-space: nowrap;
         }
 
         .status-due {
@@ -191,19 +142,17 @@
 
         .empty-state {
             text-align: center;
-            padding: 40px;
+            padding: 60px 20px;
             color: #999;
         }
 
-        .date-header {
-            color: white;
-            text-align: center;
-            margin-bottom: 20px;
-            opacity: 0.9;
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
         }
 
         .section-title {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: #667eea;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -215,6 +164,179 @@
         .section-title:first-child {
             margin-top: 0;
         }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(76, 175, 80, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+            z-index: 100;
+        }
+
+        .fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(76, 175, 80, 0.5);
+        }
+
+        .fab:active {
+            transform: scale(0.95);
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 200;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Modal */
+        .modal {
+            background: white;
+            border-radius: 20px 20px 0 0;
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease-out;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #999;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: #667eea;
+        }
+
+        .recurrence-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .recurrence-row input[type="number"] {
+            width: 80px;
+            padding: 15px;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            font-size: 1rem;
+            outline: none;
+            text-align: center;
+        }
+
+        .recurrence-row input[type="number"]:focus {
+            border-color: #667eea;
+        }
+
+        .recurrence-row span {
+            color: #666;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+
+        .submit-btn:hover {
+            opacity: 0.9;
+        }
+
+        .submit-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Safe area for iPhone notch */
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+            body {
+                padding-bottom: calc(100px + env(safe-area-inset-bottom));
+            }
+            .fab {
+                bottom: calc(30px + env(safe-area-inset-bottom));
+            }
+            .modal {
+                padding-bottom: calc(30px + env(safe-area-inset-bottom));
+            }
+        }
     </style>
 </head>
 <body>
@@ -222,24 +344,62 @@
         <h1>Habit Tracker</h1>
         <p class="date-header" id="currentDate"></p>
 
-        <div class="add-habit">
-            <input type="text" id="habitInput" placeholder="Add a new habit..." />
-            <div class="add-habit-row">
-                <span class="recurrence-label">
-                    Repeat every
-                    <input type="number" id="repeatDays" min="1" value="1" />
-                    day(s)
-                </span>
-                <button onclick="addHabit()">Add</button>
+        <div class="habits-list" id="habitsList">
+            <div class="empty-state">
+                <div class="empty-state-icon">✨</div>
+                <div>No habits yet.<br>Tap + to add your first habit!</div>
             </div>
         </div>
+    </div>
 
-        <div class="habits-list" id="habitsList">
-            <div class="empty-state">No habits yet. Add one above!</div>
+    <!-- Floating Action Button -->
+    <button class="fab" onclick="openModal()" aria-label="Add habit">+</button>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">New Habit</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Habit Name</label>
+                <input type="text" class="form-input" id="habitInput" placeholder="e.g., Exercise, Read, Meditate..." />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Repeat Schedule</label>
+                <div class="recurrence-row">
+                    <span>Every</span>
+                    <input type="number" id="repeatDays" min="1" value="1" />
+                    <span>day(s)</span>
+                </div>
+            </div>
+
+            <button class="submit-btn" onclick="addHabit()">Add Habit</button>
         </div>
     </div>
 
     <script>
+        // Modal functions
+        function openModal() {
+            document.getElementById('modalOverlay').classList.add('active');
+            document.getElementById('habitInput').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+            document.getElementById('habitInput').value = '';
+            document.getElementById('repeatDays').value = '1';
+        }
+
+        function handleOverlayClick(event) {
+            if (event.target === document.getElementById('modalOverlay')) {
+                closeModal();
+            }
+        }
+
         // Get today's date as string for tracking
         function getTodayString() {
             return new Date().toISOString().split('T')[0];
@@ -249,7 +409,6 @@
         function formatDate(date) {
             return date.toLocaleDateString('en-US', {
                 weekday: 'long',
-                year: 'numeric',
                 month: 'long',
                 day: 'numeric'
             });
@@ -294,8 +453,7 @@
             });
 
             saveHabits(habits);
-            input.value = '';
-            repeatInput.value = '1';
+            closeModal();
             renderHabits();
         }
 
@@ -343,7 +501,6 @@
             const habit = habits.find(h => h.id === id);
 
             if (habit && habit.lastCompletedDate === getTodayString()) {
-                // Find the previous completion date from history, or set to null
                 habit.lastCompletedDate = null;
                 habit.completionCount = Math.max(0, (habit.completionCount || 1) - 1);
                 saveHabits(habits);
@@ -353,10 +510,12 @@
 
         // Delete a habit
         function deleteHabit(id) {
-            let habits = loadHabits();
-            habits = habits.filter(h => h.id !== id);
-            saveHabits(habits);
-            renderHabits();
+            if (confirm('Delete this habit?')) {
+                let habits = loadHabits();
+                habits = habits.filter(h => h.id !== id);
+                saveHabits(habits);
+                renderHabits();
+            }
         }
 
         // Render habits list
@@ -366,7 +525,12 @@
             const today = getTodayString();
 
             if (habits.length === 0) {
-                list.innerHTML = '<div class="empty-state">No habits yet. Add one above!</div>';
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✨</div>
+                        <div>No habits yet.<br>Tap + to add your first habit!</div>
+                    </div>
+                `;
                 return;
             }
 
@@ -424,11 +588,11 @@
 
             let statusBadge = '';
             if (isOverdue) {
-                statusBadge = `<span class="habit-status status-overdue">${statusInfo.daysOverdue} day${statusInfo.daysOverdue > 1 ? 's' : ''} overdue</span>`;
+                statusBadge = `<span class="habit-status status-overdue">${statusInfo.daysOverdue}d overdue</span>`;
             } else if (statusInfo.status === 'due') {
                 statusBadge = '<span class="habit-status status-due">Due today</span>';
             } else if (isCompleted) {
-                statusBadge = `<span class="habit-status status-done">Next in ${statusInfo.daysUntilDue} day${statusInfo.daysUntilDue > 1 ? 's' : ''}</span>`;
+                statusBadge = `<span class="habit-status status-done">Next: ${statusInfo.daysUntilDue}d</span>`;
             }
 
             const scheduleText = habit.repeatDays === 1
@@ -436,7 +600,7 @@
                 : `Every ${habit.repeatDays} days`;
 
             const completionText = habit.completionCount > 0
-                ? ` · ${habit.completionCount} completion${habit.completionCount > 1 ? 's' : ''}`
+                ? ` · ${habit.completionCount}×`
                 : '';
 
             return `
@@ -467,10 +631,17 @@
             return div.innerHTML;
         }
 
-        // Handle Enter key in input
+        // Handle Enter key in modal
         document.getElementById('habitInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 addHabit();
+            }
+        });
+
+        // Handle Escape key to close modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
             }
         });
 
