@@ -129,6 +129,21 @@
 
         .action-buttons { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
 
+        .section-header.collapsible { cursor: pointer; }
+        .section-header .collapse-icon { margin-left: 4px; transition: transform 0.2s; color: #666; font-size: 0.7rem; }
+        .section-header.collapsed .collapse-icon { transform: rotate(-90deg); }
+        .section-content { transition: max-height 0.2s ease-out; overflow: hidden; }
+        .section-content.collapsed { max-height: 0 !important; }
+
+        .dual-checkbox { display: flex; gap: 4px; }
+        .dual-checkbox .habit-checkbox { width: 20px; height: 20px; }
+        .dual-checkbox .habit-checkbox::after { font-size: 10px; }
+        .dual-checkbox-label { font-size: 0.55rem; color: #555; position: absolute; bottom: -10px; }
+
+        .inactive-section { opacity: 0.6; }
+        .inactive-section .section-header { border-bottom-color: #222; }
+        .inactive-section .habit-item { border-bottom-color: #222; }
+
         .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #2a2a3e; }
         .settings-label { color: #ccc; font-size: 0.9rem; }
         .settings-value { display: flex; align-items: center; gap: 8px; }
@@ -278,6 +293,9 @@
             <button class="debug-btn debug-btn-time" onclick="debugSetTime('afternoon')">☀️</button>
             <button class="debug-btn debug-btn-time" onclick="debugSetTime('night')">🌙</button>
             <button class="debug-btn debug-btn-time" onclick="debugSetTime('latenight')">🌃</button>
+        </div>
+        <div class="debug-controls" style="margin-top:8px;">
+            <button class="debug-btn" style="background:#059669;color:white" onclick="loadTestData()">Load Test Data</button>
         </div>
     </div>
 
@@ -506,37 +524,135 @@
             renderHabits();
         }
 
+        let collapsedSections = {};
+
         function renderHabits() {
             const habits = loadHabits(), container = document.getElementById('habitsContainer');
             if (!habits.length) {
                 container.innerHTML = '<div class="habits-section"><div class="empty-state"><div class="empty-state-icon">✨</div><div>No habits yet</div></div></div>';
                 return;
             }
-            const dueHabits = habits.filter(h => isDueToday(h));
+            const today = getTodayString();
+            const timeOfDay = getTimeOfDayNow();
+
+            // Separate twice-daily habits to show them as unified items in their own section
+            const twiceDaily = habits.filter(h => h.frequency.type === 'twiceDaily' && !h.skippedDates?.includes(today));
+            const regularHabits = habits.filter(h => h.frequency.type !== 'twiceDaily');
+
+            // Get due and inactive regular habits
+            const dueRegular = regularHabits.filter(h => isDueToday(h));
+            const inactiveRegular = regularHabits.filter(h => !isDueToday(h) && !h.skippedDates?.includes(today));
+
+            // Get inactive twice-daily (both morning and night done)
+            const activeTwiceDaily = twiceDaily.filter(h => { const s = getCompletionStatus(h); return !(s.morningDone && s.nightDone); });
+            const inactiveTwiceDaily = twiceDaily.filter(h => { const s = getCompletionStatus(h); return s.morningDone && s.nightDone; });
+
             const groups = {
-                morning: dueHabits.filter(h => h.timeOfDay === 'morning' || h.frequency.type === 'twiceDaily'),
-                anytime: dueHabits.filter(h => h.timeOfDay === 'anytime' && h.frequency.type !== 'twiceDaily'),
-                night: dueHabits.filter(h => h.timeOfDay === 'night' || h.frequency.type === 'twiceDaily')
+                morning: dueRegular.filter(h => h.timeOfDay === 'morning'),
+                twiceDaily: activeTwiceDaily,
+                anytime: dueRegular.filter(h => h.timeOfDay === 'anytime'),
+                night: dueRegular.filter(h => h.timeOfDay === 'night'),
+                inactive: [...inactiveRegular, ...inactiveTwiceDaily]
             };
+
             let html = '';
+
+            // Morning section
             if (groups.morning.length) {
-                const done = groups.morning.filter(h => h.frequency.type === 'twiceDaily' ? getCompletionStatus(h).morningDone : getCompletionStatus(h).completed).length;
-                html += renderSection('🌅', 'Morning', groups.morning, 'morning', done);
+                const done = groups.morning.filter(h => getCompletionStatus(h).completed).length;
+                html += renderSection('🌅', 'Morning', groups.morning, 'morning', done, false);
             }
+
+            // Twice daily section (unified items with dual checkboxes)
+            if (groups.twiceDaily.length) {
+                const done = groups.twiceDaily.filter(h => { const s = getCompletionStatus(h); return s.morningDone && s.nightDone; }).length;
+                html += renderTwiceDailySection(groups.twiceDaily, done);
+            }
+
+            // Anytime section
             if (groups.anytime.length) {
                 const done = groups.anytime.filter(h => getCompletionStatus(h).completed).length;
-                html += renderSection('☀️', 'Anytime', groups.anytime, null, done);
+                html += renderSection('☀️', 'Anytime', groups.anytime, null, done, false);
             }
+
+            // Night section (collapsible when not night)
             if (groups.night.length) {
-                const done = groups.night.filter(h => h.frequency.type === 'twiceDaily' ? getCompletionStatus(h).nightDone : getCompletionStatus(h).completed).length;
-                html += renderSection('🌙', 'Night', groups.night, 'night', done);
+                const done = groups.night.filter(h => getCompletionStatus(h).completed).length;
+                const isNight = timeOfDay === 'night';
+                const defaultCollapsed = !isNight && collapsedSections['night'] !== false;
+                if (collapsedSections['night'] === undefined) collapsedSections['night'] = defaultCollapsed;
+                html += renderSection('🌙', 'Night', groups.night, 'night', done, true, collapsedSections['night']);
             }
+
+            // Inactive section (collapsible)
+            if (groups.inactive.length) {
+                if (collapsedSections['inactive'] === undefined) collapsedSections['inactive'] = true;
+                html += renderInactiveSection(groups.inactive, collapsedSections['inactive']);
+            }
+
             if (!html) html = '<div class="habits-section"><div class="empty-state"><div class="empty-state-icon">✓</div><div>All done for today!</div></div></div>';
             container.innerHTML = html;
         }
 
-        function renderSection(icon, title, habits, period, done) {
-            return `<div class="habits-section"><div class="section-header"><span class="section-icon">${icon}</span><span class="section-title">${title}</span><span class="section-count">${done}/${habits.length}</span></div>${habits.map(h => renderHabitItem(h, period)).join('')}</div>`;
+        function renderSection(icon, title, habits, period, done, collapsible = false, collapsed = false) {
+            const sectionId = title.toLowerCase();
+            const collapseAttr = collapsible ? `onclick="toggleSection('${sectionId}')"` : '';
+            const headerClass = collapsible ? `section-header collapsible${collapsed ? ' collapsed' : ''}` : 'section-header';
+            const collapseIcon = collapsible ? `<span class="collapse-icon">▼</span>` : '';
+            const contentClass = collapsed ? 'section-content collapsed' : 'section-content';
+            const contentStyle = collapsed ? '' : `style="max-height: ${habits.length * 60}px"`;
+            return `<div class="habits-section"><div class="${headerClass}" ${collapseAttr}><span class="section-icon">${icon}</span><span class="section-title">${title}</span>${collapseIcon}<span class="section-count">${done}/${habits.length}</span></div><div class="${contentClass}" ${contentStyle}>${habits.map(h => renderHabitItem(h, period)).join('')}</div></div>`;
+        }
+
+        function renderTwiceDailySection(habits, done) {
+            return `<div class="habits-section"><div class="section-header"><span class="section-icon">🔄</span><span class="section-title">Twice Daily</span><span class="section-count">${done}/${habits.length}</span></div>${habits.map(h => renderTwiceDailyItem(h)).join('')}</div>`;
+        }
+
+        function renderTwiceDailyItem(habit) {
+            const status = getCompletionStatus(habit);
+            const bothDone = status.morningDone && status.nightDone;
+            return `<div class="habit-item ${bothDone ? 'completed' : ''}">
+                <div class="dual-checkbox">
+                    <div class="habit-checkbox ${status.morningDone ? 'checked' : ''}" onclick="completeHabit(${habit.id}, 'morning')" title="Morning"></div>
+                    <div class="habit-checkbox ${status.nightDone ? 'checked' : ''}" onclick="completeHabit(${habit.id}, 'night')" title="Night"></div>
+                </div>
+                <div class="habit-info" onclick="openDetails(${habit.id})">
+                    <span class="habit-name">${escapeHtml(habit.name)}</span>
+                </div>
+            </div>`;
+        }
+
+        function renderInactiveSection(habits, collapsed) {
+            const contentClass = collapsed ? 'section-content collapsed' : 'section-content';
+            const headerClass = collapsed ? 'section-header collapsible collapsed' : 'section-header collapsible';
+            const contentStyle = collapsed ? '' : `style="max-height: ${habits.length * 60}px"`;
+            return `<div class="habits-section inactive-section"><div class="${headerClass}" onclick="toggleSection('inactive')"><span class="section-icon">💤</span><span class="section-title">Inactive</span><span class="collapse-icon">▼</span><span class="section-count">${habits.length}</span></div><div class="${contentClass}" ${contentStyle}>${habits.map(h => renderInactiveItem(h)).join('')}</div></div>`;
+        }
+
+        function renderInactiveItem(habit) {
+            let meta = '';
+            if (habit.frequency.type === 'everyXDays') {
+                const last = getLastCompletionDate(habit);
+                if (last) {
+                    const daysAgo = daysBetween(last, getTodayString());
+                    const daysUntil = habit.frequency.everyXDays - daysAgo;
+                    if (daysUntil > 0) meta = `in ${daysUntil}d`;
+                }
+            } else if (habit.frequency.type === 'twiceDaily') {
+                meta = '✓✓';
+            }
+            return `<div class="habit-item completed">
+                <div class="habit-checkbox checked"></div>
+                <div class="habit-info" onclick="openDetails(${habit.id})">
+                    <span class="habit-name">${escapeHtml(habit.name)}</span>
+                    ${meta ? `<span class="habit-meta">${meta}</span>` : ''}
+                </div>
+            </div>`;
+        }
+
+        function toggleSection(sectionId) {
+            collapsedSections[sectionId] = !collapsedSections[sectionId];
+            renderHabits();
         }
 
         function renderHabitItem(habit, period) {
@@ -596,6 +712,26 @@
         }
 
         function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+        function loadTestData() {
+            const today = getTodayString();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+            const testHabits = [
+                { id: 1, name: 'Brush teeth', timeOfDay: 'morning', frequency: { type: 'twiceDaily' }, completions: [{ date: today, period: 'morning', timestamp: Date.now() }], skippedDates: [], createdAt: yesterdayStr },
+                { id: 2, name: 'Meditate', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [], skippedDates: [], createdAt: yesterdayStr },
+                { id: 3, name: 'Exercise', timeOfDay: 'morning', frequency: { type: 'timesPerWeek', timesPerWeek: 4, everyXDays: 2 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], createdAt: yesterdayStr },
+                { id: 4, name: 'Read', timeOfDay: 'anytime', frequency: { type: 'daily' }, completions: [], skippedDates: [], createdAt: yesterdayStr },
+                { id: 5, name: 'Journal', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], createdAt: yesterdayStr },
+                { id: 6, name: 'Water plants', timeOfDay: 'morning', frequency: { type: 'everyXDays', timesPerWeek: 3, everyXDays: 3 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], createdAt: yesterdayStr },
+                { id: 7, name: 'Take vitamins', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [{ date: today, period: null, timestamp: Date.now() }], skippedDates: [], createdAt: yesterdayStr },
+                { id: 8, name: 'Skincare', timeOfDay: 'night', frequency: { type: 'twiceDaily' }, completions: [], skippedDates: [], createdAt: yesterdayStr }
+            ];
+            saveHabits(testHabits);
+            renderHabits();
+        }
 
         document.getElementById('habitInput').addEventListener('keypress', e => { if (e.key === 'Enter') addHabit(); });
         document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetails(); closeSettings(); } });
