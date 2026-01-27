@@ -549,6 +549,142 @@
                 padding-bottom: calc(25px + env(safe-area-inset-bottom));
             }
         }
+
+        /* Debug Panel */
+        .debug-toggle {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.3);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            z-index: 500;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+
+        .debug-toggle:hover {
+            opacity: 1;
+        }
+
+        .debug-toggle.active {
+            background: #ff6b6b;
+            opacity: 1;
+        }
+
+        .debug-panel {
+            position: fixed;
+            top: 50px;
+            left: 10px;
+            right: 10px;
+            max-width: 350px;
+            background: #1a1a2e;
+            color: #eee;
+            border-radius: 12px;
+            padding: 15px;
+            z-index: 500;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            display: none;
+            font-size: 0.85rem;
+        }
+
+        .debug-panel.active {
+            display: block;
+        }
+
+        .debug-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #ff6b6b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .debug-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .debug-row:last-child {
+            border-bottom: none;
+        }
+
+        .debug-label {
+            color: #888;
+        }
+
+        .debug-value {
+            font-family: monospace;
+            color: #4ade80;
+        }
+
+        .debug-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .debug-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: transform 0.1s;
+        }
+
+        .debug-btn:active {
+            transform: scale(0.95);
+        }
+
+        .debug-btn-prev {
+            background: #374151;
+            color: white;
+        }
+
+        .debug-btn-next {
+            background: #374151;
+            color: white;
+        }
+
+        .debug-btn-reset {
+            background: #dc2626;
+            color: white;
+        }
+
+        .debug-btn-time {
+            background: #2563eb;
+            color: white;
+            flex: 0.5;
+        }
+
+        .debug-info {
+            margin-top: 10px;
+            padding: 10px;
+            background: #252540;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        .debug-offset {
+            display: inline-block;
+            background: #ff6b6b;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            margin-left: 8px;
+        }
     </style>
 </head>
 <body>
@@ -631,6 +767,46 @@
         <div class="calendar-modal" id="calendarModal"></div>
     </div>
 
+    <!-- Debug Panel -->
+    <button class="debug-toggle" id="debugToggle" onclick="toggleDebug()">🐛 Debug</button>
+    <div class="debug-panel" id="debugPanel">
+        <div class="debug-title">🐛 Debug Mode</div>
+        <div class="debug-row">
+            <span class="debug-label">Real Date:</span>
+            <span class="debug-value" id="debugRealDate"></span>
+        </div>
+        <div class="debug-row">
+            <span class="debug-label">Simulated Date:</span>
+            <span class="debug-value" id="debugSimDate"></span>
+        </div>
+        <div class="debug-row">
+            <span class="debug-label">Day Offset:</span>
+            <span class="debug-value" id="debugOffset">0</span>
+        </div>
+        <div class="debug-row">
+            <span class="debug-label">Time Period:</span>
+            <span class="debug-value" id="debugPeriod"></span>
+        </div>
+        <div class="debug-row">
+            <span class="debug-label">Simulated Hour:</span>
+            <span class="debug-value" id="debugHour"></span>
+        </div>
+        <div class="debug-controls">
+            <button class="debug-btn debug-btn-prev" onclick="debugChangeDay(-1)">← Day</button>
+            <button class="debug-btn debug-btn-next" onclick="debugChangeDay(1)">Day →</button>
+            <button class="debug-btn debug-btn-reset" onclick="debugReset()">Reset</button>
+        </div>
+        <div class="debug-controls">
+            <button class="debug-btn debug-btn-time" onclick="debugSetTime('morning')">🌅</button>
+            <button class="debug-btn debug-btn-time" onclick="debugSetTime('afternoon')">☀️</button>
+            <button class="debug-btn debug-btn-time" onclick="debugSetTime('night')">🌙</button>
+            <button class="debug-btn debug-btn-time" onclick="debugSetTime('latenight')">🌃</button>
+        </div>
+        <div class="debug-info">
+            Time buttons: Morning (8am), Afternoon (2pm), Night (8pm), Late Night (1am next day)
+        </div>
+    </div>
+
     <script>
         // Constants
         const NIGHT_CUTOFF_HOUR = 3; // Completions before 3am count as previous day
@@ -643,10 +819,93 @@
         let calendarMonth = new Date();
         let selectedHabitId = null;
 
+        // Debug mode state
+        let debugMode = false;
+        let debugDayOffset = 0;
+        let debugHourOverride = null; // null means use real time
+
+        // Debug functions
+        function toggleDebug() {
+            debugMode = !debugMode;
+            document.getElementById('debugToggle').classList.toggle('active', debugMode);
+            document.getElementById('debugPanel').classList.toggle('active', debugMode);
+            if (debugMode) {
+                updateDebugDisplay();
+            }
+        }
+
+        function debugChangeDay(delta) {
+            debugDayOffset += delta;
+            updateDebugDisplay();
+            updateDisplay();
+        }
+
+        function debugSetTime(period) {
+            // Set hour based on period
+            switch(period) {
+                case 'morning': debugHourOverride = 8; break;
+                case 'afternoon': debugHourOverride = 14; break;
+                case 'night': debugHourOverride = 20; break;
+                case 'latenight':
+                    debugHourOverride = 1;
+                    debugDayOffset += 1; // Late night is technically next day
+                    break;
+            }
+            updateDebugDisplay();
+            updateDisplay();
+        }
+
+        function debugReset() {
+            debugDayOffset = 0;
+            debugHourOverride = null;
+            updateDebugDisplay();
+            updateDisplay();
+        }
+
+        function updateDebugDisplay() {
+            const realNow = new Date();
+            document.getElementById('debugRealDate').textContent = realNow.toLocaleDateString();
+            document.getElementById('debugSimDate').textContent = getSimulatedDate().toLocaleDateString();
+            document.getElementById('debugOffset').textContent = debugDayOffset >= 0 ? `+${debugDayOffset}` : debugDayOffset;
+            document.getElementById('debugPeriod').textContent = getTimeOfDayNow();
+            document.getElementById('debugHour').textContent = debugHourOverride !== null
+                ? `${debugHourOverride}:00 (simulated)`
+                : `${realNow.getHours()}:00 (real)`;
+        }
+
+        function getSimulatedDate() {
+            const d = new Date();
+            d.setDate(d.getDate() + debugDayOffset);
+            if (debugHourOverride !== null) {
+                d.setHours(debugHourOverride, 0, 0, 0);
+            }
+            return d;
+        }
+
+        function updateDisplay() {
+            const simDate = getSimulatedDate();
+            document.getElementById('currentDate').innerHTML = formatDate(simDate) +
+                (debugDayOffset !== 0 || debugHourOverride !== null
+                    ? `<span class="debug-offset">${debugDayOffset >= 0 ? '+' : ''}${debugDayOffset}d</span>`
+                    : '');
+
+            const hour = debugHourOverride !== null ? debugHourOverride : simDate.getHours();
+            if (hour < NIGHT_CUTOFF_HOUR) {
+                const prevDay = new Date(simDate);
+                prevDay.setDate(prevDay.getDate() - 1);
+                document.getElementById('timeNote').textContent = `Before 3am — counting as ${formatDate(prevDay)}`;
+            } else {
+                document.getElementById('timeNote').textContent = '';
+            }
+
+            renderHabits();
+        }
+
         // Get "effective" date - before 3am counts as previous day
-        function getEffectiveDate(date = new Date()) {
-            const d = new Date(date);
-            if (d.getHours() < NIGHT_CUTOFF_HOUR) {
+        function getEffectiveDate(date = null) {
+            const d = date ? new Date(date) : getSimulatedDate();
+            const hour = debugHourOverride !== null ? debugHourOverride : d.getHours();
+            if (hour < NIGHT_CUTOFF_HOUR) {
                 d.setDate(d.getDate() - 1);
             }
             return d.toISOString().split('T')[0];
@@ -665,7 +924,7 @@
         }
 
         function getTimeOfDayNow() {
-            const hour = new Date().getHours();
+            const hour = debugHourOverride !== null ? debugHourOverride : new Date().getHours();
             // Before 3am = still night
             if (hour < NIGHT_CUTOFF_HOUR) return 'night';
             // 3am-12pm = morning
@@ -1137,15 +1396,7 @@
         });
 
         // Initialize
-        const now = new Date();
-        document.getElementById('currentDate').textContent = formatDate(now);
-
-        const hour = now.getHours();
-        if (hour < NIGHT_CUTOFF_HOUR) {
-            document.getElementById('timeNote').textContent = `Before 3am — counting as ${formatDate(new Date(now.getTime() - 86400000))}`;
-        }
-
-        renderHabits();
+        updateDisplay();
     </script>
 </body>
 </html>
