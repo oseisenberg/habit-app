@@ -196,17 +196,13 @@
                 <input type="text" class="form-input" id="habitInput" placeholder="e.g., Brush teeth..." />
             </div>
             <div class="form-group">
-                <label class="form-label">Time of Day</label>
+                <label class="form-label">Time of Day <span style="font-weight:normal;text-transform:none">(optional)</span></label>
                 <div class="time-options">
-                    <div class="time-option selected" data-time="morning" onclick="selectTime('morning')">
+                    <div class="time-option" data-time="morning" onclick="toggleTime('morning')">
                         <span class="time-option-icon">🌅</span>
                         <span class="time-option-label">Morning</span>
                     </div>
-                    <div class="time-option" data-time="anytime" onclick="selectTime('anytime')">
-                        <span class="time-option-icon">☀️</span>
-                        <span class="time-option-label">Anytime</span>
-                    </div>
-                    <div class="time-option" data-time="night" onclick="selectTime('night')">
+                    <div class="time-option" data-time="night" onclick="toggleTime('night')">
                         <span class="time-option-icon">🌙</span>
                         <span class="time-option-label">Night</span>
                     </div>
@@ -220,10 +216,11 @@
                         <span class="frequency-dot"></span>
                         <span class="frequency-label">Daily</span>
                     </label>
-                    <label class="frequency-option" onclick="selectFrequency('twiceDaily')">
-                        <input type="radio" name="frequency" class="frequency-radio" value="twiceDaily">
+                    <label class="frequency-option" onclick="selectFrequency('timesPerDay')">
+                        <input type="radio" name="frequency" class="frequency-radio" value="timesPerDay">
                         <span class="frequency-dot"></span>
-                        <span class="frequency-label">Twice daily</span>
+                        <span class="frequency-label">Per day:</span>
+                        <input type="number" class="frequency-input" id="timesPerDay" value="2" min="2" max="10" onclick="event.stopPropagation()">
                     </label>
                     <label class="frequency-option" onclick="selectFrequency('timesPerWeek')">
                         <input type="radio" name="frequency" class="frequency-radio" value="timesPerWeek">
@@ -304,7 +301,7 @@
         const DAY_NAMES = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
         const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-        let selectedTime = 'morning';
+        let selectedTime = null; // null means anytime
         let selectedFrequency = 'daily';
         let selectedHabitId = null;
         let debugDayOffset = 0;
@@ -408,9 +405,10 @@
             updateDisplay();
         }
 
-        function selectTime(t) {
-            selectedTime = t;
-            document.querySelectorAll('.time-option').forEach(el => el.classList.toggle('selected', el.dataset.time === t));
+        function toggleTime(t) {
+            // Toggle: if already selected, deselect (set to null/anytime)
+            selectedTime = selectedTime === t ? null : t;
+            document.querySelectorAll('.time-option').forEach(el => el.classList.toggle('selected', el.dataset.time === selectedTime));
         }
 
         function selectFrequency(f) {
