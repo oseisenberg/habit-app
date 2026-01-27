@@ -48,6 +48,9 @@
         .habit-name { font-size: 0.95rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .habit-meta { font-size: 0.7rem; color: #666; flex-shrink: 0; }
         .overdue-badge { background: #dc2626; color: #fff; padding: 2px 6px; border-radius: 8px; font-size: 0.65rem; font-weight: 600; }
+        .score-badge { padding: 2px 6px; border-radius: 8px; font-size: 0.65rem; font-weight: 600; }
+        .score-badge.amber { background: #f59e0b; color: #000; }
+        .score-badge.red { background: #dc2626; color: #fff; }
 
         .empty-state { text-align: center; padding: 40px 16px; color: #555; }
         .empty-state-icon { font-size: 2rem; margin-bottom: 8px; opacity: 0.5; }
@@ -556,13 +559,138 @@
         }
         function daysBetween(d1, d2) { return Math.floor((new Date(d2) - new Date(d1)) / 86400000); }
 
+        // Momentum score system
+        function calculateMomentumScore(habit) {
+            const today = getTodayString();
+            const freq = habit.frequency;
+
+            // Determine the cycle length for this habit type
+            let cycleDays = 1;
+            if (freq.type === 'daily' || freq.type === 'twiceDaily') cycleDays = 1;
+            else if (freq.type === 'timesPerWeek') cycleDays = 7 / freq.timesPerWeek;
+            else if (freq.type === 'everyXDays') cycleDays = freq.everyXDays;
+
+            // Time window is 2-3x the cycle length, minimum 14 days
+            const windowDays = Math.max(14, Math.round(cycleDays * 2.5));
+
+            // Get completions and expected completions within window
+            const windowStart = new Date(today);
+            windowStart.setDate(windowStart.getDate() - windowDays);
+            const windowStartStr = windowStart.toISOString().split('T')[0];
+
+            let score = habit.momentumScore || 0;
+
+            // If habit was just created, start at 0
+            if (!habit.lastScoreUpdate) {
+                return { raw: 0, display: 0 };
+            }
+
+            // Calculate days since last score update
+            const daysSinceUpdate = daysBetween(habit.lastScoreUpdate, today);
+            if (daysSinceUpdate === 0) {
+                return { raw: score, display: getDisplayScore(score) };
+            }
+
+            // Apply decay and calculate new score
+            // For each day, apply small decay if no completion
+            const completionDates = new Set(habit.completions.map(c => c.date));
+
+            for (let i = 1; i <= daysSinceUpdate; i++) {
+                const checkDate = new Date(habit.lastScoreUpdate);
+                checkDate.setDate(checkDate.getDate() + i);
+                const checkDateStr = checkDate.toISOString().split('T')[0];
+
+                // Check if habit was due on this date
+                const wasDue = wasHabitDueOnDate(habit, checkDateStr);
+                const wasCompleted = completionDates.has(checkDateStr);
+
+                if (wasDue) {
+                    if (wasCompleted) {
+                        // Completion: +15 points
+                        score = Math.min(100, score + 15);
+                    } else {
+                        // Missed: -10 points, but diminishing returns when already negative
+                        const penalty = score < 0 ? Math.max(3, 10 + score * 0.1) : 10;
+                        score = Math.max(-100, score - penalty);
+                    }
+                }
+
+                // Apply small daily decay (1% towards 0)
+                score = score * 0.99;
+            }
+
+            return { raw: Math.round(score), display: getDisplayScore(score) };
+        }
+
+        function wasHabitDueOnDate(habit, dateStr) {
+            const freq = habit.frequency;
+            if (freq.type === 'daily' || freq.type === 'twiceDaily') return true;
+            if (freq.type === 'timesPerWeek') return true; // Simplified - always potentially due
+            if (freq.type === 'everyXDays') {
+                const last = getLastCompletionBefore(habit, dateStr);
+                if (!last) return true;
+                const since = daysBetween(last, dateStr);
+                return since >= freq.everyXDays;
+            }
+            return true;
+        }
+
+        function getLastCompletionBefore(habit, dateStr) {
+            const before = habit.completions.filter(c => c.date < dateStr);
+            if (!before.length) return null;
+            return before.sort((a, b) => b.date.localeCompare(a.date))[0].date;
+        }
+
+        function getDisplayScore(rawScore) {
+            // Map -100 to +100 to -5 to +5
+            return Math.round(rawScore / 20);
+        }
+
+        function updateHabitScore(habit) {
+            const today = getTodayString();
+            const scoreData = calculateMomentumScore(habit);
+            habit.momentumScore = scoreData.raw;
+            habit.lastScoreUpdate = today;
+            return scoreData;
+        }
+
+        function renderScoreBadge(habit) {
+            const scoreData = calculateMomentumScore(habit);
+            const display = scoreData.display;
+
+            // Only show if at 0 or below
+            if (display > 0) return '';
+            if (display === 0) return `<span class="score-badge amber">•</span>`;
+            return `<span class="score-badge red">${display}</span>`;
+        }
+
+        function freshStartHabit(id) {
+            const habits = loadHabits();
+            const habit = habits.find(h => h.id === id);
+            if (habit) {
+                habit.momentumScore = 0;
+                habit.lastScoreUpdate = getTodayString();
+                saveHabits(habits);
+                renderDetails();
+                renderHabits();
+            }
+        }
+
         function completeHabit(id, period = null) {
             const habits = loadHabits(), habit = habits.find(h => h.id === id), today = getTodayString();
             if (!habit) return;
             if (habit.frequency.type === 'twiceDaily' && !period) period = getTimeOfDayNow() === 'morning' ? 'morning' : 'night';
             const existing = habit.completions.find(c => c.date === today && (habit.frequency.type !== 'twiceDaily' || c.period === period));
-            if (existing) habit.completions = habit.completions.filter(c => c !== existing);
-            else habit.completions.push({ date: today, period, timestamp: Date.now() });
+            if (existing) {
+                habit.completions = habit.completions.filter(c => c !== existing);
+            } else {
+                habit.completions.push({ date: today, period, timestamp: Date.now() });
+                // Initialize momentum tracking if needed
+                if (!habit.lastScoreUpdate) {
+                    habit.lastScoreUpdate = habit.createdAt || today;
+                    habit.momentumScore = 0;
+                }
+            }
             saveHabits(habits);
             renderHabits();
         }
@@ -772,11 +900,13 @@
             }
 
             const isChecked = status.completed;
+            const scoreBadge = renderScoreBadge(habit);
             return `<div class="habit-item ${isChecked ? 'completed' : ''}">
                 <div class="habit-checkbox ${isChecked ? 'checked' : ''}" onclick="completeHabit(${habit.id})"></div>
                 <div class="habit-info" onclick="openDetails(${habit.id})">
                     <span class="habit-name">${escapeHtml(habit.name)}</span>
                     ${meta ? `<span class="habit-meta">${meta}</span>` : ''}
+                    ${scoreBadge}
                     ${overdue > 0 ? `<span class="overdue-badge">+${overdue}</span>` : ''}
                 </div>
             </div>`;
@@ -798,8 +928,61 @@
             renderHabits();
         }
 
-        function openDetails(id) { selectedHabitId = id; renderDetails(); document.getElementById('detailsOverlay').classList.add('active'); }
-        function closeDetails() { document.getElementById('detailsOverlay').classList.remove('active'); selectedHabitId = null; }
+        let editMode = false;
+        let editTimeOfDay = null;
+        let editFrequency = 'daily';
+
+        function openDetails(id) { selectedHabitId = id; editMode = false; renderDetails(); document.getElementById('detailsOverlay').classList.add('active'); }
+        function closeDetails() { document.getElementById('detailsOverlay').classList.remove('active'); selectedHabitId = null; editMode = false; }
+
+        function toggleEditMode() {
+            const habit = loadHabits().find(h => h.id === selectedHabitId);
+            if (!habit) return;
+            editMode = !editMode;
+            if (editMode) {
+                editTimeOfDay = habit.timeOfDay;
+                editFrequency = habit.frequency.type;
+            }
+            renderDetails();
+        }
+
+        function toggleEditTime(t) {
+            editTimeOfDay = editTimeOfDay === t ? null : t;
+            renderDetails();
+        }
+
+        function selectEditFrequency(f) {
+            editFrequency = f;
+            renderDetails();
+        }
+
+        function saveHabitEdit() {
+            const habits = loadHabits();
+            const habit = habits.find(h => h.id === selectedHabitId);
+            if (!habit) return;
+
+            const nameInput = document.getElementById('editHabitName');
+            const newName = nameInput ? nameInput.value.trim() : habit.name;
+            if (!newName) return;
+
+            habit.name = newName;
+            habit.timeOfDay = editTimeOfDay;
+            habit.frequency.type = editFrequency;
+
+            if (editFrequency === 'timesPerWeek') {
+                const input = document.getElementById('editTimesPerWeek');
+                habit.frequency.timesPerWeek = parseInt(input?.value) || 3;
+            }
+            if (editFrequency === 'everyXDays') {
+                const input = document.getElementById('editEveryXDays');
+                habit.frequency.everyXDays = parseInt(input?.value) || 2;
+            }
+
+            saveHabits(habits);
+            editMode = false;
+            renderDetails();
+            renderHabits();
+        }
 
         function renderDetails() {
             const habit = loadHabits().find(h => h.id === selectedHabitId);
@@ -821,27 +1004,99 @@
                 if (count > 0) avgInterval = (totalDays / count).toFixed(1) + 'd';
             }
 
-            const freqLabel = { daily: 'Daily', twiceDaily: 'Twice daily', timesPerWeek: `${habit.frequency.timesPerWeek}x/week`, everyXDays: `Every ${habit.frequency.everyXDays} days` }[habit.frequency.type];
-            const timeLabel = habit.timeOfDay ? { morning: 'Morning', night: 'Night' }[habit.timeOfDay] : 'Anytime';
-
             const isSnoozed = habit.snoozedUntil === 'night';
             const canSnooze = !isSnoozed && timeOfDay !== 'night' && !isCompletedToday(habit);
 
-            document.getElementById('detailsModal').innerHTML = `
-                <div class="modal-header"><h2 class="modal-title">${escapeHtml(habit.name)}</h2><button class="modal-close" onclick="closeDetails()">&times;</button></div>
-                <div class="detail-row"><span class="detail-label">Time</span><span class="detail-value">${timeLabel}</span></div>
-                <div class="detail-row"><span class="detail-label">Frequency</span><span class="detail-value">${freqLabel}</span></div>
-                <div class="stats-grid">
-                    <div class="stat-box"><div class="stat-number">${total}</div><div class="stat-label">Total</div></div>
-                    <div class="stat-box"><div class="stat-number">${rate}%</div><div class="stat-label">Rate</div></div>
-                    <div class="stat-box"><div class="stat-number">${avgInterval}</div><div class="stat-label">Avg Gap</div></div>
-                </div>
-                <div class="action-buttons">
-                    ${canSnooze ? `<button class="submit-btn secondary" onclick="snoozeHabit(${habit.id})">Snooze Until Tonight</button>` : ''}
-                    ${isSnoozed ? `<button class="submit-btn secondary" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
-                    <button class="submit-btn secondary" onclick="skipHabit(${habit.id})">Skip Today</button>
-                    <button class="submit-btn danger" onclick="deleteHabit(${habit.id})">Delete Habit</button>
-                </div>`;
+            if (editMode) {
+                // Edit mode
+                const currentTime = editTimeOfDay;
+                const currentFreq = editFrequency;
+                document.getElementById('detailsModal').innerHTML = `
+                    <div class="modal-header"><h2 class="modal-title">Edit Habit</h2><button class="modal-close" onclick="closeDetails()">&times;</button></div>
+                    <div class="form-group">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-input" id="editHabitName" value="${escapeHtml(habit.name)}" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Time of Day <span style="font-weight:normal;text-transform:none">(optional)</span></label>
+                        <div class="time-options">
+                            <div class="time-option ${currentTime === 'morning' ? 'selected' : ''}" onclick="toggleEditTime('morning')">
+                                <span class="time-option-icon">🌅</span>
+                                <span class="time-option-label">Morning</span>
+                            </div>
+                            <div class="time-option ${currentTime === 'night' ? 'selected' : ''}" onclick="toggleEditTime('night')">
+                                <span class="time-option-icon">🌙</span>
+                                <span class="time-option-label">Night</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Frequency</label>
+                        <div class="frequency-options">
+                            <div class="frequency-option ${currentFreq === 'daily' ? 'selected' : ''}" onclick="selectEditFrequency('daily')">
+                                <span class="frequency-dot"></span>
+                                <span class="frequency-label">Daily</span>
+                            </div>
+                            <div class="frequency-option ${currentFreq === 'twiceDaily' ? 'selected' : ''}" onclick="selectEditFrequency('twiceDaily')">
+                                <span class="frequency-dot"></span>
+                                <span class="frequency-label">Twice daily</span>
+                            </div>
+                            <div class="frequency-option ${currentFreq === 'timesPerWeek' ? 'selected' : ''}" onclick="selectEditFrequency('timesPerWeek')">
+                                <span class="frequency-dot"></span>
+                                <span class="frequency-label">Per week:</span>
+                                <input type="number" class="frequency-input" id="editTimesPerWeek" value="${habit.frequency.timesPerWeek || 3}" min="1" max="7" onclick="event.stopPropagation()">
+                            </div>
+                            <div class="frequency-option ${currentFreq === 'everyXDays' ? 'selected' : ''}" onclick="selectEditFrequency('everyXDays')">
+                                <span class="frequency-dot"></span>
+                                <span class="frequency-label">Every</span>
+                                <input type="number" class="frequency-input" id="editEveryXDays" value="${habit.frequency.everyXDays || 2}" min="1" onclick="event.stopPropagation()">
+                                <span style="color:#666;margin-left:4px">days</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="submit-btn" onclick="saveHabitEdit()">Save Changes</button>
+                        <button class="submit-btn secondary" onclick="toggleEditMode()">Cancel</button>
+                    </div>`;
+            } else {
+                // View mode
+                const freqLabel = { daily: 'Daily', twiceDaily: 'Twice daily', timesPerWeek: `${habit.frequency.timesPerWeek}x/week`, everyXDays: `Every ${habit.frequency.everyXDays} days` }[habit.frequency.type];
+                const timeLabel = habit.timeOfDay ? { morning: 'Morning', night: 'Night' }[habit.timeOfDay] : 'Anytime';
+
+                // Momentum score
+                const scoreData = calculateMomentumScore(habit);
+                const displayScore = scoreData.display;
+                const lastCompletion = getLastCompletionDate(habit);
+                const daysSinceCompletion = lastCompletion ? daysBetween(lastCompletion, today) : 999;
+                const canFreshStart = daysSinceCompletion >= 60 || displayScore <= -3;
+
+                // Recovery info
+                let recoveryText = '';
+                if (displayScore < 0) {
+                    const completionsNeeded = Math.ceil(Math.abs(scoreData.raw) / 15);
+                    recoveryText = `<div style="color:#888;font-size:0.8rem;margin-top:8px;text-align:center">${completionsNeeded} completion${completionsNeeded > 1 ? 's' : ''} to improve score</div>`;
+                }
+
+                document.getElementById('detailsModal').innerHTML = `
+                    <div class="modal-header"><h2 class="modal-title">${escapeHtml(habit.name)}</h2><button class="modal-close" onclick="closeDetails()">&times;</button></div>
+                    <div class="detail-row" onclick="toggleEditMode()" style="cursor:pointer"><span class="detail-label">Time</span><span class="detail-value">${timeLabel} ✎</span></div>
+                    <div class="detail-row" onclick="toggleEditMode()" style="cursor:pointer"><span class="detail-label">Frequency</span><span class="detail-value">${freqLabel} ✎</span></div>
+                    <div class="detail-row"><span class="detail-label">Score</span><span class="detail-value ${displayScore <= 0 ? (displayScore === 0 ? 'amber' : 'red') : ''}">${displayScore > 0 ? '+' + displayScore : displayScore}</span></div>
+                    <div class="stats-grid">
+                        <div class="stat-box"><div class="stat-number">${total}</div><div class="stat-label">Total</div></div>
+                        <div class="stat-box"><div class="stat-number">${rate}%</div><div class="stat-label">Rate</div></div>
+                        <div class="stat-box"><div class="stat-number">${avgInterval}</div><div class="stat-label">Avg Gap</div></div>
+                    </div>
+                    ${recoveryText}
+                    <div class="action-buttons">
+                        <button class="submit-btn secondary" onclick="toggleEditMode()">Edit Habit</button>
+                        ${canSnooze ? `<button class="submit-btn secondary" onclick="snoozeHabit(${habit.id})">Snooze Until Tonight</button>` : ''}
+                        ${isSnoozed ? `<button class="submit-btn secondary" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
+                        <button class="submit-btn secondary" onclick="skipHabit(${habit.id})">Skip Today</button>
+                        ${canFreshStart ? `<button class="submit-btn secondary" onclick="freshStartHabit(${habit.id})">Fresh Start</button>` : ''}
+                        <button class="submit-btn danger" onclick="deleteHabit(${habit.id})">Delete Habit</button>
+                    </div>`;
+            }
         }
 
         function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
