@@ -19,17 +19,78 @@
             -webkit-tap-highlight-color: transparent;
         }
         .container { max-width: 500px; margin: 0 auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        h1 { color: #fff; font-size: 1.3rem; font-weight: 600; }
-        .settings-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
-        .date-header { color: #666; font-size: 0.8rem; margin-bottom: 8px; }
-        .time-note { color: #f59e0b; font-size: 0.7rem; margin-bottom: 8px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        h1 { color: #fff; font-size: 1.1rem; font-weight: 600; }
+        .settings-btn { background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
+        .date-header { color: #666; font-size: 0.75rem; margin-bottom: 6px; }
+        .time-note { color: #f59e0b; font-size: 0.65rem; margin-bottom: 6px; }
 
-        .habits-section { background: #1a1a2e; border-radius: 10px; padding: 10px; margin-bottom: 8px; }
-        .section-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #2a2a3e; }
-        .section-icon { font-size: 0.9rem; }
-        .section-title { font-size: 0.85rem; font-weight: 600; color: #fff; }
-        .section-count { margin-left: auto; color: #666; font-size: 0.75rem; }
+        /* Icon Grid Layout */
+        .habits-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 8px 0; }
+        .habit-icon {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            cursor: pointer; padding: 4px; border-radius: 12px; transition: background 0.15s;
+        }
+        .habit-icon:active { background: rgba(255,255,255,0.05); }
+
+        .habit-ring {
+            width: 56px; height: 56px; border-radius: 50%; position: relative;
+            display: flex; align-items: center; justify-content: center;
+            background: conic-gradient(#667eea var(--progress), #2a2a3e var(--progress));
+            transition: all 0.2s;
+        }
+        .habit-ring::before {
+            content: ''; position: absolute; width: 48px; height: 48px;
+            background: #1a1a2e; border-radius: 50%;
+        }
+        .habit-ring.completed { background: #667eea; }
+        .habit-ring.completed::before { background: #667eea; }
+        .habit-ring.overdue { background: conic-gradient(#dc2626 var(--progress), #2a2a3e var(--progress)); }
+        .habit-ring.needs-attention::after {
+            content: ''; position: absolute; top: -2px; right: -2px;
+            width: 12px; height: 12px; background: #dc2626; border-radius: 50%;
+            border: 2px solid #0f0f1a;
+        }
+
+        .habit-emoji {
+            position: relative; z-index: 1; font-size: 1.4rem; line-height: 1;
+        }
+        .habit-ring.completed .habit-emoji { filter: brightness(1.2); }
+
+        .habit-ring-label {
+            font-size: 0.55rem; color: #666; text-align: center; max-width: 60px;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .habit-ring.completed + .habit-ring-label { color: #4ade80; }
+
+        /* Twice daily split ring */
+        .habit-ring.split { background: #2a2a3e; }
+        .habit-ring.split .half-fill {
+            position: absolute; width: 50%; height: 100%; top: 0;
+        }
+        .habit-ring.split .half-fill.left { left: 0; border-radius: 28px 0 0 28px; }
+        .habit-ring.split .half-fill.right { right: 0; border-radius: 0 28px 28px 0; }
+        .habit-ring.split .half-fill.filled { background: #667eea; }
+        .habit-ring.split .half-fill.missed { background: #dc262666; }
+
+        /* Section dividers */
+        .section-divider {
+            display: flex; align-items: center; gap: 8px; padding: 8px 0 4px;
+            font-size: 0.65rem; color: #555; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .section-divider::after { content: ''; flex: 1; height: 1px; background: #2a2a3e; }
+
+        /* Subtask dots */
+        .subtask-dots { display: flex; gap: 3px; justify-content: center; margin-top: 2px; }
+        .subtask-dot { width: 5px; height: 5px; border-radius: 50%; background: #444; }
+        .subtask-dot.done { background: #667eea; }
+
+        /* Old list styles kept for Later/Done sections */
+        .habits-section { background: #1a1a2e; border-radius: 10px; padding: 8px; margin-bottom: 6px; }
+        .section-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid #2a2a3e; }
+        .section-icon { font-size: 0.8rem; }
+        .section-title { font-size: 0.75rem; font-weight: 600; color: #fff; }
+        .section-count { margin-left: auto; color: #666; font-size: 0.7rem; }
 
         .habit-item { display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #2a2a3e; gap: 8px; min-height: 44px; }
         .habit-item:last-child { border-bottom: none; padding-bottom: 0; }
@@ -235,6 +296,25 @@
         .debug-btn-reset { background: #dc2626; color: white; }
         .debug-btn-time { background: #2563eb; color: white; }
         .debug-offset { background: #dc2626; color: white; padding: 1px 5px; border-radius: 6px; font-size: 0.6rem; margin-left: 4px; }
+
+        /* Emoji picker */
+        .emoji-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+        .emoji-option {
+            width: 40px; height: 40px; border-radius: 8px; border: 2px solid transparent;
+            background: #0f0f1a; cursor: pointer; font-size: 1.2rem;
+            display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+        }
+        .emoji-option:active { transform: scale(0.95); }
+        .emoji-option.selected { border-color: #667eea; background: rgba(102, 126, 234, 0.2); }
+
+        /* Details header with large icon */
+        .details-icon-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 12px; }
+        .details-large-icon {
+            width: 72px; height: 72px; border-radius: 50%; background: #0f0f1a;
+            display: flex; align-items: center; justify-content: center; font-size: 2rem;
+            margin-bottom: 8px;
+        }
+        .details-habit-name { font-size: 1.1rem; font-weight: 600; color: #fff; text-align: center; }
     </style>
 </head>
 <body>
@@ -256,6 +336,10 @@
             <div class="modal-header">
                 <h2 class="modal-title">New Habit</h2>
                 <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Icon</label>
+                <div class="emoji-picker" id="emojiPicker"></div>
             </div>
             <div class="form-group">
                 <label class="form-label">Name</label>
@@ -378,12 +462,27 @@
     <script>
         const DAY_NAMES = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
         const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const HABIT_EMOJIS = ['💪', '🏃', '📚', '💧', '🧘', '😴', '🦷', '💊', '🥗', '✍️', '🎯', '🧹', '🌱', '☀️', '🌙', '💼', '🎨', '🎵'];
 
         let selectedTime = null; // null means anytime
         let selectedFrequency = 'daily';
+        let selectedEmoji = HABIT_EMOJIS[0];
         let selectedHabitId = null;
         let debugDayOffset = 0;
         let debugHourOverride = null;
+
+        function renderEmojiPicker(containerId, selected = null) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = HABIT_EMOJIS.map(e =>
+                `<div class="emoji-option ${e === (selected || selectedEmoji) ? 'selected' : ''}" onclick="selectEmoji('${e}', '${containerId}')">${e}</div>`
+            ).join('');
+        }
+
+        function selectEmoji(emoji, containerId) {
+            selectedEmoji = emoji;
+            renderEmojiPicker(containerId, emoji);
+        }
 
         function getSettings() {
             const s = localStorage.getItem('habit_settings');
@@ -463,11 +562,17 @@
 
         function handleOverlayClick(e, id, closeFn) { if (e.target === document.getElementById(id)) closeFn(); }
 
-        function openModal() { document.getElementById('modalOverlay').classList.add('active'); document.getElementById('habitInput').focus(); }
+        function openModal() {
+            selectedEmoji = HABIT_EMOJIS[0];
+            renderEmojiPicker('emojiPicker');
+            document.getElementById('modalOverlay').classList.add('active');
+            document.getElementById('habitInput').focus();
+        }
         function closeModal() {
             document.getElementById('modalOverlay').classList.remove('active');
             document.getElementById('habitInput').value = '';
             selectedTime = null;
+            selectedEmoji = HABIT_EMOJIS[0];
             document.querySelectorAll('.time-option').forEach(el => el.classList.remove('selected'));
             selectFrequency('daily');
         }
@@ -511,6 +616,7 @@
             const habits = loadHabits();
             habits.push({
                 id: Date.now(), name,
+                icon: selectedEmoji,
                 timeOfDay: selectedTime, // null = anytime, 'morning', 'night', or 'both' for twice daily
                 frequency: {
                     type: selectedFrequency,
@@ -902,55 +1008,105 @@
         function renderHabits() {
             const habits = loadHabits(), container = document.getElementById('habitsContainer');
             if (!habits.length) {
-                container.innerHTML = '<div class="habits-section"><div class="empty-state"><div class="empty-state-icon">✨</div><div>No habits yet</div></div></div>';
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✨</div><div>No habits yet</div></div>';
                 return;
             }
-            const today = getTodayString();
-            const timeOfDay = getTimeOfDayNow();
 
-            // Sort and categorize habits
             const sortedHabits = sortHabits(habits);
             const nowHabits = sortedHabits.filter(h => canDoNow(h));
             const laterHabits = sortedHabits.filter(h => isForLater(h));
             const completedHabits = sortedHabits.filter(h => isCompletedToday(h));
 
-            // Sub-categorize Now section
-            const morningNow = nowHabits.filter(h => h.timeOfDay === 'morning');
-            const anytimeNow = nowHabits.filter(h => !h.timeOfDay || h.timeOfDay === 'anytime' || h.frequency.type === 'twiceDaily');
-
             let html = '';
 
-            // Now section with sub-headers
+            // Now section - Icon Grid
             if (nowHabits.length) {
-                html += `<div class="habits-section"><div class="section-header"><span class="section-icon">⚡</span><span class="section-title">Now</span><span class="section-count">${nowHabits.length}</span></div>`;
-                if (morningNow.length && timeOfDay === 'morning') {
-                    html += `<div class="sub-header">🌅 Morning</div>`;
-                    html += morningNow.map(h => renderHabitItem(h)).join('');
-                }
-                if (anytimeNow.length) {
-                    if (morningNow.length && timeOfDay === 'morning') html += `<div class="sub-header">Anytime</div>`;
-                    html += anytimeNow.map(h => renderHabitItem(h)).join('');
-                }
-                if (morningNow.length && timeOfDay !== 'morning') {
-                    html += morningNow.map(h => renderHabitItem(h)).join('');
-                }
-                html += `</div>`;
+                html += `<div class="habits-grid">${nowHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
             }
 
-            // Later section (tasks to do later today)
+            // Later section - compact
             if (laterHabits.length) {
                 if (collapsedSections['later'] === undefined) collapsedSections['later'] = true;
-                html += renderLaterSection(laterHabits, collapsedSections['later']);
+                const collapsed = collapsedSections['later'];
+                html += `<div class="section-divider" onclick="toggleSection('later')" style="cursor:pointer">
+                    Later <span style="font-size:0.5rem">${collapsed ? '▶' : '▼'}</span> (${laterHabits.length})
+                </div>`;
+                if (!collapsed) {
+                    html += `<div class="habits-grid">${laterHabits.map(h => renderHabitIcon(h, true)).join('')}</div>`;
+                }
             }
 
-            // Completed section (hidden by default)
+            // Completed section - compact
             if (completedHabits.length) {
                 if (collapsedSections['completed'] === undefined) collapsedSections['completed'] = true;
-                html += renderCompletedSection(completedHabits, collapsedSections['completed']);
+                const collapsed = collapsedSections['completed'];
+                html += `<div class="section-divider" onclick="toggleSection('completed')" style="cursor:pointer">
+                    Done <span style="font-size:0.5rem">${collapsed ? '▶' : '▼'}</span> (${completedHabits.length})
+                </div>`;
+                if (!collapsed) {
+                    html += `<div class="habits-grid">${completedHabits.map(h => renderHabitIcon(h, false, true)).join('')}</div>`;
+                }
             }
 
-            if (!html) html = '<div class="habits-section"><div class="empty-state"><div class="empty-state-icon">✓</div><div>All done for today!</div></div></div>';
+            if (!html) html = '<div class="empty-state"><div class="empty-state-icon">✓</div><div>All done!</div></div>';
             container.innerHTML = html;
+        }
+
+        function renderHabitIcon(habit, isLater = false, isCompleted = false) {
+            const status = getCompletionStatus(habit);
+            const scoreData = calculateMomentumScore(habit);
+            const needsAttention = habit.lastScoreUpdate && scoreData.display < 0;
+            const icon = habit.icon || '📌';
+
+            // Calculate progress for ring
+            let progress = '0%';
+            let ringClass = '';
+
+            if (habit.frequency.type === 'twiceDaily') {
+                // Split ring for twice daily
+                const timeOfDay = getTimeOfDayNow();
+                const morningMissed = timeOfDay === 'night' && !status.morningDone;
+                return `<div class="habit-icon" onclick="openDetails(${habit.id})">
+                    <div class="habit-ring split ${needsAttention ? 'needs-attention' : ''}">
+                        <div class="half-fill left ${status.morningDone ? 'filled' : (morningMissed ? 'missed' : '')}"></div>
+                        <div class="half-fill right ${status.nightDone ? 'filled' : ''}"></div>
+                        <span class="habit-emoji">${icon}</span>
+                    </div>
+                    ${renderSubtaskDots(habit)}
+                </div>`;
+            }
+
+            if (isCompleted || status.completed) {
+                ringClass = 'completed';
+                progress = '100%';
+            } else if (habit.frequency.type === 'timesPerWeek' && status.count !== undefined) {
+                const pct = Math.round((status.count / status.target) * 100);
+                progress = pct + '%';
+                if (needsAttention) ringClass = 'overdue';
+            } else if (habit.frequency.type === 'timesPerMonth' && status.count !== undefined) {
+                const pct = Math.round((status.count / status.target) * 100);
+                progress = pct + '%';
+                if (needsAttention) ringClass = 'overdue';
+            } else {
+                progress = '0%';
+                if (needsAttention) ringClass = 'overdue';
+            }
+
+            return `<div class="habit-icon" onclick="${isCompleted ? `openDetails(${habit.id})` : `completeHabit(${habit.id})`}" oncontextmenu="event.preventDefault();openDetails(${habit.id})">
+                <div class="habit-ring ${ringClass} ${needsAttention && !isCompleted ? 'needs-attention' : ''}" style="--progress: ${progress}">
+                    <span class="habit-emoji">${icon}</span>
+                </div>
+                ${renderSubtaskDots(habit)}
+            </div>`;
+        }
+
+        function renderSubtaskDots(habit) {
+            if (!habit.subtasks || habit.subtasks.length === 0) return '';
+            const dots = habit.subtasks.map(s => {
+                const done = isSubtaskCompleted(habit, s.id);
+                return `<div class="subtask-dot ${done ? 'done' : ''}"></div>`;
+            }).join('');
+            return `<div class="subtask-dots">${dots}</div>`;
         }
 
         function renderLaterSection(habits, collapsed) {
@@ -1206,7 +1362,9 @@
             editTimeOfDay = habit.timeOfDay;
             editFrequency = habit.frequency.type;
             editHideSubtasks = habit.showSubtasksOnMain === false;
+            editIcon = habit.icon || HABIT_EMOJIS[0];
             renderDetails();
+            renderEditEmojiPicker(habit.icon || HABIT_EMOJIS[0]);
             document.getElementById('detailsOverlay').classList.add('active');
         }
         function closeDetails() { document.getElementById('detailsOverlay').classList.remove('active'); selectedHabitId = null; editMode = false; }
@@ -1219,8 +1377,10 @@
                 editTimeOfDay = habit.timeOfDay;
                 editFrequency = habit.frequency.type;
                 editHideSubtasks = habit.showSubtasksOnMain === false;
+                editIcon = habit.icon || HABIT_EMOJIS[0];
             }
             renderDetails();
+            if (editMode) renderEditEmojiPicker(habit.icon || HABIT_EMOJIS[0]);
         }
 
         function toggleEditTime(t) {
@@ -1234,11 +1394,25 @@
         }
 
         let editHideSubtasks = false;
+        let editIcon = null;
 
         function toggleHideSubtasks() {
             editHideSubtasks = !editHideSubtasks;
             const toggle = document.getElementById('hideSubtasksToggle');
             if (toggle) toggle.classList.toggle('active', editHideSubtasks);
+        }
+
+        function selectEditIcon(emoji) {
+            editIcon = emoji;
+            renderEditEmojiPicker(emoji);
+        }
+
+        function renderEditEmojiPicker(selected) {
+            const container = document.getElementById('editEmojiPicker');
+            if (!container) return;
+            container.innerHTML = HABIT_EMOJIS.map(e =>
+                `<div class="emoji-option ${e === selected ? 'selected' : ''}" onclick="selectEditIcon('${e}')">${e}</div>`
+            ).join('');
         }
 
         function saveHabitEdit() {
@@ -1251,6 +1425,7 @@
             if (!newName) return;
 
             habit.name = newName;
+            habit.icon = editIcon || habit.icon || HABIT_EMOJIS[0];
             habit.timeOfDay = editTimeOfDay;
             habit.frequency.type = editFrequency;
 
@@ -1303,8 +1478,13 @@
                 // Edit mode
                 const currentTime = editTimeOfDay;
                 const currentFreq = editFrequency;
+                const currentIcon = editIcon || habit.icon || '📌';
                 document.getElementById('detailsModal').innerHTML = `
                     <div class="modal-header"><h2 class="modal-title">Edit Habit</h2><button class="modal-close" onclick="closeDetails()">&times;</button></div>
+                    <div class="form-group">
+                        <label class="form-label">Icon</label>
+                        <div class="emoji-picker" id="editEmojiPicker"></div>
+                    </div>
                     <div class="form-group">
                         <label class="form-label">Name</label>
                         <input type="text" class="form-input" id="editHabitName" value="${escapeHtml(habit.name)}" />
@@ -1405,11 +1585,16 @@
                 }
 
                 const scoreClass = rawScore > 0 ? 'positive' : (rawScore < 0 ? 'negative' : 'neutral');
+                const icon = habit.icon || '📌';
                 document.getElementById('detailsModal').innerHTML = `
-                    <div class="modal-header"><h2 class="modal-title">${escapeHtml(habit.name)}</h2><button class="modal-close" onclick="closeDetails()">&times;</button></div>
+                    <div class="modal-header"><span></span><button class="modal-close" onclick="closeDetails()">&times;</button></div>
+                    <div class="details-icon-header">
+                        <div class="details-large-icon">${icon}</div>
+                        <div class="details-habit-name">${escapeHtml(habit.name)}</div>
+                    </div>
                     <div class="momentum-display">
                         <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
-                        <div class="momentum-label">Momentum Score</div>
+                        <div class="momentum-label">Momentum</div>
                     </div>
                     <div class="detail-row"><span class="detail-label">Time</span><span class="detail-value">${timeLabel}</span></div>
                     <div class="detail-row"><span class="detail-label">Frequency</span><span class="detail-value">${freqLabel}</span></div>
@@ -1447,14 +1632,14 @@
             const yesterdayStr = yesterday.toISOString().split('T')[0];
 
             const testHabits = [
-                { id: 1, name: 'Brush teeth', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [{ date: today, period: 'morning', timestamp: Date.now() }], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 2, name: 'Meditate', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 3, name: 'Exercise', timeOfDay: 'morning', frequency: { type: 'timesPerWeek', timesPerWeek: 4, everyXDays: 2 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 4, name: 'Read', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 5, name: 'Journal', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 6, name: 'Water plants', timeOfDay: 'morning', frequency: { type: 'everyXDays', timesPerWeek: 3, everyXDays: 3 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 7, name: 'Take vitamins', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [{ date: today, period: null, timestamp: Date.now() }], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 8, name: 'Skincare', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr }
+                { id: 1, name: 'Brush teeth', icon: '🦷', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [{ date: today, period: 'morning', timestamp: Date.now() }], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
+                { id: 2, name: 'Meditate', icon: '🧘', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
+                { id: 3, name: 'Exercise', icon: '🏃', timeOfDay: 'morning', frequency: { type: 'timesPerWeek', timesPerWeek: 4, everyXDays: 2 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
+                { id: 4, name: 'Read', icon: '📚', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
+                { id: 5, name: 'Journal', icon: '✍️', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
+                { id: 6, name: 'Water plants', icon: '🌱', timeOfDay: 'morning', frequency: { type: 'everyXDays', timesPerWeek: 3, everyXDays: 3 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
+                { id: 7, name: 'Take vitamins', icon: '💊', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [{ date: today, period: null, timestamp: Date.now() }], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
+                { id: 8, name: 'Skincare', icon: '✨', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr }
             ];
             saveHabits(testHabits);
             renderHabits();
