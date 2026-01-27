@@ -5,712 +5,181 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Habit Tracker</title>
+    <meta name="theme-color" content="#0f0f1a">
+    <title>Habits</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0f0f1a;
+            color: #e0e0e0;
             min-height: 100vh;
-            padding: 20px;
-            padding-bottom: 100px;
+            padding: 16px;
+            padding-bottom: 90px;
             -webkit-tap-highlight-color: transparent;
         }
+        .container { max-width: 500px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        h1 { color: #fff; font-size: 1.5rem; font-weight: 600; }
+        .settings-btn { background: none; border: none; font-size: 1.3rem; cursor: pointer; padding: 4px; }
+        .date-header { color: #666; font-size: 0.85rem; margin-bottom: 16px; }
+        .time-note { color: #f59e0b; font-size: 0.75rem; margin-bottom: 12px; }
 
-        .container {
-            max-width: 500px;
-            margin: 0 auto;
-        }
+        .habits-section { background: #1a1a2e; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+        .section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #2a2a3e; }
+        .section-icon { font-size: 1rem; }
+        .section-title { font-size: 0.9rem; font-weight: 600; color: #fff; }
+        .section-count { margin-left: auto; color: #666; font-size: 0.8rem; }
 
-        h1 {
-            color: white;
-            text-align: center;
-            margin-bottom: 10px;
-            font-size: 2rem;
-        }
-
-        .date-header {
-            color: white;
-            text-align: center;
-            margin-bottom: 20px;
-            opacity: 0.9;
-        }
-
-        .time-note {
-            color: rgba(255,255,255,0.7);
-            text-align: center;
-            font-size: 0.8rem;
-            margin-bottom: 15px;
-        }
-
-        .habits-section {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            margin-bottom: 15px;
-        }
-
-        .section-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #eee;
-        }
-
-        .section-icon {
-            font-size: 1.3rem;
-        }
-
-        .section-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .section-count {
-            margin-left: auto;
-            background: #667eea;
-            color: white;
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-        }
-
-        .habit-item {
-            display: flex;
-            align-items: center;
-            padding: 12px;
-            border-bottom: 1px solid #f0f0f0;
-            gap: 12px;
-        }
-
-        .habit-item:last-child {
-            border-bottom: none;
-        }
-
-        .habit-item.completed .habit-name {
-            text-decoration: line-through;
-            color: #999;
-        }
+        .habit-item { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #2a2a3e; gap: 12px; min-height: 44px; }
+        .habit-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .habit-item:first-of-type { padding-top: 0; }
+        .habit-item.completed .habit-name { color: #555; text-decoration: line-through; }
 
         .habit-checkbox {
-            width: 28px;
-            height: 28px;
-            cursor: pointer;
-            accent-color: #667eea;
-            flex-shrink: 0;
+            width: 24px; height: 24px; border-radius: 50%; border: 2px solid #444;
+            background: transparent; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; flex-shrink: 0; transition: all 0.15s;
         }
+        .habit-checkbox.checked { background: #667eea; border-color: #667eea; }
+        .habit-checkbox.checked::after { content: '✓'; color: white; font-size: 12px; }
 
-        .habit-info {
-            flex: 1;
-            min-width: 0;
-            cursor: pointer;
-        }
+        .habit-info { flex: 1; min-width: 0; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .habit-name { font-size: 0.95rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .habit-meta { font-size: 0.7rem; color: #666; flex-shrink: 0; }
+        .overdue-badge { background: #dc2626; color: #fff; padding: 2px 6px; border-radius: 8px; font-size: 0.65rem; font-weight: 600; }
 
-        .habit-name {
-            font-size: 1rem;
-            display: block;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+        .empty-state { text-align: center; padding: 40px 16px; color: #555; }
+        .empty-state-icon { font-size: 2rem; margin-bottom: 8px; opacity: 0.5; }
 
-        .habit-meta {
-            font-size: 0.75rem;
-            color: #888;
-            margin-top: 2px;
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .habit-progress {
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: 500;
-            white-space: nowrap;
-        }
-
-        .progress-good {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .progress-warning {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .progress-danger {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .delete-btn {
-            background: none;
-            border: none;
-            color: #ccc;
-            font-size: 1.2rem;
-            cursor: pointer;
-            padding: 5px;
-            transition: color 0.2s;
-        }
-
-        .delete-btn:hover {
-            color: #ff4757;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: #999;
-        }
-
-        .empty-state-icon {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-
-        /* Calendar View */
-        .calendar-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 300;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s, visibility 0.3s;
-            padding: 20px;
-        }
-
-        .calendar-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .calendar-modal {
-            background: white;
-            border-radius: 20px;
-            padding: 25px;
-            width: 100%;
-            max-width: 400px;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .calendar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .calendar-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-
-        .calendar-close {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            color: #999;
-            cursor: pointer;
-        }
-
-        .calendar-nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .calendar-nav button {
-            background: #f0f0f0;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-        }
-
-        .calendar-month {
-            font-weight: 600;
-        }
-
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 5px;
-            text-align: center;
-        }
-
-        .calendar-day-header {
-            font-size: 0.7rem;
-            color: #999;
-            padding: 5px;
-        }
-
-        .calendar-day {
-            aspect-ratio: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.85rem;
-            border-radius: 50%;
-            position: relative;
-        }
-
-        .calendar-day.other-month {
-            color: #ccc;
-        }
-
-        .calendar-day.today {
-            font-weight: bold;
-            border: 2px solid #667eea;
-        }
-
-        .calendar-day.completed {
-            background: #667eea;
-            color: white;
-        }
-
-        .calendar-day.partial {
-            background: #b8c5f2;
-            color: white;
-        }
-
-        .calendar-stats {
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 1px solid #eee;
-        }
-
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            font-size: 0.9rem;
-        }
-
-        .stat-label {
-            color: #666;
-        }
-
-        .stat-value {
-            font-weight: 600;
-        }
-
-        /* Floating Action Button */
         .fab {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #4CAF50, #45a049);
-            color: white;
-            border: none;
-            font-size: 2rem;
-            cursor: pointer;
-            box-shadow: 0 4px 20px rgba(76, 175, 80, 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.2s, box-shadow 0.2s;
-            z-index: 100;
+            position: fixed; bottom: 24px; right: 24px; width: 52px; height: 52px;
+            border-radius: 50%; background: #667eea; color: white; border: none;
+            font-size: 1.6rem; cursor: pointer; box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+            display: flex; align-items: center; justify-content: center; z-index: 100;
         }
+        .fab:active { transform: scale(0.95); }
 
-        .fab:hover {
-            transform: scale(1.1);
-        }
-
-        .fab:active {
-            transform: scale(0.95);
-        }
-
-        /* Modal */
         .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            z-index: 200;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s, visibility 0.3s;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7); display: flex; align-items: flex-end;
+            justify-content: center; z-index: 200; opacity: 0; visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
         }
-
-        .modal-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
 
         .modal {
-            background: white;
-            border-radius: 20px 20px 0 0;
-            padding: 25px;
-            width: 100%;
-            max-width: 500px;
-            max-height: 85vh;
-            overflow-y: auto;
-            transform: translateY(100%);
-            transition: transform 0.3s ease-out;
+            background: #1a1a2e; border-radius: 16px 16px 0 0; padding: 20px;
+            width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto;
+            transform: translateY(100%); transition: transform 0.25s ease-out;
         }
+        .modal-overlay.active .modal { transform: translateY(0); }
 
-        .modal-overlay.active .modal {
-            transform: translateY(0);
-        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-title { font-size: 1.2rem; font-weight: 600; color: #fff; }
+        .modal-close { background: none; border: none; font-size: 1.4rem; color: #666; cursor: pointer; }
 
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .modal-title {
-            font-size: 1.4rem;
-            font-weight: 600;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            color: #999;
-            cursor: pointer;
-        }
-
-        .form-group {
-            margin-bottom: 18px;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 0.85rem;
-            color: #666;
-            margin-bottom: 6px;
-            font-weight: 500;
-        }
-
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 0.75rem; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
         .form-input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #eee;
-            border-radius: 10px;
-            font-size: 1rem;
-            outline: none;
-            transition: border-color 0.2s;
+            width: 100%; padding: 12px; border: 1px solid #2a2a3e; border-radius: 10px;
+            font-size: 1rem; background: #0f0f1a; color: #fff; outline: none;
         }
+        .form-input:focus { border-color: #667eea; }
+        .form-input::placeholder { color: #444; }
 
-        .form-input:focus {
-            border-color: #667eea;
-        }
-
-        .time-options {
-            display: flex;
-            gap: 10px;
-        }
-
+        .time-options { display: flex; gap: 8px; }
         .time-option {
-            flex: 1;
-            padding: 12px 8px;
-            border: 2px solid #eee;
-            border-radius: 10px;
-            background: white;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s;
+            flex: 1; padding: 10px 6px; border: 1px solid #2a2a3e; border-radius: 10px;
+            background: #0f0f1a; cursor: pointer; text-align: center; transition: all 0.15s;
         }
+        .time-option.selected { border-color: #667eea; background: rgba(102, 126, 234, 0.15); }
+        .time-option-icon { font-size: 1.2rem; display: block; margin-bottom: 2px; }
+        .time-option-label { font-size: 0.7rem; color: #888; }
+        .time-option.selected .time-option-label { color: #667eea; }
 
-        .time-option:hover {
-            border-color: #667eea;
-        }
-
-        .time-option.selected {
-            border-color: #667eea;
-            background: #667eea;
-            color: white;
-        }
-
-        .time-option-icon {
-            font-size: 1.3rem;
-            display: block;
-            margin-bottom: 4px;
-        }
-
-        .time-option-label {
-            font-size: 0.8rem;
-        }
-
-        .frequency-options {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
+        .frequency-options { display: flex; flex-direction: column; gap: 6px; }
         .frequency-option {
-            display: flex;
-            align-items: center;
-            padding: 12px;
-            border: 2px solid #eee;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
+            display: flex; align-items: center; padding: 10px 12px; border: 1px solid #2a2a3e;
+            border-radius: 10px; background: #0f0f1a; cursor: pointer; transition: all 0.15s;
         }
-
-        .frequency-option:hover {
-            border-color: #667eea;
-        }
-
-        .frequency-option.selected {
-            border-color: #667eea;
-            background: #f8f9ff;
-        }
-
-        .frequency-radio {
-            width: 20px;
-            height: 20px;
-            margin-right: 12px;
-            accent-color: #667eea;
-        }
-
-        .frequency-label {
-            flex: 1;
-        }
-
-        .frequency-input {
-            width: 50px;
-            padding: 6px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            text-align: center;
-            font-size: 0.9rem;
-        }
+        .frequency-option.selected { border-color: #667eea; background: rgba(102, 126, 234, 0.1); }
+        .frequency-radio { display: none; }
+        .frequency-dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #444; margin-right: 10px; }
+        .frequency-option.selected .frequency-dot { border-color: #667eea; background: #667eea; }
+        .frequency-label { flex: 1; color: #ccc; font-size: 0.9rem; }
+        .frequency-input { width: 44px; padding: 6px; border: 1px solid #2a2a3e; border-radius: 6px; text-align: center; font-size: 0.85rem; background: #1a1a2e; color: #fff; }
 
         .submit-btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 10px;
+            width: 100%; padding: 14px; background: #667eea; color: white; border: none;
+            border-radius: 10px; font-size: 0.95rem; font-weight: 600; cursor: pointer; margin-top: 6px;
         }
+        .submit-btn:active { opacity: 0.9; }
+        .submit-btn.danger { background: #dc2626; }
+        .submit-btn.secondary { background: #2a2a3e; }
 
-        .submit-btn:active {
-            transform: scale(0.98);
-        }
+        .detail-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2a2a3e; }
+        .detail-label { color: #888; font-size: 0.85rem; }
+        .detail-value { color: #fff; font-size: 0.85rem; }
 
-        .settings-note {
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 15px;
-            line-height: 1.4;
-        }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 16px 0; }
+        .stat-box { background: #0f0f1a; border-radius: 10px; padding: 12px 8px; text-align: center; }
+        .stat-number { font-size: 1.3rem; font-weight: 700; color: #fff; }
+        .stat-label { font-size: 0.65rem; color: #666; margin-top: 2px; }
 
-        /* Safe area */
+        .action-buttons { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+
+        .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #2a2a3e; }
+        .settings-label { color: #ccc; font-size: 0.9rem; }
+        .settings-value { display: flex; align-items: center; gap: 8px; }
+        .settings-input { width: 60px; padding: 8px; border: 1px solid #2a2a3e; border-radius: 8px; background: #0f0f1a; color: #fff; text-align: center; font-size: 0.9rem; }
+
         @supports (padding-bottom: env(safe-area-inset-bottom)) {
-            body {
-                padding-bottom: calc(100px + env(safe-area-inset-bottom));
-            }
-            .fab {
-                bottom: calc(30px + env(safe-area-inset-bottom));
-            }
-            .modal {
-                padding-bottom: calc(25px + env(safe-area-inset-bottom));
-            }
+            body { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
+            .fab { bottom: calc(24px + env(safe-area-inset-bottom)); }
+            .modal { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
         }
 
-        /* Debug Panel */
-        .debug-toggle {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.3);
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 0.75rem;
-            cursor: pointer;
-            z-index: 500;
-            opacity: 0.5;
-            transition: opacity 0.2s;
-        }
-
-        .debug-toggle:hover {
-            opacity: 1;
-        }
-
-        .debug-toggle.active {
-            background: #ff6b6b;
-            opacity: 1;
-        }
-
-        .debug-panel {
-            position: fixed;
-            top: 50px;
-            left: 10px;
-            right: 10px;
-            max-width: 350px;
-            background: #1a1a2e;
-            color: #eee;
-            border-radius: 12px;
-            padding: 15px;
-            z-index: 500;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            display: none;
-            font-size: 0.85rem;
-        }
-
-        .debug-panel.active {
-            display: block;
-        }
-
-        .debug-title {
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: #ff6b6b;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .debug-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid #333;
-        }
-
-        .debug-row:last-child {
-            border-bottom: none;
-        }
-
-        .debug-label {
-            color: #888;
-        }
-
-        .debug-value {
-            font-family: monospace;
-            color: #4ade80;
-        }
-
-        .debug-controls {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-        }
-
-        .debug-btn {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: transform 0.1s;
-        }
-
-        .debug-btn:active {
-            transform: scale(0.95);
-        }
-
-        .debug-btn-prev {
-            background: #374151;
-            color: white;
-        }
-
-        .debug-btn-next {
-            background: #374151;
-            color: white;
-        }
-
-        .debug-btn-reset {
-            background: #dc2626;
-            color: white;
-        }
-
-        .debug-btn-time {
-            background: #2563eb;
-            color: white;
-            flex: 0.5;
-        }
-
-        .debug-info {
-            margin-top: 10px;
-            padding: 10px;
-            background: #252540;
-            border-radius: 8px;
-            font-size: 0.75rem;
-            color: #888;
-        }
-
-        .debug-offset {
-            display: inline-block;
-            background: #ff6b6b;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 0.7rem;
-            margin-left: 8px;
-        }
+        .debug-toggle { position: fixed; top: 8px; left: 8px; background: rgba(255,255,255,0.1); color: #666; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.65rem; cursor: pointer; z-index: 500; opacity: 0.4; }
+        .debug-toggle:hover { opacity: 1; }
+        .debug-toggle.active { background: #dc2626; color: white; opacity: 1; }
+        .debug-panel { position: fixed; top: 36px; left: 8px; max-width: 280px; background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 10px; padding: 12px; z-index: 500; display: none; font-size: 0.75rem; }
+        .debug-panel.active { display: block; }
+        .debug-row { display: flex; justify-content: space-between; padding: 4px 0; }
+        .debug-label { color: #666; }
+        .debug-value { color: #4ade80; font-family: monospace; }
+        .debug-controls { display: flex; gap: 4px; margin-top: 8px; }
+        .debug-btn { flex: 1; padding: 6px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.7rem; }
+        .debug-btn-nav { background: #2a2a3e; color: white; }
+        .debug-btn-reset { background: #dc2626; color: white; }
+        .debug-btn-time { background: #2563eb; color: white; }
+        .debug-offset { background: #dc2626; color: white; padding: 1px 5px; border-radius: 6px; font-size: 0.6rem; margin-left: 4px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Habits</h1>
+        <div class="header">
+            <h1>Habits</h1>
+            <button class="settings-btn" onclick="openSettings()">⚙️</button>
+        </div>
         <p class="date-header" id="currentDate"></p>
         <p class="time-note" id="timeNote"></p>
-
         <div id="habitsContainer"></div>
     </div>
 
-    <button class="fab" onclick="openModal()" aria-label="Add habit">+</button>
+    <button class="fab" onclick="openModal()">+</button>
 
-    <!-- Add Habit Modal -->
-    <div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+    <!-- Add Modal -->
+    <div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event, 'modalOverlay', closeModal)">
         <div class="modal">
             <div class="modal-header">
                 <h2 class="modal-title">New Habit</h2>
                 <button class="modal-close" onclick="closeModal()">&times;</button>
             </div>
-
             <div class="form-group">
-                <label class="form-label">Habit Name</label>
-                <input type="text" class="form-input" id="habitInput" placeholder="e.g., Brush teeth, Exercise..." />
+                <label class="form-label">Name</label>
+                <input type="text" class="form-input" id="habitInput" placeholder="e.g., Brush teeth..." />
             </div>
-
             <div class="form-group">
                 <label class="form-label">Time of Day</label>
                 <div class="time-options">
@@ -728,72 +197,80 @@
                     </div>
                 </div>
             </div>
-
             <div class="form-group">
                 <label class="form-label">Frequency</label>
                 <div class="frequency-options">
                     <label class="frequency-option selected" onclick="selectFrequency('daily')">
                         <input type="radio" name="frequency" class="frequency-radio" value="daily" checked>
+                        <span class="frequency-dot"></span>
                         <span class="frequency-label">Daily</span>
                     </label>
                     <label class="frequency-option" onclick="selectFrequency('twiceDaily')">
                         <input type="radio" name="frequency" class="frequency-radio" value="twiceDaily">
-                        <span class="frequency-label">Twice daily (morning & night)</span>
+                        <span class="frequency-dot"></span>
+                        <span class="frequency-label">Twice daily</span>
                     </label>
                     <label class="frequency-option" onclick="selectFrequency('timesPerWeek')">
                         <input type="radio" name="frequency" class="frequency-radio" value="timesPerWeek">
-                        <span class="frequency-label">Times per week:</span>
+                        <span class="frequency-dot"></span>
+                        <span class="frequency-label">Per week:</span>
                         <input type="number" class="frequency-input" id="timesPerWeek" value="3" min="1" max="7" onclick="event.stopPropagation()">
                     </label>
                     <label class="frequency-option" onclick="selectFrequency('everyXDays')">
                         <input type="radio" name="frequency" class="frequency-radio" value="everyXDays">
+                        <span class="frequency-dot"></span>
                         <span class="frequency-label">Every</span>
                         <input type="number" class="frequency-input" id="everyXDays" value="2" min="1" onclick="event.stopPropagation()">
-                        <span style="margin-left: 5px;">days</span>
+                        <span style="color:#666;margin-left:4px">days</span>
                     </label>
                 </div>
             </div>
-
-            <div class="settings-note">
-                💡 Completions before 3am count as the previous day, useful for night routines.
-            </div>
-
             <button class="submit-btn" onclick="addHabit()">Add Habit</button>
         </div>
     </div>
 
-    <!-- Calendar Modal -->
-    <div class="calendar-overlay" id="calendarOverlay" onclick="handleCalendarOverlayClick(event)">
-        <div class="calendar-modal" id="calendarModal"></div>
+    <!-- Details Modal -->
+    <div class="modal-overlay" id="detailsOverlay" onclick="handleOverlayClick(event, 'detailsOverlay', closeDetails)">
+        <div class="modal" id="detailsModal"></div>
     </div>
 
-    <!-- Debug Panel -->
-    <button class="debug-toggle" id="debugToggle" onclick="toggleDebug()">🐛 Debug</button>
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsOverlay" onclick="handleOverlayClick(event, 'settingsOverlay', closeSettings)">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Settings</h2>
+                <button class="modal-close" onclick="closeSettings()">&times;</button>
+            </div>
+            <div class="settings-row">
+                <span class="settings-label">Morning starts at</span>
+                <div class="settings-value">
+                    <input type="number" class="settings-input" id="morningStart" min="0" max="23" value="3">
+                    <span style="color:#666">:00</span>
+                </div>
+            </div>
+            <div class="settings-row">
+                <span class="settings-label">Night starts at</span>
+                <div class="settings-value">
+                    <input type="number" class="settings-input" id="nightStart" min="0" max="23" value="18">
+                    <span style="color:#666">:00</span>
+                </div>
+            </div>
+            <div class="settings-row" style="border-bottom:none; color:#666; font-size:0.8rem;">
+                Completions before morning count as previous day's night.
+            </div>
+            <button class="submit-btn" onclick="saveSettings()">Save Settings</button>
+        </div>
+    </div>
+
+    <!-- Debug -->
+    <button class="debug-toggle" id="debugToggle" onclick="toggleDebug()">🐛</button>
     <div class="debug-panel" id="debugPanel">
-        <div class="debug-title">🐛 Debug Mode</div>
-        <div class="debug-row">
-            <span class="debug-label">Real Date:</span>
-            <span class="debug-value" id="debugRealDate"></span>
-        </div>
-        <div class="debug-row">
-            <span class="debug-label">Simulated Date:</span>
-            <span class="debug-value" id="debugSimDate"></span>
-        </div>
-        <div class="debug-row">
-            <span class="debug-label">Day Offset:</span>
-            <span class="debug-value" id="debugOffset">0</span>
-        </div>
-        <div class="debug-row">
-            <span class="debug-label">Time Period:</span>
-            <span class="debug-value" id="debugPeriod"></span>
-        </div>
-        <div class="debug-row">
-            <span class="debug-label">Simulated Hour:</span>
-            <span class="debug-value" id="debugHour"></span>
-        </div>
+        <div class="debug-row"><span class="debug-label">Real:</span><span class="debug-value" id="debugRealDate"></span></div>
+        <div class="debug-row"><span class="debug-label">Sim:</span><span class="debug-value" id="debugSimDate"></span></div>
+        <div class="debug-row"><span class="debug-label">Period:</span><span class="debug-value" id="debugPeriod"></span></div>
         <div class="debug-controls">
-            <button class="debug-btn debug-btn-prev" onclick="debugChangeDay(-1)">← Day</button>
-            <button class="debug-btn debug-btn-next" onclick="debugChangeDay(1)">Day →</button>
+            <button class="debug-btn debug-btn-nav" onclick="debugChangeDay(-1)">←</button>
+            <button class="debug-btn debug-btn-nav" onclick="debugChangeDay(1)">→</button>
             <button class="debug-btn debug-btn-reset" onclick="debugReset()">Reset</button>
         </div>
         <div class="debug-controls">
@@ -802,202 +279,139 @@
             <button class="debug-btn debug-btn-time" onclick="debugSetTime('night')">🌙</button>
             <button class="debug-btn debug-btn-time" onclick="debugSetTime('latenight')">🌃</button>
         </div>
-        <div class="debug-info">
-            Time buttons: Morning (8am), Afternoon (2pm), Night (8pm), Late Night (1am next day)
-        </div>
     </div>
 
     <script>
-        // Constants
-        const NIGHT_CUTOFF_HOUR = 3; // Completions before 3am count as previous day
-        const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
-                            'July', 'August', 'September', 'October', 'November', 'December'];
+        const DAY_NAMES = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+        const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
         let selectedTime = 'morning';
         let selectedFrequency = 'daily';
-        let calendarMonth = new Date();
         let selectedHabitId = null;
-
-        // Debug mode state
-        let debugMode = false;
         let debugDayOffset = 0;
-        let debugHourOverride = null; // null means use real time
+        let debugHourOverride = null;
 
-        // Debug functions
+        function getSettings() {
+            const s = localStorage.getItem('habit_settings');
+            return s ? JSON.parse(s) : { morningStart: 3, nightStart: 18 };
+        }
+
         function toggleDebug() {
-            debugMode = !debugMode;
-            document.getElementById('debugToggle').classList.toggle('active', debugMode);
-            document.getElementById('debugPanel').classList.toggle('active', debugMode);
-            if (debugMode) {
-                updateDebugDisplay();
-            }
-        }
-
-        function debugChangeDay(delta) {
-            debugDayOffset += delta;
+            document.getElementById('debugToggle').classList.toggle('active');
+            document.getElementById('debugPanel').classList.toggle('active');
             updateDebugDisplay();
-            updateDisplay();
         }
 
-        function debugSetTime(period) {
-            // Set hour based on period
-            switch(period) {
-                case 'morning': debugHourOverride = 8; break;
+        function debugChangeDay(d) { debugDayOffset += d; updateDebugDisplay(); updateDisplay(); }
+        function debugSetTime(p) {
+            const s = getSettings();
+            switch(p) {
+                case 'morning': debugHourOverride = s.morningStart + 1; break;
                 case 'afternoon': debugHourOverride = 14; break;
-                case 'night': debugHourOverride = 20; break;
-                case 'latenight':
-                    debugHourOverride = 1;
-                    debugDayOffset += 1; // Late night is technically next day
-                    break;
+                case 'night': debugHourOverride = s.nightStart + 1; break;
+                case 'latenight': debugHourOverride = s.morningStart - 1; if (debugHourOverride < 0) debugHourOverride = 23; debugDayOffset++; break;
             }
-            updateDebugDisplay();
-            updateDisplay();
+            updateDebugDisplay(); updateDisplay();
         }
-
-        function debugReset() {
-            debugDayOffset = 0;
-            debugHourOverride = null;
-            updateDebugDisplay();
-            updateDisplay();
-        }
-
+        function debugReset() { debugDayOffset = 0; debugHourOverride = null; updateDebugDisplay(); updateDisplay(); }
         function updateDebugDisplay() {
-            const realNow = new Date();
-            document.getElementById('debugRealDate').textContent = realNow.toLocaleDateString();
+            document.getElementById('debugRealDate').textContent = new Date().toLocaleDateString();
             document.getElementById('debugSimDate').textContent = getSimulatedDate().toLocaleDateString();
-            document.getElementById('debugOffset').textContent = debugDayOffset >= 0 ? `+${debugDayOffset}` : debugDayOffset;
             document.getElementById('debugPeriod').textContent = getTimeOfDayNow();
-            document.getElementById('debugHour').textContent = debugHourOverride !== null
-                ? `${debugHourOverride}:00 (simulated)`
-                : `${realNow.getHours()}:00 (real)`;
         }
 
         function getSimulatedDate() {
             const d = new Date();
             d.setDate(d.getDate() + debugDayOffset);
-            if (debugHourOverride !== null) {
-                d.setHours(debugHourOverride, 0, 0, 0);
-            }
+            if (debugHourOverride !== null) d.setHours(debugHourOverride, 0, 0, 0);
             return d;
+        }
+
+        function getEffectiveDate() {
+            const d = getSimulatedDate();
+            const s = getSettings();
+            const hour = debugHourOverride !== null ? debugHourOverride : d.getHours();
+            if (hour < s.morningStart) d.setDate(d.getDate() - 1);
+            return d.toISOString().split('T')[0];
+        }
+
+        function getTodayString() { return getEffectiveDate(); }
+
+        function formatDate(date) {
+            return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        }
+
+        function getTimeOfDayNow() {
+            const s = getSettings();
+            const hour = debugHourOverride !== null ? debugHourOverride : new Date().getHours();
+            if (hour < s.morningStart) return 'night';
+            if (hour < 12) return 'morning';
+            if (hour < s.nightStart) return 'anytime';
+            return 'night';
         }
 
         function updateDisplay() {
             const simDate = getSimulatedDate();
+            const s = getSettings();
             document.getElementById('currentDate').innerHTML = formatDate(simDate) +
-                (debugDayOffset !== 0 || debugHourOverride !== null
-                    ? `<span class="debug-offset">${debugDayOffset >= 0 ? '+' : ''}${debugDayOffset}d</span>`
-                    : '');
-
+                (debugDayOffset !== 0 || debugHourOverride !== null ? `<span class="debug-offset">${debugDayOffset >= 0 ? '+' : ''}${debugDayOffset}d</span>` : '');
             const hour = debugHourOverride !== null ? debugHourOverride : simDate.getHours();
-            if (hour < NIGHT_CUTOFF_HOUR) {
-                const prevDay = new Date(simDate);
-                prevDay.setDate(prevDay.getDate() - 1);
-                document.getElementById('timeNote').textContent = `Before 3am — counting as ${formatDate(prevDay)}`;
+            if (hour < s.morningStart) {
+                const prev = new Date(simDate); prev.setDate(prev.getDate() - 1);
+                document.getElementById('timeNote').textContent = `Before ${s.morningStart}am — counts as ${formatDate(prev)}`;
             } else {
                 document.getElementById('timeNote').textContent = '';
             }
-
             renderHabits();
         }
 
-        // Get "effective" date - before 3am counts as previous day
-        function getEffectiveDate(date = null) {
-            const d = date ? new Date(date) : getSimulatedDate();
-            const hour = debugHourOverride !== null ? debugHourOverride : d.getHours();
-            if (hour < NIGHT_CUTOFF_HOUR) {
-                d.setDate(d.getDate() - 1);
-            }
-            return d.toISOString().split('T')[0];
+        function loadHabits() { const h = localStorage.getItem('habits_v3'); return h ? JSON.parse(h) : []; }
+        function saveHabits(h) { localStorage.setItem('habits_v3', JSON.stringify(h)); }
+
+        function handleOverlayClick(e, id, closeFn) { if (e.target === document.getElementById(id)) closeFn(); }
+
+        function openModal() { document.getElementById('modalOverlay').classList.add('active'); document.getElementById('habitInput').focus(); }
+        function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); document.getElementById('habitInput').value = ''; selectTime('morning'); selectFrequency('daily'); }
+
+        function openSettings() {
+            const s = getSettings();
+            document.getElementById('morningStart').value = s.morningStart;
+            document.getElementById('nightStart').value = s.nightStart;
+            document.getElementById('settingsOverlay').classList.add('active');
+        }
+        function closeSettings() { document.getElementById('settingsOverlay').classList.remove('active'); }
+        function saveSettings() {
+            localStorage.setItem('habit_settings', JSON.stringify({
+                morningStart: parseInt(document.getElementById('morningStart').value) || 3,
+                nightStart: parseInt(document.getElementById('nightStart').value) || 18
+            }));
+            closeSettings();
+            updateDisplay();
         }
 
-        function getTodayString() {
-            return getEffectiveDate();
+        function selectTime(t) {
+            selectedTime = t;
+            document.querySelectorAll('.time-option').forEach(el => el.classList.toggle('selected', el.dataset.time === t));
         }
 
-        function formatDate(date) {
-            return date.toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric'
-            });
-        }
-
-        function getTimeOfDayNow() {
-            const hour = debugHourOverride !== null ? debugHourOverride : new Date().getHours();
-            // Before 3am = still night
-            if (hour < NIGHT_CUTOFF_HOUR) return 'night';
-            // 3am-12pm = morning
-            if (hour < 12) return 'morning';
-            // 12pm-6pm = afternoon (counts as anytime)
-            if (hour < 18) return 'anytime';
-            // After 6pm = night
-            return 'night';
-        }
-
-        function loadHabits() {
-            const habits = localStorage.getItem('habits_v2');
-            return habits ? JSON.parse(habits) : [];
-        }
-
-        function saveHabits(habits) {
-            localStorage.setItem('habits_v2', JSON.stringify(habits));
-        }
-
-        // Modal functions
-        function openModal() {
-            document.getElementById('modalOverlay').classList.add('active');
-            document.getElementById('habitInput').focus();
-        }
-
-        function closeModal() {
-            document.getElementById('modalOverlay').classList.remove('active');
-            document.getElementById('habitInput').value = '';
-            selectTime('morning');
-            selectFrequency('daily');
-        }
-
-        function handleOverlayClick(event) {
-            if (event.target === document.getElementById('modalOverlay')) {
-                closeModal();
-            }
-        }
-
-        function selectTime(time) {
-            selectedTime = time;
-            document.querySelectorAll('.time-option').forEach(el => {
-                el.classList.toggle('selected', el.dataset.time === time);
-            });
-        }
-
-        function selectFrequency(freq) {
-            selectedFrequency = freq;
+        function selectFrequency(f) {
+            selectedFrequency = f;
             document.querySelectorAll('.frequency-option').forEach(el => {
-                const radio = el.querySelector('input[type="radio"]');
-                el.classList.toggle('selected', radio.value === freq);
-                radio.checked = radio.value === freq;
+                const r = el.querySelector('input[type="radio"]');
+                el.classList.toggle('selected', r.value === f);
+                r.checked = r.value === f;
             });
         }
 
         function addHabit() {
             const name = document.getElementById('habitInput').value.trim();
             if (!name) return;
-
             const habits = loadHabits();
-            const habit = {
-                id: Date.now(),
-                name: name,
-                timeOfDay: selectedTime,
-                frequency: {
-                    type: selectedFrequency,
-                    timesPerWeek: parseInt(document.getElementById('timesPerWeek').value) || 3,
-                    everyXDays: parseInt(document.getElementById('everyXDays').value) || 2
-                },
-                completions: [], // Array of { date, period: 'morning'|'night'|null }
-                createdAt: getTodayString()
-            };
-
-            habits.push(habit);
+            habits.push({
+                id: Date.now(), name, timeOfDay: selectedTime,
+                frequency: { type: selectedFrequency, timesPerWeek: parseInt(document.getElementById('timesPerWeek').value) || 3, everyXDays: parseInt(document.getElementById('everyXDays').value) || 2 },
+                completions: [], skippedDates: [], createdAt: getTodayString()
+            });
             saveHabits(habits);
             closeModal();
             renderHabits();
@@ -1005,397 +419,187 @@
 
         function deleteHabit(id) {
             if (confirm('Delete this habit?')) {
-                let habits = loadHabits();
-                habits = habits.filter(h => h.id !== id);
-                saveHabits(habits);
+                saveHabits(loadHabits().filter(h => h.id !== id));
+                closeDetails();
                 renderHabits();
             }
         }
 
-        // Get completions for a specific date
-        function getCompletionsForDate(habit, date) {
-            return habit.completions.filter(c => c.date === date);
-        }
-
-        // Check if habit is completed for current period
-        function isCompletedForPeriod(habit, date, period) {
-            const completions = getCompletionsForDate(habit, date);
-            if (habit.frequency.type === 'twiceDaily') {
-                return completions.some(c => c.period === period);
-            }
-            return completions.length > 0;
-        }
-
-        // Get completion status for display
-        function getCompletionStatus(habit) {
-            const today = getTodayString();
-            const currentPeriod = getTimeOfDayNow();
-
-            if (habit.frequency.type === 'twiceDaily') {
-                const morningDone = isCompletedForPeriod(habit, today, 'morning');
-                const nightDone = isCompletedForPeriod(habit, today, 'night');
-                return {
-                    completed: morningDone && nightDone,
-                    partial: morningDone || nightDone,
-                    morningDone,
-                    nightDone,
-                    text: `${(morningDone ? 1 : 0) + (nightDone ? 1 : 0)}/2 today`
-                };
-            }
-
-            if (habit.frequency.type === 'timesPerWeek') {
-                const weekStart = getWeekStart(today);
-                const count = countCompletionsInRange(habit, weekStart, today);
-                const target = habit.frequency.timesPerWeek;
-                const daysLeftInWeek = 7 - getDayOfWeek(today);
-                const needed = target - count;
-                return {
-                    completed: count >= target,
-                    partial: count > 0,
-                    count,
-                    target,
-                    text: `${count}/${target} this week`,
-                    onTrack: needed <= daysLeftInWeek
-                };
-            }
-
-            if (habit.frequency.type === 'everyXDays') {
-                const lastCompletion = getLastCompletionDate(habit);
-                if (!lastCompletion) {
-                    return { completed: false, text: 'Not started', due: true };
-                }
-                const daysSince = daysBetween(lastCompletion, today);
-                const due = daysSince >= habit.frequency.everyXDays;
-                return {
-                    completed: daysSince === 0,
-                    due,
-                    text: due ? 'Due today' : `Next: ${habit.frequency.everyXDays - daysSince}d`
-                };
-            }
-
-            // Daily
-            const completed = getCompletionsForDate(habit, today).length > 0;
-            return { completed, text: completed ? 'Done' : 'Due today' };
-        }
-
-        function getWeekStart(dateStr) {
-            const d = new Date(dateStr);
-            const day = d.getDay();
-            d.setDate(d.getDate() - day);
-            return d.toISOString().split('T')[0];
-        }
-
-        function getDayOfWeek(dateStr) {
-            return new Date(dateStr).getDay();
-        }
-
-        function countCompletionsInRange(habit, startDate, endDate) {
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-            const dates = new Set();
-            habit.completions.forEach(c => {
-                const d = new Date(c.date);
-                if (d >= start && d <= end) {
-                    dates.add(c.date);
-                }
-            });
-            return dates.size;
-        }
-
-        function getLastCompletionDate(habit) {
-            if (!habit.completions.length) return null;
-            const sorted = [...habit.completions].sort((a, b) => b.date.localeCompare(a.date));
-            return sorted[0].date;
-        }
-
-        function daysBetween(date1, date2) {
-            const d1 = new Date(date1);
-            const d2 = new Date(date2);
-            return Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
-        }
-
-        function completeHabit(id, period = null) {
+        function skipHabit(id) {
             const habits = loadHabits();
             const habit = habits.find(h => h.id === id);
             const today = getTodayString();
-
-            if (habit) {
-                // For twice daily, use current period if not specified
-                if (habit.frequency.type === 'twiceDaily' && !period) {
-                    period = getTimeOfDayNow() === 'morning' ? 'morning' : 'night';
-                }
-
-                // Check if already completed for this period
-                const existing = habit.completions.find(c =>
-                    c.date === today && (habit.frequency.type !== 'twiceDaily' || c.period === period)
-                );
-
-                if (existing) {
-                    // Undo completion
-                    habit.completions = habit.completions.filter(c => c !== existing);
-                } else {
-                    // Add completion
-                    habit.completions.push({ date: today, period, timestamp: Date.now() });
-                }
-
+            if (habit && !habit.skippedDates.includes(today)) {
+                habit.skippedDates.push(today);
                 saveHabits(habits);
+                closeDetails();
                 renderHabits();
             }
         }
 
-        function renderHabits() {
-            const habits = loadHabits();
-            const container = document.getElementById('habitsContainer');
-            const currentPeriod = getTimeOfDayNow();
+        function getCompletionsForDate(habit, date) { return habit.completions.filter(c => c.date === date); }
 
-            if (habits.length === 0) {
-                container.innerHTML = `
-                    <div class="habits-section">
-                        <div class="empty-state">
-                            <div class="empty-state-icon">✨</div>
-                            <div>No habits yet.<br>Tap + to add your first habit!</div>
-                        </div>
-                    </div>
-                `;
+        function isCompletedForPeriod(habit, date, period) {
+            const comps = getCompletionsForDate(habit, date);
+            return habit.frequency.type === 'twiceDaily' ? comps.some(c => c.period === period) : comps.length > 0;
+        }
+
+        function getCompletionStatus(habit) {
+            const today = getTodayString();
+            if (habit.frequency.type === 'twiceDaily') {
+                const m = isCompletedForPeriod(habit, today, 'morning'), n = isCompletedForPeriod(habit, today, 'night');
+                return { completed: m && n, morningDone: m, nightDone: n };
+            }
+            if (habit.frequency.type === 'timesPerWeek') {
+                const ws = getWeekStart(today), count = countCompletionsInRange(habit, ws, today), target = habit.frequency.timesPerWeek;
+                return { completed: count >= target, count, target, text: `${count}/${target}` };
+            }
+            if (habit.frequency.type === 'everyXDays') {
+                const last = getLastCompletionDate(habit);
+                if (!last) return { completed: false, due: true, daysOverdue: 0 };
+                const since = daysBetween(last, today), target = habit.frequency.everyXDays;
+                return { completed: since === 0, due: since >= target, daysOverdue: Math.max(0, since - target) };
+            }
+            return { completed: getCompletionsForDate(habit, today).length > 0 };
+        }
+
+        function isDueToday(habit) {
+            const today = getTodayString();
+            if (habit.skippedDates && habit.skippedDates.includes(today)) return false;
+            const status = getCompletionStatus(habit);
+            if (habit.frequency.type === 'twiceDaily') return true;
+            if (habit.frequency.type === 'timesPerWeek') return !status.completed;
+            if (habit.frequency.type === 'everyXDays') return status.due || status.completed;
+            return true;
+        }
+
+        function getDaysOverdue(habit) {
+            const today = getTodayString();
+            if (habit.frequency.type === 'everyXDays') {
+                const last = getLastCompletionDate(habit);
+                if (!last) return 0;
+                return Math.max(0, daysBetween(last, today) - habit.frequency.everyXDays);
+            }
+            return 0;
+        }
+
+        function getWeekStart(d) { const dt = new Date(d); dt.setDate(dt.getDate() - dt.getDay()); return dt.toISOString().split('T')[0]; }
+        function countCompletionsInRange(habit, start, end) {
+            const s = new Date(start), e = new Date(end), dates = new Set();
+            habit.completions.forEach(c => { const d = new Date(c.date); if (d >= s && d <= e) dates.add(c.date); });
+            return dates.size;
+        }
+        function getLastCompletionDate(habit) {
+            if (!habit.completions.length) return null;
+            return [...habit.completions].sort((a, b) => b.date.localeCompare(a.date))[0].date;
+        }
+        function daysBetween(d1, d2) { return Math.floor((new Date(d2) - new Date(d1)) / 86400000); }
+
+        function completeHabit(id, period = null) {
+            const habits = loadHabits(), habit = habits.find(h => h.id === id), today = getTodayString();
+            if (!habit) return;
+            if (habit.frequency.type === 'twiceDaily' && !period) period = getTimeOfDayNow() === 'morning' ? 'morning' : 'night';
+            const existing = habit.completions.find(c => c.date === today && (habit.frequency.type !== 'twiceDaily' || c.period === period));
+            if (existing) habit.completions = habit.completions.filter(c => c !== existing);
+            else habit.completions.push({ date: today, period, timestamp: Date.now() });
+            saveHabits(habits);
+            renderHabits();
+        }
+
+        function renderHabits() {
+            const habits = loadHabits(), container = document.getElementById('habitsContainer');
+            if (!habits.length) {
+                container.innerHTML = '<div class="habits-section"><div class="empty-state"><div class="empty-state-icon">✨</div><div>No habits yet</div></div></div>';
                 return;
             }
-
-            // Group habits by time
+            const dueHabits = habits.filter(h => isDueToday(h));
             const groups = {
-                morning: habits.filter(h => h.timeOfDay === 'morning' || h.frequency.type === 'twiceDaily'),
-                anytime: habits.filter(h => h.timeOfDay === 'anytime' && h.frequency.type !== 'twiceDaily'),
-                night: habits.filter(h => h.timeOfDay === 'night' || h.frequency.type === 'twiceDaily')
+                morning: dueHabits.filter(h => h.timeOfDay === 'morning' || h.frequency.type === 'twiceDaily'),
+                anytime: dueHabits.filter(h => h.timeOfDay === 'anytime' && h.frequency.type !== 'twiceDaily'),
+                night: dueHabits.filter(h => h.timeOfDay === 'night' || h.frequency.type === 'twiceDaily')
             };
-
-            // Remove duplicates from morning/night (twice daily shows in both)
-            const twiceDailyIds = new Set(habits.filter(h => h.frequency.type === 'twiceDaily').map(h => h.id));
-
             let html = '';
-
-            // Morning section
-            if (groups.morning.length > 0) {
-                const completed = groups.morning.filter(h => {
-                    const status = getCompletionStatus(h);
-                    if (h.frequency.type === 'twiceDaily') return status.morningDone;
-                    return status.completed;
-                }).length;
-                html += renderSection('morning', '🌅', 'Morning', groups.morning, 'morning', completed);
+            if (groups.morning.length) {
+                const done = groups.morning.filter(h => h.frequency.type === 'twiceDaily' ? getCompletionStatus(h).morningDone : getCompletionStatus(h).completed).length;
+                html += renderSection('🌅', 'Morning', groups.morning, 'morning', done);
             }
-
-            // Anytime section
-            if (groups.anytime.length > 0) {
-                const completed = groups.anytime.filter(h => getCompletionStatus(h).completed).length;
-                html += renderSection('anytime', '☀️', 'Anytime', groups.anytime, null, completed);
+            if (groups.anytime.length) {
+                const done = groups.anytime.filter(h => getCompletionStatus(h).completed).length;
+                html += renderSection('☀️', 'Anytime', groups.anytime, null, done);
             }
-
-            // Night section
-            if (groups.night.length > 0) {
-                const completed = groups.night.filter(h => {
-                    const status = getCompletionStatus(h);
-                    if (h.frequency.type === 'twiceDaily') return status.nightDone;
-                    return status.completed;
-                }).length;
-                html += renderSection('night', '🌙', 'Night', groups.night, 'night', completed);
+            if (groups.night.length) {
+                const done = groups.night.filter(h => h.frequency.type === 'twiceDaily' ? getCompletionStatus(h).nightDone : getCompletionStatus(h).completed).length;
+                html += renderSection('🌙', 'Night', groups.night, 'night', done);
             }
-
+            if (!html) html = '<div class="habits-section"><div class="empty-state"><div class="empty-state-icon">✓</div><div>All done for today!</div></div></div>';
             container.innerHTML = html;
         }
 
-        function renderSection(sectionType, icon, title, habits, period, completedCount) {
-            const total = habits.length;
-            let items = habits.map(h => renderHabitItem(h, period)).join('');
-
-            return `
-                <div class="habits-section">
-                    <div class="section-header">
-                        <span class="section-icon">${icon}</span>
-                        <span class="section-title">${title}</span>
-                        <span class="section-count">${completedCount}/${total}</span>
-                    </div>
-                    ${items}
-                </div>
-            `;
+        function renderSection(icon, title, habits, period, done) {
+            return `<div class="habits-section"><div class="section-header"><span class="section-icon">${icon}</span><span class="section-title">${title}</span><span class="section-count">${done}/${habits.length}</span></div>${habits.map(h => renderHabitItem(h, period)).join('')}</div>`;
         }
 
         function renderHabitItem(habit, period) {
             const status = getCompletionStatus(habit);
-            let isChecked = false;
-            let progressClass = '';
-            let progressText = status.text;
-
-            if (habit.frequency.type === 'twiceDaily') {
-                isChecked = period === 'morning' ? status.morningDone : status.nightDone;
-                progressClass = status.completed ? 'progress-good' : (status.partial ? 'progress-warning' : '');
-            } else if (habit.frequency.type === 'timesPerWeek') {
-                isChecked = status.completed;
-                progressClass = status.completed ? 'progress-good' : (status.onTrack ? 'progress-warning' : 'progress-danger');
-            } else if (habit.frequency.type === 'everyXDays') {
-                isChecked = status.completed;
-                progressClass = status.completed ? 'progress-good' : (status.due ? 'progress-danger' : 'progress-warning');
-            } else {
-                isChecked = status.completed;
-                progressClass = status.completed ? 'progress-good' : 'progress-warning';
-            }
-
-            const freqLabel = getFrequencyLabel(habit);
-
-            return `
-                <div class="habit-item ${isChecked ? 'completed' : ''}">
-                    <input
-                        type="checkbox"
-                        class="habit-checkbox"
-                        ${isChecked ? 'checked' : ''}
-                        onchange="completeHabit(${habit.id}, '${period || ''}')"
-                    />
-                    <div class="habit-info" onclick="openCalendar(${habit.id})">
-                        <span class="habit-name">${escapeHtml(habit.name)}</span>
-                        <div class="habit-meta">
-                            <span>${freqLabel}</span>
-                            <span class="habit-progress ${progressClass}">${progressText}</span>
-                        </div>
-                    </div>
-                    <button class="delete-btn" onclick="deleteHabit(${habit.id})">×</button>
+            const isChecked = habit.frequency.type === 'twiceDaily' ? (period === 'morning' ? status.morningDone : status.nightDone) : status.completed;
+            const overdue = getDaysOverdue(habit);
+            let meta = '';
+            if (habit.frequency.type === 'timesPerWeek' && status.text) meta = status.text;
+            return `<div class="habit-item ${isChecked ? 'completed' : ''}">
+                <div class="habit-checkbox ${isChecked ? 'checked' : ''}" onclick="completeHabit(${habit.id}, '${period || ''}')"></div>
+                <div class="habit-info" onclick="openDetails(${habit.id})">
+                    <span class="habit-name">${escapeHtml(habit.name)}</span>
+                    ${meta ? `<span class="habit-meta">${meta}</span>` : ''}
+                    ${overdue > 0 ? `<span class="overdue-badge">+${overdue}</span>` : ''}
                 </div>
-            `;
+            </div>`;
         }
 
-        function getFrequencyLabel(habit) {
-            switch (habit.frequency.type) {
-                case 'daily': return 'Daily';
-                case 'twiceDaily': return '2×/day';
-                case 'timesPerWeek': return `${habit.frequency.timesPerWeek}×/week`;
-                case 'everyXDays': return `Every ${habit.frequency.everyXDays}d`;
-                default: return '';
-            }
-        }
+        function openDetails(id) { selectedHabitId = id; renderDetails(); document.getElementById('detailsOverlay').classList.add('active'); }
+        function closeDetails() { document.getElementById('detailsOverlay').classList.remove('active'); selectedHabitId = null; }
 
-        // Calendar functions
-        function openCalendar(habitId) {
-            selectedHabitId = habitId;
-            calendarMonth = new Date();
-            renderCalendar();
-            document.getElementById('calendarOverlay').classList.add('active');
-        }
-
-        function closeCalendar() {
-            document.getElementById('calendarOverlay').classList.remove('active');
-            selectedHabitId = null;
-        }
-
-        function handleCalendarOverlayClick(event) {
-            if (event.target === document.getElementById('calendarOverlay')) {
-                closeCalendar();
-            }
-        }
-
-        function changeMonth(delta) {
-            calendarMonth.setMonth(calendarMonth.getMonth() + delta);
-            renderCalendar();
-        }
-
-        function renderCalendar() {
-            const habits = loadHabits();
-            const habit = habits.find(h => h.id === selectedHabitId);
+        function renderDetails() {
+            const habit = loadHabits().find(h => h.id === selectedHabitId);
             if (!habit) return;
-
-            const year = calendarMonth.getFullYear();
-            const month = calendarMonth.getMonth();
             const today = getTodayString();
-
-            const firstDay = new Date(year, month, 1);
-            const lastDay = new Date(year, month + 1, 0);
-            const startDay = firstDay.getDay();
-            const daysInMonth = lastDay.getDate();
-
-            // Build calendar grid
-            let calendarDays = '';
-
-            // Day headers
-            DAY_NAMES.forEach(day => {
-                calendarDays += `<div class="calendar-day-header">${day}</div>`;
-            });
-
-            // Empty cells before first day
-            for (let i = 0; i < startDay; i++) {
-                calendarDays += '<div class="calendar-day other-month"></div>';
-            }
-
-            // Days of month
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const completions = getCompletionsForDate(habit, dateStr);
-
-                let dayClass = 'calendar-day';
-                if (dateStr === today) dayClass += ' today';
-
-                if (habit.frequency.type === 'twiceDaily') {
-                    const hasMorning = completions.some(c => c.period === 'morning');
-                    const hasNight = completions.some(c => c.period === 'night');
-                    if (hasMorning && hasNight) dayClass += ' completed';
-                    else if (hasMorning || hasNight) dayClass += ' partial';
-                } else if (completions.length > 0) {
-                    dayClass += ' completed';
-                }
-
-                calendarDays += `<div class="${dayClass}">${day}</div>`;
-            }
-
-            // Stats
-            const totalCompletions = habit.completions.length;
+            const total = habit.completions.length;
             const uniqueDays = new Set(habit.completions.map(c => c.date)).size;
             const daysSinceCreated = Math.max(1, daysBetween(habit.createdAt, today) + 1);
-            const completionRate = Math.round((uniqueDays / daysSinceCreated) * 100);
+            const rate = Math.round((uniqueDays / daysSinceCreated) * 100);
 
-            const modal = document.getElementById('calendarModal');
-            modal.innerHTML = `
-                <div class="calendar-header">
-                    <h3 class="calendar-title">${escapeHtml(habit.name)}</h3>
-                    <button class="calendar-close" onclick="closeCalendar()">&times;</button>
-                </div>
-                <div class="calendar-nav">
-                    <button onclick="changeMonth(-1)">←</button>
-                    <span class="calendar-month">${MONTH_NAMES[month]} ${year}</span>
-                    <button onclick="changeMonth(1)">→</button>
-                </div>
-                <div class="calendar-grid">
-                    ${calendarDays}
-                </div>
-                <div class="calendar-stats">
-                    <div class="stat-row">
-                        <span class="stat-label">Total completions</span>
-                        <span class="stat-value">${totalCompletions}</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">Days completed</span>
-                        <span class="stat-value">${uniqueDays}</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">Completion rate</span>
-                        <span class="stat-value">${completionRate}%</span>
-                    </div>
-                </div>
-            `;
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // Event listeners
-        document.getElementById('habitInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') addHabit();
-        });
-
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeModal();
-                closeCalendar();
+            let avgInterval = '-';
+            if (habit.completions.length > 1) {
+                const sorted = [...habit.completions].map(c => c.date).sort();
+                let totalDays = 0, count = 0;
+                for (let i = 1; i < sorted.length; i++) {
+                    if (sorted[i] !== sorted[i-1]) { totalDays += daysBetween(sorted[i-1], sorted[i]); count++; }
+                }
+                if (count > 0) avgInterval = (totalDays / count).toFixed(1) + 'd';
             }
-        });
 
-        // Initialize
+            const freqLabel = { daily: 'Daily', twiceDaily: 'Twice daily', timesPerWeek: `${habit.frequency.timesPerWeek}x/week`, everyXDays: `Every ${habit.frequency.everyXDays} days` }[habit.frequency.type];
+            const timeLabel = { morning: 'Morning', anytime: 'Anytime', night: 'Night' }[habit.timeOfDay];
+
+            document.getElementById('detailsModal').innerHTML = `
+                <div class="modal-header"><h2 class="modal-title">${escapeHtml(habit.name)}</h2><button class="modal-close" onclick="closeDetails()">&times;</button></div>
+                <div class="detail-row"><span class="detail-label">Time</span><span class="detail-value">${timeLabel}</span></div>
+                <div class="detail-row"><span class="detail-label">Frequency</span><span class="detail-value">${freqLabel}</span></div>
+                <div class="stats-grid">
+                    <div class="stat-box"><div class="stat-number">${total}</div><div class="stat-label">Total</div></div>
+                    <div class="stat-box"><div class="stat-number">${rate}%</div><div class="stat-label">Rate</div></div>
+                    <div class="stat-box"><div class="stat-number">${avgInterval}</div><div class="stat-label">Avg Gap</div></div>
+                </div>
+                <div class="action-buttons">
+                    <button class="submit-btn secondary" onclick="skipHabit(${habit.id})">Skip Today</button>
+                    <button class="submit-btn danger" onclick="deleteHabit(${habit.id})">Delete Habit</button>
+                </div>`;
+        }
+
+        function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+        document.getElementById('habitInput').addEventListener('keypress', e => { if (e.key === 'Enter') addHabit(); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetails(); closeSettings(); } });
+
         updateDisplay();
     </script>
 </body>
