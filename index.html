@@ -304,10 +304,8 @@
             <button class="debug-btn debug-btn-reset" onclick="debugResetTime()">Reset Time</button>
         </div>
         <div class="debug-controls">
-            <button class="debug-btn debug-btn-time" onclick="debugSetTime('morning')">🌅</button>
-            <button class="debug-btn debug-btn-time" onclick="debugSetTime('afternoon')">☀️</button>
-            <button class="debug-btn debug-btn-time" onclick="debugSetTime('night')">🌙</button>
-            <button class="debug-btn debug-btn-time" onclick="debugSetTime('latenight')">🌃</button>
+            <button class="debug-btn debug-btn-time" onclick="debugSetTime('morning')">🌅 Morning</button>
+            <button class="debug-btn debug-btn-time" onclick="debugSetTime('night')">🌙 Night</button>
         </div>
         <div class="debug-controls" style="margin-top:8px;">
             <button class="debug-btn" style="background:#059669;color:white" onclick="loadTestData()">Test Data</button>
@@ -339,11 +337,10 @@
         function debugChangeDay(d) { debugDayOffset += d; updateDebugDisplay(); updateDisplay(); }
         function debugSetTime(p) {
             const s = getSettings();
-            switch(p) {
-                case 'morning': debugHourOverride = s.morningStart + 1; break;
-                case 'afternoon': debugHourOverride = 14; break;
-                case 'night': debugHourOverride = s.nightStart + 1; break;
-                case 'latenight': debugHourOverride = s.morningStart - 1; if (debugHourOverride < 0) debugHourOverride = 23; debugDayOffset++; break;
+            if (p === 'morning') {
+                debugHourOverride = s.morningStart + 1;
+            } else if (p === 'night') {
+                debugHourOverride = s.nightStart + 1;
             }
             updateDebugDisplay(); updateDisplay();
         }
@@ -655,6 +652,9 @@
         }
 
         function renderScoreBadge(habit) {
+            // Don't show badge for new habits with no tracking history
+            if (!habit.lastScoreUpdate) return '';
+
             const scoreData = calculateMomentumScore(habit);
             const display = scoreData.display;
 
@@ -716,6 +716,12 @@
                 return false;
             }
 
+            // Times per week: only allow one completion per day
+            if (habit.frequency.type === 'timesPerWeek') {
+                const completedToday = habit.completions.some(c => c.date === today);
+                if (completedToday) return false;
+            }
+
             if (status.completed) return false;
             if (!isDueToday(habit)) return false;
             if (habit.timeOfDay === 'night' && timeOfDay !== 'night') return false;
@@ -723,8 +729,14 @@
         }
 
         function isCompletedToday(habit) {
+            const today = getTodayString();
             const status = getCompletionStatus(habit);
             if (habit.frequency.type === 'twiceDaily') return status.morningDone && status.nightDone;
+            // For times per week: show as completed for today if done today (even if weekly quota not met)
+            if (habit.frequency.type === 'timesPerWeek') {
+                const completedToday = habit.completions.some(c => c.date === today);
+                return completedToday || status.completed;
+            }
             return status.completed;
         }
 
