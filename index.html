@@ -31,10 +31,12 @@
         .section-title { font-size: 0.85rem; font-weight: 600; color: #fff; }
         .section-count { margin-left: auto; color: #666; font-size: 0.75rem; }
 
-        .habit-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #2a2a3e; gap: 10px; min-height: 44px; }
+        .habit-item { display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #2a2a3e; gap: 8px; min-height: 44px; }
         .habit-item:last-child { border-bottom: none; padding-bottom: 0; }
         .habit-item:first-of-type { padding-top: 0; }
         .habit-item.completed .habit-name { color: #555; text-decoration: line-through; }
+        .habit-edit-btn { background: none; border: none; color: #555; font-size: 0.85rem; padding: 8px; cursor: pointer; flex-shrink: 0; min-width: 36px; min-height: 36px; display: flex; align-items: center; justify-content: center; }
+        .habit-edit-btn:active { color: #667eea; }
 
         .habit-checkbox {
             width: 24px; height: 24px; border-radius: 50%; border: 2px solid #444;
@@ -72,46 +74,46 @@
         .modal-overlay.active { opacity: 1; visibility: visible; }
 
         .modal {
-            background: #1a1a2e; border-radius: 14px 14px 0 0; padding: 16px;
+            background: #1a1a2e; border-radius: 14px 14px 0 0; padding: 14px;
             width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto;
             transform: translateY(100%); transition: transform 0.25s ease-out;
         }
         .modal-overlay.active .modal { transform: translateY(0); }
 
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-        .modal-title { font-size: 1.1rem; font-weight: 600; color: #fff; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .modal-title { font-size: 1rem; font-weight: 600; color: #fff; }
         .modal-close { background: none; border: none; font-size: 1.3rem; color: #666; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
 
-        .form-group { margin-bottom: 12px; }
-        .form-label { display: block; font-size: 0.7rem; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group { margin-bottom: 10px; }
+        .form-label { display: block; font-size: 0.65rem; color: #888; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
         .form-input {
             width: 100%; padding: 10px; border: 1px solid #2a2a3e; border-radius: 8px;
-            font-size: 0.95rem; background: #0f0f1a; color: #fff; outline: none;
+            font-size: 0.9rem; background: #0f0f1a; color: #fff; outline: none;
         }
         .form-input:focus { border-color: #667eea; }
         .form-input::placeholder { color: #444; }
 
-        .time-options { display: flex; gap: 8px; }
+        .time-options { display: flex; gap: 6px; }
         .time-option {
-            flex: 1; padding: 10px 6px; border: 1px solid #2a2a3e; border-radius: 10px;
+            flex: 1; padding: 8px 4px; border: 1px solid #2a2a3e; border-radius: 8px;
             background: #0f0f1a; cursor: pointer; text-align: center; transition: all 0.15s;
         }
         .time-option.selected { border-color: #667eea; background: rgba(102, 126, 234, 0.15); }
-        .time-option-icon { font-size: 1.2rem; display: block; margin-bottom: 2px; }
-        .time-option-label { font-size: 0.7rem; color: #888; }
+        .time-option-icon { font-size: 1rem; display: block; margin-bottom: 1px; }
+        .time-option-label { font-size: 0.65rem; color: #888; }
         .time-option.selected .time-option-label { color: #667eea; }
 
-        .frequency-options { display: flex; flex-direction: column; gap: 6px; }
+        .frequency-options { display: flex; flex-direction: column; gap: 4px; }
         .frequency-option {
-            display: flex; align-items: center; padding: 10px 12px; border: 1px solid #2a2a3e;
-            border-radius: 10px; background: #0f0f1a; cursor: pointer; transition: all 0.15s;
+            display: flex; align-items: center; padding: 8px 10px; border: 1px solid #2a2a3e;
+            border-radius: 8px; background: #0f0f1a; cursor: pointer; transition: all 0.15s;
         }
         .frequency-option.selected { border-color: #667eea; background: rgba(102, 126, 234, 0.1); }
         .frequency-radio { display: none; }
-        .frequency-dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #444; margin-right: 10px; }
+        .frequency-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #444; margin-right: 8px; flex-shrink: 0; }
         .frequency-option.selected .frequency-dot { border-color: #667eea; background: #667eea; }
-        .frequency-label { flex: 1; color: #ccc; font-size: 0.9rem; }
-        .frequency-input { width: 44px; padding: 6px; border: 1px solid #2a2a3e; border-radius: 6px; text-align: center; font-size: 0.85rem; background: #1a1a2e; color: #fff; }
+        .frequency-label { flex: 1; color: #ccc; font-size: 0.85rem; }
+        .frequency-input { width: 44px; padding: 5px; border: 1px solid #2a2a3e; border-radius: 6px; text-align: center; font-size: 0.8rem; background: #1a1a2e; color: #fff; }
 
         .submit-btn {
             width: 100%; padding: 12px; background: #667eea; color: white; border: none;
@@ -122,16 +124,27 @@
         .submit-btn.danger { background: #dc2626; }
         .submit-btn.secondary { background: #2a2a3e; }
 
-        .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #2a2a3e; }
-        .detail-label { color: #888; font-size: 0.8rem; }
-        .detail-value { color: #fff; font-size: 0.8rem; }
+        .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #2a2a3e; }
+        .detail-label { color: #888; font-size: 0.75rem; }
+        .detail-value { color: #fff; font-size: 0.75rem; }
 
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 0; }
-        .stat-box { background: #0f0f1a; border-radius: 8px; padding: 10px 6px; text-align: center; }
-        .stat-number { font-size: 1.2rem; font-weight: 700; color: #fff; }
-        .stat-label { font-size: 0.6rem; color: #666; margin-top: 2px; }
+        .momentum-display { background: #0f0f1a; border-radius: 10px; padding: 12px; text-align: center; margin-bottom: 10px; }
+        .momentum-score { font-size: 1.8rem; font-weight: 700; }
+        .momentum-score.positive { color: #4ade80; }
+        .momentum-score.negative { color: #dc2626; }
+        .momentum-score.neutral { color: #888; }
+        .momentum-max { color: #555; font-size: 1rem; font-weight: 400; }
+        .momentum-label { font-size: 0.65rem; color: #666; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
 
-        .action-buttons { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 8px 0; }
+        .stat-box { background: #0f0f1a; border-radius: 8px; padding: 8px 4px; text-align: center; }
+        .stat-number { font-size: 1rem; font-weight: 700; color: #fff; }
+        .stat-label { font-size: 0.55rem; color: #666; margin-top: 1px; }
+
+        .action-buttons { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+        .action-buttons .submit-btn { padding: 10px; font-size: 0.85rem; }
+        .action-row { display: flex; gap: 6px; }
+        .action-row .submit-btn { flex: 1; }
 
         .section-header.collapsible { cursor: pointer; }
         .section-header .collapse-icon { margin-left: 4px; transition: transform 0.2s; color: #666; font-size: 0.7rem; }
@@ -164,26 +177,28 @@
 
         .sub-header { font-size: 0.7rem; color: #666; padding: 8px 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px; }
 
-        .subtask-indicator { font-size: 0.65rem; color: #888; background: #2a2a3e; padding: 2px 5px; border-radius: 6px; }
+        .subtask-indicator { font-size: 0.6rem; color: #888; background: #2a2a3e; padding: 2px 5px; border-radius: 6px; }
         .subtask-indicator.partial { color: #f59e0b; }
         .subtask-indicator.complete { color: #4ade80; }
-        .subtask-list { margin-top: 12px; }
-        .subtask-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #2a2a3e; }
+        .subtask-list { margin-top: 10px; }
+        .subtask-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #2a2a3e; min-height: 36px; }
         .subtask-item:last-child { border-bottom: none; }
         .subtask-checkbox { width: 18px; height: 18px; border-radius: 4px; border: 2px solid #444; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .subtask-checkbox.checked { background: #667eea; border-color: #667eea; }
         .subtask-checkbox.checked::after { content: '✓'; color: white; font-size: 10px; }
-        .subtask-name { flex: 1; color: #ccc; font-size: 0.85rem; }
+        .subtask-name { flex: 1; color: #ccc; font-size: 0.8rem; }
         .subtask-name.completed { color: #555; text-decoration: line-through; }
-        .add-subtask { display: flex; gap: 8px; margin-top: 8px; }
-        .add-subtask input { flex: 1; padding: 8px; border: 1px solid #2a2a3e; border-radius: 6px; background: #0f0f1a; color: #fff; font-size: 0.85rem; }
-        .add-subtask button { padding: 8px 12px; background: #667eea; color: white; border: none; border-radius: 6px; font-size: 0.85rem; cursor: pointer; }
+        .subtask-delete { color: #666; font-size: 0.7rem; cursor: pointer; padding: 4px 8px; min-width: 32px; min-height: 32px; display: flex; align-items: center; justify-content: center; }
+        .add-subtask { display: flex; gap: 6px; margin-top: 6px; }
+        .add-subtask input { flex: 1; padding: 8px; border: 1px solid #2a2a3e; border-radius: 6px; background: #0f0f1a; color: #fff; font-size: 0.8rem; }
+        .add-subtask button { padding: 8px 14px; background: #667eea; color: white; border: none; border-radius: 6px; font-size: 0.9rem; cursor: pointer; min-width: 44px; }
 
         /* Inline subtasks on main screen */
-        .inline-subtask { display: flex; align-items: center; gap: 8px; padding: 4px 0 4px 36px; min-height: 32px; }
-        .inline-subtask .subtask-checkbox { width: 16px; height: 16px; }
-        .inline-subtask .subtask-name { font-size: 0.8rem; color: #888; }
-        .inline-subtask .subtask-name.completed { color: #555; }
+        .inline-subtasks-container { margin-left: 32px; padding-left: 10px; border-left: 2px solid #2a2a3e; }
+        .inline-subtask { display: flex; align-items: center; gap: 8px; padding: 3px 0; min-height: 28px; }
+        .inline-subtask .subtask-checkbox { width: 14px; height: 14px; border-radius: 3px; }
+        .inline-subtask .subtask-name { font-size: 0.75rem; color: #777; }
+        .inline-subtask .subtask-name.completed { color: #555; text-decoration: line-through; }
 
         /* Sort select */
         .settings-select { padding: 8px 12px; border: 1px solid #2a2a3e; border-radius: 8px; background: #0f0f1a; color: #fff; font-size: 0.9rem; min-width: 140px; }
@@ -195,10 +210,10 @@
         .toggle-switch::after { content: ''; position: absolute; width: 20px; height: 20px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: left 0.2s; }
         .toggle-switch.active::after { left: 22px; }
 
-        .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #2a2a3e; }
-        .settings-label { color: #ccc; font-size: 0.9rem; }
-        .settings-value { display: flex; align-items: center; gap: 8px; }
-        .settings-input { width: 60px; padding: 8px; border: 1px solid #2a2a3e; border-radius: 8px; background: #0f0f1a; color: #fff; text-align: center; font-size: 0.9rem; }
+        .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #2a2a3e; }
+        .settings-label { color: #ccc; font-size: 0.85rem; }
+        .settings-value { display: flex; align-items: center; gap: 6px; }
+        .settings-input { width: 56px; padding: 8px; border: 1px solid #2a2a3e; border-radius: 8px; background: #0f0f1a; color: #fff; text-align: center; font-size: 0.85rem; }
 
         @supports (padding-bottom: env(safe-area-inset-bottom)) {
             body { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
@@ -313,6 +328,7 @@
                 <span class="settings-label">Sort habits by</span>
                 <select class="settings-select" id="sortMethod">
                     <option value="default">Default</option>
+                    <option value="overdue">Most overdue</option>
                     <option value="score">Needs attention</option>
                     <option value="alphabetical">A-Z</option>
                 </select>
@@ -738,6 +754,13 @@
             return `<span class="score-badge red">${'!'.repeat(exclamationCount)}</span>`;
         }
 
+        function renderOverdueBadge(daysOverdue) {
+            // Convert overdue days to exclamation points for consistency
+            if (daysOverdue <= 0) return '';
+            const exclamationCount = Math.min(3, Math.ceil(daysOverdue / 2));
+            return `<span class="score-badge red">${'!'.repeat(exclamationCount)}</span>`;
+        }
+
         function freshStartHabit(id) {
             const habits = loadHabits();
             const habit = habits.find(h => h.id === id);
@@ -837,6 +860,14 @@
             const method = settings.sortMethod || 'default';
             if (method === 'default') return habits;
             if (method === 'alphabetical') return [...habits].sort((a, b) => a.name.localeCompare(b.name));
+            if (method === 'overdue') {
+                // Sort by momentum score (most negative first = most overdue)
+                return [...habits].sort((a, b) => {
+                    const scoreA = calculateMomentumScore(a).raw;
+                    const scoreB = calculateMomentumScore(b).raw;
+                    return scoreA - scoreB;
+                });
+            }
             if (method === 'score') {
                 return [...habits].sort((a, b) => {
                     const scoreA = calculateMomentumScore(a).raw;
@@ -939,6 +970,7 @@
                         <span class="habit-name">${escapeHtml(habit.name)}</span>
                         <span class="habit-meta">${reason}</span>
                     </div>
+                    <button class="habit-edit-btn" onclick="event.stopPropagation();openDetailsEdit(${habit.id})">✎</button>
                 </div>`;
             }
 
@@ -949,6 +981,7 @@
                     <span class="habit-name">${escapeHtml(habit.name)}</span>
                     <span class="habit-meta">${reason}</span>
                 </div>
+                <button class="habit-edit-btn" onclick="event.stopPropagation();openDetailsEdit(${habit.id})">✎</button>
             </div>`;
         }
 
@@ -962,6 +995,7 @@
                     <div class="habit-info" onclick="openDetails(${habit.id})">
                         <span class="habit-name">${escapeHtml(habit.name)}</span>
                     </div>
+                    <button class="habit-edit-btn" onclick="event.stopPropagation();openDetailsEdit(${habit.id})">✎</button>
                 </div>`;
             }
             return `<div class="habit-item completed">
@@ -969,6 +1003,7 @@
                 <div class="habit-info" onclick="openDetails(${habit.id})">
                     <span class="habit-name">${escapeHtml(habit.name)}</span>
                 </div>
+                <button class="habit-edit-btn" onclick="event.stopPropagation();openDetailsEdit(${habit.id})">✎</button>
             </div>`;
         }
 
@@ -983,6 +1018,7 @@
             const timeOfDay = getTimeOfDayNow();
             let meta = '';
             if (habit.frequency.type === 'timesPerWeek' && status.text) meta = status.text;
+            if (habit.frequency.type === 'timesPerMonth' && status.text) meta = status.text;
 
             // For twice daily, show half-circle
             if (habit.frequency.type === 'twiceDaily') {
@@ -990,6 +1026,7 @@
                 const canComplete = currentPeriod === 'morning' ? !status.morningDone : !status.nightDone;
                 // If it's night and morning was missed, show it as missed
                 const morningMissed = timeOfDay === 'night' && !status.morningDone;
+                const scoreBadge = renderScoreBadge(habit);
 
                 return `<div class="habit-item">
                     <div class="half-circle ${status.morningDone && status.nightDone ? 'both-filled' : ''}" onclick="completeTwiceDaily(${habit.id})">
@@ -998,12 +1035,15 @@
                     </div>
                     <div class="habit-info" onclick="openDetails(${habit.id})">
                         <span class="habit-name">${escapeHtml(habit.name)}</span>
+                        ${scoreBadge}
                     </div>
+                    <button class="habit-edit-btn" onclick="event.stopPropagation();openDetailsEdit(${habit.id})">✎</button>
                 </div>`;
             }
 
             const isChecked = status.completed;
             const scoreBadge = renderScoreBadge(habit);
+            const overdueBadge = renderOverdueBadge(overdue);
             const subtaskProgress = getSubtaskProgress(habit);
             let subtaskBadge = '';
             if (subtaskProgress && !habit.showSubtasksOnMain) {
@@ -1014,13 +1054,14 @@
             // Render inline subtasks if enabled
             let inlineSubtasks = '';
             if (habit.showSubtasksOnMain && habit.subtasks && habit.subtasks.length > 0) {
-                inlineSubtasks = habit.subtasks.map(s => {
+                const subtaskItems = habit.subtasks.map(s => {
                     const completed = isSubtaskCompleted(habit, s.id);
                     return `<div class="inline-subtask">
                         <div class="subtask-checkbox ${completed ? 'checked' : ''}" onclick="event.stopPropagation();toggleSubtask(${habit.id}, ${s.id})"></div>
                         <span class="subtask-name ${completed ? 'completed' : ''}">${escapeHtml(s.name)}</span>
                     </div>`;
                 }).join('');
+                inlineSubtasks = `<div class="inline-subtasks-container">${subtaskItems}</div>`;
             }
 
             return `<div class="habit-item ${isChecked ? 'completed' : ''}">
@@ -1030,8 +1071,9 @@
                     ${subtaskBadge}
                     ${meta ? `<span class="habit-meta">${meta}</span>` : ''}
                     ${scoreBadge}
-                    ${overdue > 0 ? `<span class="overdue-badge">+${overdue}</span>` : ''}
+                    ${overdueBadge}
                 </div>
+                <button class="habit-edit-btn" onclick="event.stopPropagation();openDetailsEdit(${habit.id})">✎</button>
             </div>${inlineSubtasks}`;
         }
 
@@ -1130,6 +1172,18 @@
         let editFrequency = 'daily';
 
         function openDetails(id) { selectedHabitId = id; editMode = false; renderDetails(); document.getElementById('detailsOverlay').classList.add('active'); }
+        function openDetailsEdit(id) {
+            // Open details directly in edit mode
+            const habit = loadHabits().find(h => h.id === id);
+            if (!habit) return;
+            selectedHabitId = id;
+            editMode = true;
+            editTimeOfDay = habit.timeOfDay;
+            editFrequency = habit.frequency.type;
+            editShowSubtasks = habit.showSubtasksOnMain || false;
+            renderDetails();
+            document.getElementById('detailsOverlay').classList.add('active');
+        }
         function closeDetails() { document.getElementById('detailsOverlay').classList.remove('active'); selectedHabitId = null; editMode = false; }
 
         function toggleEditMode() {
@@ -1316,7 +1370,7 @@
                                 return `<div class="subtask-item">
                                     <div class="subtask-checkbox ${completed ? 'checked' : ''}" onclick="toggleSubtask(${habit.id}, ${s.id})"></div>
                                     <span class="subtask-name ${completed ? 'completed' : ''}">${escapeHtml(s.name)}</span>
-                                    <span style="color:#666;font-size:0.7rem;cursor:pointer" onclick="deleteSubtask(${habit.id}, ${s.id})">✕</span>
+                                    <span class="subtask-delete" onclick="deleteSubtask(${habit.id}, ${s.id})">✕</span>
                                 </div>`;
                             }).join('')}
                             <div class="add-subtask">
@@ -1326,11 +1380,15 @@
                         </div>`;
                 }
 
+                const scoreClass = rawScore > 0 ? 'positive' : (rawScore < 0 ? 'negative' : 'neutral');
                 document.getElementById('detailsModal').innerHTML = `
                     <div class="modal-header"><h2 class="modal-title">${escapeHtml(habit.name)}</h2><button class="modal-close" onclick="closeDetails()">&times;</button></div>
+                    <div class="momentum-display">
+                        <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
+                        <div class="momentum-label">Momentum Score</div>
+                    </div>
                     <div class="detail-row"><span class="detail-label">Time</span><span class="detail-value">${timeLabel}</span></div>
                     <div class="detail-row"><span class="detail-label">Frequency</span><span class="detail-value">${freqLabel}</span></div>
-                    <div class="detail-row"><span class="detail-label">Momentum</span><span class="detail-value"><span class="${rawScore < 0 ? 'red' : ''}">${rawScore}</span><span style="color:#666">/100</span></span></div>
                     <div class="stats-grid">
                         <div class="stat-box"><div class="stat-number">${total}</div><div class="stat-label">Total</div></div>
                         <div class="stat-box"><div class="stat-number">${rate}%</div><div class="stat-label">Rate</div></div>
@@ -1339,10 +1397,12 @@
                     ${recoveryText}
                     ${subtasksHtml}
                     <div class="action-buttons">
-                        <button class="submit-btn" onclick="toggleEditMode()">Edit</button>
-                        ${canSnooze ? `<button class="submit-btn secondary" onclick="snoozeHabit(${habit.id})">Snooze</button>` : ''}
-                        ${isSnoozed ? `<button class="submit-btn secondary" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
-                        <button class="submit-btn secondary" onclick="skipHabit(${habit.id})">Skip Today</button>
+                        <button class="submit-btn" onclick="toggleEditMode()">Edit Habit</button>
+                        <div style="display:flex;gap:6px">
+                            ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="snoozeHabit(${habit.id})">Snooze</button>` : ''}
+                            ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
+                            <button class="submit-btn secondary" style="flex:1" onclick="skipHabit(${habit.id})">Skip Today</button>
+                        </div>
                         ${canFreshStart ? `<button class="submit-btn secondary" onclick="freshStartHabit(${habit.id})">Fresh Start</button>` : ''}
                         <button class="submit-btn danger" onclick="deleteHabit(${habit.id})">Delete</button>
                     </div>`;
