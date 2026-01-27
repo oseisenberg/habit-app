@@ -286,7 +286,7 @@
         <div class="debug-controls">
             <button class="debug-btn debug-btn-nav" onclick="debugChangeDay(-1)">←</button>
             <button class="debug-btn debug-btn-nav" onclick="debugChangeDay(1)">→</button>
-            <button class="debug-btn debug-btn-reset" onclick="debugReset()">Reset</button>
+            <button class="debug-btn debug-btn-reset" onclick="debugResetTime()">Reset Time</button>
         </div>
         <div class="debug-controls">
             <button class="debug-btn debug-btn-time" onclick="debugSetTime('morning')">🌅</button>
@@ -295,7 +295,8 @@
             <button class="debug-btn debug-btn-time" onclick="debugSetTime('latenight')">🌃</button>
         </div>
         <div class="debug-controls" style="margin-top:8px;">
-            <button class="debug-btn" style="background:#059669;color:white" onclick="loadTestData()">Load Test Data</button>
+            <button class="debug-btn" style="background:#059669;color:white" onclick="loadTestData()">Test Data</button>
+            <button class="debug-btn" style="background:#7c3aed;color:white" onclick="restoreData()">Restore</button>
         </div>
     </div>
 
@@ -331,7 +332,7 @@
             }
             updateDebugDisplay(); updateDisplay();
         }
-        function debugReset() { debugDayOffset = 0; debugHourOverride = null; updateDebugDisplay(); updateDisplay(); }
+        function debugResetTime() { debugDayOffset = 0; debugHourOverride = null; updateDebugDisplay(); updateDisplay(); }
         function updateDebugDisplay() {
             document.getElementById('debugRealDate').textContent = new Date().toLocaleDateString();
             document.getElementById('debugSimDate').textContent = getSimulatedDate().toLocaleDateString();
@@ -526,6 +527,31 @@
 
         let collapsedSections = {};
 
+        function canDoNow(habit) {
+            const today = getTodayString();
+            const timeOfDay = getTimeOfDayNow();
+            if (habit.skippedDates?.includes(today)) return false;
+
+            // Check if habit is fully completed
+            const status = getCompletionStatus(habit);
+            if (habit.frequency.type === 'twiceDaily') {
+                // Can do now if current period isn't done yet
+                if (timeOfDay === 'morning' && !status.morningDone) return true;
+                if (timeOfDay === 'night' && !status.nightDone) return true;
+                // If anytime, can do either incomplete period
+                if (timeOfDay === 'anytime' && (!status.morningDone || !status.nightDone)) return true;
+                return false;
+            }
+            if (status.completed) return false;
+
+            // Check if due today
+            if (!isDueToday(habit)) return false;
+
+            // Check time-of-day restrictions
+            if (habit.timeOfDay === 'night' && timeOfDay !== 'night') return false;
+            return true;
+        }
+
         function renderHabits() {
             const habits = loadHabits(), container = document.getElementById('habitsContainer');
             if (!habits.length) {
@@ -533,119 +559,74 @@
                 return;
             }
             const today = getTodayString();
-            const timeOfDay = getTimeOfDayNow();
 
-            // Separate twice-daily habits to show them as unified items in their own section
-            const twiceDaily = habits.filter(h => h.frequency.type === 'twiceDaily' && !h.skippedDates?.includes(today));
-            const regularHabits = habits.filter(h => h.frequency.type !== 'twiceDaily');
-
-            // Get due and inactive regular habits
-            const dueRegular = regularHabits.filter(h => isDueToday(h));
-            const inactiveRegular = regularHabits.filter(h => !isDueToday(h) && !h.skippedDates?.includes(today));
-
-            // Get inactive twice-daily (both morning and night done)
-            const activeTwiceDaily = twiceDaily.filter(h => { const s = getCompletionStatus(h); return !(s.morningDone && s.nightDone); });
-            const inactiveTwiceDaily = twiceDaily.filter(h => { const s = getCompletionStatus(h); return s.morningDone && s.nightDone; });
-
-            const groups = {
-                morning: dueRegular.filter(h => h.timeOfDay === 'morning'),
-                twiceDaily: activeTwiceDaily,
-                anytime: dueRegular.filter(h => h.timeOfDay === 'anytime'),
-                night: dueRegular.filter(h => h.timeOfDay === 'night'),
-                inactive: [...inactiveRegular, ...inactiveTwiceDaily]
-            };
+            // Split into "now" (can do) and "later" (can't do right now)
+            const nowHabits = habits.filter(h => canDoNow(h));
+            const laterHabits = habits.filter(h => !canDoNow(h) && !h.skippedDates?.includes(today));
 
             let html = '';
 
-            // Morning section
-            if (groups.morning.length) {
-                const done = groups.morning.filter(h => getCompletionStatus(h).completed).length;
-                html += renderSection('🌅', 'Morning', groups.morning, 'morning', done, false);
+            // Now section
+            if (nowHabits.length) {
+                const done = nowHabits.filter(h => {
+                    const s = getCompletionStatus(h);
+                    return h.frequency.type === 'twiceDaily' ? (s.morningDone && s.nightDone) : s.completed;
+                }).length;
+                html += renderNowSection(nowHabits, done);
             }
 
-            // Twice daily section (unified items with dual checkboxes)
-            if (groups.twiceDaily.length) {
-                const done = groups.twiceDaily.filter(h => { const s = getCompletionStatus(h); return s.morningDone && s.nightDone; }).length;
-                html += renderTwiceDailySection(groups.twiceDaily, done);
-            }
-
-            // Anytime section
-            if (groups.anytime.length) {
-                const done = groups.anytime.filter(h => getCompletionStatus(h).completed).length;
-                html += renderSection('☀️', 'Anytime', groups.anytime, null, done, false);
-            }
-
-            // Night section (collapsible when not night)
-            if (groups.night.length) {
-                const done = groups.night.filter(h => getCompletionStatus(h).completed).length;
-                const isNight = timeOfDay === 'night';
-                const defaultCollapsed = !isNight && collapsedSections['night'] !== false;
-                if (collapsedSections['night'] === undefined) collapsedSections['night'] = defaultCollapsed;
-                html += renderSection('🌙', 'Night', groups.night, 'night', done, true, collapsedSections['night']);
-            }
-
-            // Inactive section (collapsible)
-            if (groups.inactive.length) {
-                if (collapsedSections['inactive'] === undefined) collapsedSections['inactive'] = true;
-                html += renderInactiveSection(groups.inactive, collapsedSections['inactive']);
+            // Later section (collapsible)
+            if (laterHabits.length) {
+                if (collapsedSections['later'] === undefined) collapsedSections['later'] = true;
+                html += renderLaterSection(laterHabits, collapsedSections['later']);
             }
 
             if (!html) html = '<div class="habits-section"><div class="empty-state"><div class="empty-state-icon">✓</div><div>All done for today!</div></div></div>';
             container.innerHTML = html;
         }
 
-        function renderSection(icon, title, habits, period, done, collapsible = false, collapsed = false) {
-            const sectionId = title.toLowerCase();
-            const collapseAttr = collapsible ? `onclick="toggleSection('${sectionId}')"` : '';
-            const headerClass = collapsible ? `section-header collapsible${collapsed ? ' collapsed' : ''}` : 'section-header';
-            const collapseIcon = collapsible ? `<span class="collapse-icon">▼</span>` : '';
-            const contentClass = collapsed ? 'section-content collapsed' : 'section-content';
-            const contentStyle = collapsed ? '' : `style="max-height: ${habits.length * 60}px"`;
-            return `<div class="habits-section"><div class="${headerClass}" ${collapseAttr}><span class="section-icon">${icon}</span><span class="section-title">${title}</span>${collapseIcon}<span class="section-count">${done}/${habits.length}</span></div><div class="${contentClass}" ${contentStyle}>${habits.map(h => renderHabitItem(h, period)).join('')}</div></div>`;
+        function renderNowSection(habits, done) {
+            return `<div class="habits-section"><div class="section-header"><span class="section-icon">⚡</span><span class="section-title">Now</span><span class="section-count">${done}/${habits.length}</span></div>${habits.map(h => renderHabitItem(h)).join('')}</div>`;
         }
 
-        function renderTwiceDailySection(habits, done) {
-            return `<div class="habits-section"><div class="section-header"><span class="section-icon">🔄</span><span class="section-title">Twice Daily</span><span class="section-count">${done}/${habits.length}</span></div>${habits.map(h => renderTwiceDailyItem(h)).join('')}</div>`;
-        }
-
-        function renderTwiceDailyItem(habit) {
-            const status = getCompletionStatus(habit);
-            const bothDone = status.morningDone && status.nightDone;
-            return `<div class="habit-item ${bothDone ? 'completed' : ''}">
-                <div class="dual-checkbox">
-                    <div class="habit-checkbox ${status.morningDone ? 'checked' : ''}" onclick="completeHabit(${habit.id}, 'morning')" title="Morning"></div>
-                    <div class="habit-checkbox ${status.nightDone ? 'checked' : ''}" onclick="completeHabit(${habit.id}, 'night')" title="Night"></div>
-                </div>
-                <div class="habit-info" onclick="openDetails(${habit.id})">
-                    <span class="habit-name">${escapeHtml(habit.name)}</span>
-                </div>
-            </div>`;
-        }
-
-        function renderInactiveSection(habits, collapsed) {
+        function renderLaterSection(habits, collapsed) {
             const contentClass = collapsed ? 'section-content collapsed' : 'section-content';
             const headerClass = collapsed ? 'section-header collapsible collapsed' : 'section-header collapsible';
             const contentStyle = collapsed ? '' : `style="max-height: ${habits.length * 60}px"`;
-            return `<div class="habits-section inactive-section"><div class="${headerClass}" onclick="toggleSection('inactive')"><span class="section-icon">💤</span><span class="section-title">Inactive</span><span class="collapse-icon">▼</span><span class="section-count">${habits.length}</span></div><div class="${contentClass}" ${contentStyle}>${habits.map(h => renderInactiveItem(h)).join('')}</div></div>`;
+            return `<div class="habits-section inactive-section"><div class="${headerClass}" onclick="toggleSection('later')"><span class="section-icon">💤</span><span class="section-title">Later</span><span class="collapse-icon">▼</span><span class="section-count">${habits.length}</span></div><div class="${contentClass}" ${contentStyle}>${habits.map(h => renderLaterItem(h)).join('')}</div></div>`;
         }
 
-        function renderInactiveItem(habit) {
+        function renderLaterItem(habit) {
+            const status = getCompletionStatus(habit);
+            const today = getTodayString();
+            const timeOfDay = getTimeOfDayNow();
             let meta = '';
-            if (habit.frequency.type === 'everyXDays') {
+            let reason = '';
+
+            if (habit.frequency.type === 'twiceDaily' && status.morningDone && status.nightDone) {
+                meta = '✓✓';
+            } else if (habit.frequency.type === 'twiceDaily') {
+                // Partially done
+                meta = status.morningDone ? '✓○' : '○✓';
+            } else if (status.completed) {
+                // Already done today
+            } else if (habit.timeOfDay === 'night' && timeOfDay !== 'night') {
+                reason = 'tonight';
+            } else if (habit.frequency.type === 'everyXDays') {
                 const last = getLastCompletionDate(habit);
                 if (last) {
-                    const daysAgo = daysBetween(last, getTodayString());
+                    const daysAgo = daysBetween(last, today);
                     const daysUntil = habit.frequency.everyXDays - daysAgo;
-                    if (daysUntil > 0) meta = `in ${daysUntil}d`;
+                    if (daysUntil > 0) reason = `in ${daysUntil}d`;
                 }
-            } else if (habit.frequency.type === 'twiceDaily') {
-                meta = '✓✓';
             }
+
             return `<div class="habit-item completed">
                 <div class="habit-checkbox checked"></div>
                 <div class="habit-info" onclick="openDetails(${habit.id})">
                     <span class="habit-name">${escapeHtml(habit.name)}</span>
                     ${meta ? `<span class="habit-meta">${meta}</span>` : ''}
+                    ${reason ? `<span class="habit-meta">${reason}</span>` : ''}
                 </div>
             </div>`;
         }
@@ -655,14 +636,29 @@
             renderHabits();
         }
 
-        function renderHabitItem(habit, period) {
+        function renderHabitItem(habit) {
             const status = getCompletionStatus(habit);
-            const isChecked = habit.frequency.type === 'twiceDaily' ? (period === 'morning' ? status.morningDone : status.nightDone) : status.completed;
             const overdue = getDaysOverdue(habit);
             let meta = '';
             if (habit.frequency.type === 'timesPerWeek' && status.text) meta = status.text;
+
+            // For twice daily, show dual checkboxes
+            if (habit.frequency.type === 'twiceDaily') {
+                const bothDone = status.morningDone && status.nightDone;
+                return `<div class="habit-item ${bothDone ? 'completed' : ''}">
+                    <div class="dual-checkbox">
+                        <div class="habit-checkbox ${status.morningDone ? 'checked' : ''}" onclick="completeHabit(${habit.id}, 'morning')" title="Morning"></div>
+                        <div class="habit-checkbox ${status.nightDone ? 'checked' : ''}" onclick="completeHabit(${habit.id}, 'night')" title="Night"></div>
+                    </div>
+                    <div class="habit-info" onclick="openDetails(${habit.id})">
+                        <span class="habit-name">${escapeHtml(habit.name)}</span>
+                    </div>
+                </div>`;
+            }
+
+            const isChecked = status.completed;
             return `<div class="habit-item ${isChecked ? 'completed' : ''}">
-                <div class="habit-checkbox ${isChecked ? 'checked' : ''}" onclick="completeHabit(${habit.id}, '${period || ''}')"></div>
+                <div class="habit-checkbox ${isChecked ? 'checked' : ''}" onclick="completeHabit(${habit.id})"></div>
                 <div class="habit-info" onclick="openDetails(${habit.id})">
                     <span class="habit-name">${escapeHtml(habit.name)}</span>
                     ${meta ? `<span class="habit-meta">${meta}</span>` : ''}
@@ -713,7 +709,12 @@
 
         function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 
+        let savedDataBeforeTest = null;
+
         function loadTestData() {
+            // Save current data before loading test data
+            savedDataBeforeTest = localStorage.getItem('habits_v3');
+
             const today = getTodayString();
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
@@ -731,6 +732,14 @@
             ];
             saveHabits(testHabits);
             renderHabits();
+        }
+
+        function restoreData() {
+            if (savedDataBeforeTest !== null) {
+                localStorage.setItem('habits_v3', savedDataBeforeTest);
+                savedDataBeforeTest = null;
+                renderHabits();
+            }
         }
 
         document.getElementById('habitInput').addEventListener('keypress', e => { if (e.key === 'Enter') addHabit(); });
