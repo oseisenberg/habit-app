@@ -741,6 +741,27 @@
             return scoreData;
         }
 
+        // Update all habit scores on page load (persists momentum changes for missed days)
+        function updateAllHabitScores() {
+            const habits = loadHabits();
+            let changed = false;
+            const today = getTodayString();
+
+            habits.forEach(habit => {
+                // Only update if habit has been started (has lastScoreUpdate)
+                if (habit.lastScoreUpdate && habit.lastScoreUpdate !== today) {
+                    const scoreData = calculateMomentumScore(habit);
+                    habit.momentumScore = scoreData.raw;
+                    habit.lastScoreUpdate = today;
+                    changed = true;
+                }
+            });
+
+            if (changed) {
+                saveHabits(habits);
+            }
+        }
+
         function renderScoreBadge(habit) {
             // Don't show badge for new habits with no tracking history
             if (!habit.lastScoreUpdate) return '';
@@ -1045,15 +1066,19 @@
             const scoreBadge = renderScoreBadge(habit);
             const overdueBadge = renderOverdueBadge(overdue);
             const subtaskProgress = getSubtaskProgress(habit);
+
+            // Determine if subtasks should be shown inline (default: true if subtasks exist, unless explicitly hidden)
+            const showInline = habit.subtasks && habit.subtasks.length > 0 && habit.showSubtasksOnMain !== false;
+
             let subtaskBadge = '';
-            if (subtaskProgress && !habit.showSubtasksOnMain) {
+            if (subtaskProgress && !showInline) {
                 const cls = subtaskProgress.completed === subtaskProgress.total ? 'complete' : (subtaskProgress.completed > 0 ? 'partial' : '');
                 subtaskBadge = `<span class="subtask-indicator ${cls}">${subtaskProgress.completed}/${subtaskProgress.total}</span>`;
             }
 
-            // Render inline subtasks if enabled
+            // Render inline subtasks (shown by default when subtasks exist)
             let inlineSubtasks = '';
-            if (habit.showSubtasksOnMain && habit.subtasks && habit.subtasks.length > 0) {
+            if (showInline) {
                 const subtaskItems = habit.subtasks.map(s => {
                     const completed = isSubtaskCompleted(habit, s.id);
                     return `<div class="inline-subtask">
@@ -1180,7 +1205,7 @@
             editMode = true;
             editTimeOfDay = habit.timeOfDay;
             editFrequency = habit.frequency.type;
-            editShowSubtasks = habit.showSubtasksOnMain || false;
+            editHideSubtasks = habit.showSubtasksOnMain === false;
             renderDetails();
             document.getElementById('detailsOverlay').classList.add('active');
         }
@@ -1193,7 +1218,7 @@
             if (editMode) {
                 editTimeOfDay = habit.timeOfDay;
                 editFrequency = habit.frequency.type;
-                editShowSubtasks = habit.showSubtasksOnMain || false;
+                editHideSubtasks = habit.showSubtasksOnMain === false;
             }
             renderDetails();
         }
@@ -1208,12 +1233,12 @@
             renderDetails();
         }
 
-        let editShowSubtasks = false;
+        let editHideSubtasks = false;
 
-        function toggleShowSubtasks() {
-            editShowSubtasks = !editShowSubtasks;
-            const toggle = document.getElementById('showSubtasksToggle');
-            if (toggle) toggle.classList.toggle('active', editShowSubtasks);
+        function toggleHideSubtasks() {
+            editHideSubtasks = !editHideSubtasks;
+            const toggle = document.getElementById('hideSubtasksToggle');
+            if (toggle) toggle.classList.toggle('active', editHideSubtasks);
         }
 
         function saveHabitEdit() {
@@ -1242,8 +1267,8 @@
                 habit.frequency.timesPerMonth = parseInt(input?.value) || 4;
             }
 
-            // Save subtask visibility preference
-            habit.showSubtasksOnMain = editShowSubtasks;
+            // Save subtask visibility preference (false means hidden, undefined/true means shown)
+            habit.showSubtasksOnMain = editHideSubtasks ? false : undefined;
 
             saveHabits(habits);
             editMode = false;
@@ -1278,7 +1303,6 @@
                 // Edit mode
                 const currentTime = editTimeOfDay;
                 const currentFreq = editFrequency;
-                const showSubtasks = habit.showSubtasksOnMain || false;
                 document.getElementById('detailsModal').innerHTML = `
                     <div class="modal-header"><h2 class="modal-title">Edit Habit</h2><button class="modal-close" onclick="closeDetails()">&times;</button></div>
                     <div class="form-group">
@@ -1330,8 +1354,8 @@
                     ${(habit.subtasks && habit.subtasks.length > 0) ? `
                     <div class="form-group">
                         <div class="settings-row" style="border:none;padding:8px 0">
-                            <span class="settings-label">Show subtasks on main screen</span>
-                            <div class="toggle-switch ${showSubtasks ? 'active' : ''}" id="showSubtasksToggle" onclick="toggleShowSubtasks()"></div>
+                            <span class="settings-label">Hide subtasks on main screen</span>
+                            <div class="toggle-switch ${editHideSubtasks ? 'active' : ''}" id="hideSubtasksToggle" onclick="toggleHideSubtasks()"></div>
                         </div>
                     </div>` : ''}
                     <div class="action-buttons">
@@ -1447,6 +1471,8 @@
         document.getElementById('habitInput').addEventListener('keypress', e => { if (e.key === 'Enter') addHabit(); });
         document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetails(); closeSettings(); } });
 
+        // Update scores on page load to persist momentum for missed days
+        updateAllHabitScores();
         updateDisplay();
     </script>
 </body>
