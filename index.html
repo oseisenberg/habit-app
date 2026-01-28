@@ -48,9 +48,16 @@
         .habit-ring.completed::before { background: #4ade80; }
         .habit-ring.overdue { background: conic-gradient(#dc2626 var(--progress), #2a2a3e var(--progress)); }
 
-        /* Neglect indicators - 1 to 3 red dots */
-        .neglect-dots { position: absolute; top: -4px; right: -4px; display: flex; gap: 2px; }
-        .neglect-dot { width: 8px; height: 8px; background: #dc2626; border-radius: 50%; border: 1.5px solid #1a1a2e; }
+        /* Neglect indicators - 1 to 3 red dots along the circle arc */
+        .neglect-dots { position: absolute; inset: 0; pointer-events: none; }
+        .neglect-dot {
+            position: absolute; width: 8px; height: 8px;
+            background: #dc2626; border-radius: 50%; border: 1.5px solid #1a1a2e;
+        }
+        /* Position dots along the top-right arc of the 52px circle */
+        .neglect-dot:nth-child(1) { top: 1px; right: 10px; }
+        .neglect-dot:nth-child(2) { top: 6px; right: 2px; }
+        .neglect-dot:nth-child(3) { top: 16px; right: -2px; }
 
         .habit-emoji {
             position: relative; z-index: 1; font-size: 1.3rem; line-height: 1;
