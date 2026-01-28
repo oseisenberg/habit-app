@@ -1,0 +1,19 @@
+{
+  "name": "habits-ios",
+  "version": "1.0.0",
+  "description": "Habits tracking app for iOS",
+  "main": "index.js",
+  "scripts": {
+    "sync": "npx cap sync ios",
+    "open": "npx cap open ios",
+    "build": "npx cap sync ios && npx cap open ios"
+  },
+  "keywords": ["habits", "ios", "capacitor"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor/cli": "^8.0.2",
+    "@capacitor/core": "^8.0.2",
+    "@capacitor/ios": "^8.0.2"
+  }
+}
