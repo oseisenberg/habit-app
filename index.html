@@ -816,13 +816,14 @@
 
             let score = habit.momentumScore || 0;
 
-            // If habit was just created, start at 0
-            if (!habit.lastScoreUpdate) {
+            // Use lastScoreUpdate, or createdAt as fallback for new habits
+            const lastUpdate = habit.lastScoreUpdate || habit.createdAt;
+            if (!lastUpdate) {
                 return { raw: 0, display: 0 };
             }
 
             // Calculate days since last score update
-            const daysSinceUpdate = daysBetween(habit.lastScoreUpdate, today);
+            const daysSinceUpdate = daysBetween(lastUpdate, today);
             if (daysSinceUpdate === 0) {
                 return { raw: score, display: getDisplayScore(score) };
             }
@@ -832,7 +833,7 @@
             const completionDates = new Set(habit.completions.map(c => c.date));
 
             for (let i = 1; i <= daysSinceUpdate; i++) {
-                const checkDate = new Date(habit.lastScoreUpdate);
+                const checkDate = new Date(lastUpdate);
                 checkDate.setDate(checkDate.getDate() + i);
                 const checkDateStr = checkDate.toISOString().split('T')[0];
 
@@ -898,8 +899,9 @@
             const today = getTodayString();
 
             habits.forEach(habit => {
-                // Only update if habit has been started (has lastScoreUpdate)
-                if (habit.lastScoreUpdate && habit.lastScoreUpdate !== today) {
+                // Update if habit has history (lastScoreUpdate or createdAt) and hasn't been updated today
+                const lastUpdate = habit.lastScoreUpdate || habit.createdAt;
+                if (lastUpdate && lastUpdate !== today) {
                     const scoreData = calculateMomentumScore(habit);
                     habit.momentumScore = scoreData.raw;
                     habit.lastScoreUpdate = today;
@@ -1141,7 +1143,9 @@
         function renderHabitIcon(habit, isLater = false, isCompleted = false) {
             const status = getCompletionStatus(habit);
             const scoreData = calculateMomentumScore(habit);
-            const neglectLevel = habit.lastScoreUpdate && scoreData.display < 0 ? Math.min(3, Math.abs(scoreData.display)) : 0;
+            // Show neglect indicators if habit has history (lastScoreUpdate or createdAt) and negative score
+            const hasHistory = habit.lastScoreUpdate || habit.createdAt;
+            const neglectLevel = hasHistory && scoreData.display < 0 ? Math.min(3, Math.abs(scoreData.display)) : 0;
             const icon = habit.icon || '📌';
 
             // Calculate progress for ring
