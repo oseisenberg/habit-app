@@ -26,7 +26,7 @@
         .time-note { color: #f59e0b; font-size: 0.65rem; margin-bottom: 6px; }
 
         /* Icon Grid Layout */
-        .habits-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 8px 0; }
+        .habits-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 8px; }
         .habit-icon {
             display: flex; flex-direction: column; align-items: center; gap: 4px;
             cursor: pointer; padding: 4px; border-radius: 12px; transition: background 0.15s;
@@ -34,63 +34,62 @@
         .habit-icon:active { background: rgba(255,255,255,0.05); }
 
         .habit-ring {
-            width: 56px; height: 56px; border-radius: 50%; position: relative;
+            width: 52px; height: 52px; border-radius: 50%; position: relative;
             display: flex; align-items: center; justify-content: center;
             background: conic-gradient(#667eea var(--progress), #2a2a3e var(--progress));
             transition: all 0.2s;
         }
         .habit-ring::before {
-            content: ''; position: absolute; width: 48px; height: 48px;
+            content: ''; position: absolute; width: 44px; height: 44px;
             background: #1a1a2e; border-radius: 50%;
         }
-        .habit-ring.completed { background: #667eea; }
-        .habit-ring.completed::before { background: #667eea; }
+        .habit-ring.completed { background: #4ade80; }
+        .habit-ring.completed::before { background: #4ade80; }
         .habit-ring.overdue { background: conic-gradient(#dc2626 var(--progress), #2a2a3e var(--progress)); }
         .habit-ring.needs-attention::after {
             content: ''; position: absolute; top: -2px; right: -2px;
-            width: 12px; height: 12px; background: #dc2626; border-radius: 50%;
-            border: 2px solid #0f0f1a;
+            width: 10px; height: 10px; background: #dc2626; border-radius: 50%;
+            border: 2px solid #1a1a2e;
         }
 
         .habit-emoji {
-            position: relative; z-index: 1; font-size: 1.4rem; line-height: 1;
+            position: relative; z-index: 1; font-size: 1.3rem; line-height: 1;
         }
         .habit-ring.completed .habit-emoji { filter: brightness(1.2); }
-
-        .habit-ring-label {
-            font-size: 0.55rem; color: #666; text-align: center; max-width: 60px;
-            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-        }
-        .habit-ring.completed + .habit-ring-label { color: #4ade80; }
 
         /* Twice daily split ring */
         .habit-ring.split { background: #2a2a3e; }
         .habit-ring.split .half-fill {
             position: absolute; width: 50%; height: 100%; top: 0;
         }
-        .habit-ring.split .half-fill.left { left: 0; border-radius: 28px 0 0 28px; }
-        .habit-ring.split .half-fill.right { right: 0; border-radius: 0 28px 28px 0; }
-        .habit-ring.split .half-fill.filled { background: #667eea; }
+        .habit-ring.split .half-fill.left { left: 0; border-radius: 26px 0 0 26px; }
+        .habit-ring.split .half-fill.right { right: 0; border-radius: 0 26px 26px 0; }
+        .habit-ring.split .half-fill.filled { background: #4ade80; }
         .habit-ring.split .half-fill.missed { background: #dc262666; }
-
-        /* Section dividers */
-        .section-divider {
-            display: flex; align-items: center; gap: 8px; padding: 8px 0 4px;
-            font-size: 0.65rem; color: #555; text-transform: uppercase; letter-spacing: 0.5px;
-        }
-        .section-divider::after { content: ''; flex: 1; height: 1px; background: #2a2a3e; }
 
         /* Subtask dots */
         .subtask-dots { display: flex; gap: 3px; justify-content: center; margin-top: 2px; }
-        .subtask-dot { width: 5px; height: 5px; border-radius: 50%; background: #444; }
-        .subtask-dot.done { background: #667eea; }
+        .subtask-dot { width: 4px; height: 4px; border-radius: 50%; background: #444; }
+        .subtask-dot.done { background: #4ade80; }
 
-        /* Old list styles kept for Later/Done sections */
-        .habits-section { background: #1a1a2e; border-radius: 10px; padding: 8px; margin-bottom: 6px; }
-        .section-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid #2a2a3e; }
-        .section-icon { font-size: 0.8rem; }
-        .section-title { font-size: 0.75rem; font-weight: 600; color: #fff; }
-        .section-count { margin-left: auto; color: #666; font-size: 0.7rem; }
+        /* Prominent section containers */
+        .habits-section { background: #1a1a2e; border-radius: 12px; margin-bottom: 8px; overflow: hidden; }
+        .section-header {
+            display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+            background: linear-gradient(135deg, #1f1f35 0%, #1a1a2e 100%);
+            border-bottom: 1px solid #2a2a3e;
+        }
+        .section-header.collapsible { cursor: pointer; }
+        .section-icon { font-size: 0.9rem; }
+        .section-title { font-size: 0.8rem; font-weight: 600; color: #fff; flex: 1; }
+        .section-count { color: #666; font-size: 0.7rem; background: #0f0f1a; padding: 2px 8px; border-radius: 10px; }
+        .section-header .collapse-icon { color: #555; font-size: 0.6rem; transition: transform 0.2s; }
+        .section-header.collapsed .collapse-icon { transform: rotate(-90deg); }
+
+        .inactive-section { opacity: 0.7; }
+        .inactive-section .section-header { background: #151525; }
+        .section-content { transition: max-height 0.2s ease-out; overflow: hidden; }
+        .section-content.collapsed { max-height: 0 !important; }
 
         .habit-item { display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #2a2a3e; gap: 8px; min-height: 44px; }
         .habit-item:last-child { border-bottom: none; padding-bottom: 0; }
@@ -298,14 +297,15 @@
         .debug-offset { background: #dc2626; color: white; padding: 1px 5px; border-radius: 6px; font-size: 0.6rem; margin-left: 4px; }
 
         /* Emoji picker */
-        .emoji-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+        .emoji-picker { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; max-height: 160px; overflow-y: auto; padding: 4px; background: #0a0a14; border-radius: 8px; }
         .emoji-option {
-            width: 40px; height: 40px; border-radius: 8px; border: 2px solid transparent;
-            background: #0f0f1a; cursor: pointer; font-size: 1.2rem;
+            width: 36px; height: 36px; border-radius: 6px; border: 2px solid transparent;
+            background: #1a1a2e; cursor: pointer; font-size: 1.1rem;
             display: flex; align-items: center; justify-content: center; transition: all 0.15s;
         }
         .emoji-option:active { transform: scale(0.95); }
-        .emoji-option.selected { border-color: #667eea; background: rgba(102, 126, 234, 0.2); }
+        .emoji-option.selected { border-color: #667eea; background: rgba(102, 126, 234, 0.3); }
+        .emoji-option.used { opacity: 0.25; cursor: not-allowed; }
 
         /* Details header with large icon */
         .details-icon-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 12px; }
@@ -462,21 +462,47 @@
     <script>
         const DAY_NAMES = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
         const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const HABIT_EMOJIS = ['💪', '🏃', '📚', '💧', '🧘', '😴', '🦷', '💊', '🥗', '✍️', '🎯', '🧹', '🌱', '☀️', '🌙', '💼', '🎨', '🎵'];
+        const HABIT_EMOJIS = [
+            // Health & Fitness
+            '💪', '🏃', '🚴', '🏊', '🧘', '🤸', '⚽', '🏀', '🎾', '🏋️',
+            // Self-care
+            '🦷', '💊', '💉', '🧴', '🛁', '💅', '💇', '😴', '🛌', '☀️',
+            // Food & Drink
+            '🥗', '🍎', '🥤', '💧', '☕', '🍵', '🥛', '🥕', '🥦', '🍳',
+            // Productivity
+            '📚', '✍️', '💼', '📝', '💻', '📧', '📱', '🗂️', '📊', '🎯',
+            // Creative
+            '🎨', '🎵', '🎸', '🎹', '📷', '✏️', '🖌️', '🎭', '🎬', '🎤',
+            // Home
+            '🧹', '🧺', '🍳', '🛒', '🌱', '🪴', '🐕', '🐈', '🏠', '🛠️',
+            // Social & Spiritual
+            '🙏', '📿', '❤️', '👨‍👩‍👧', '📞', '💬', '🤝', '😊', '🧠', '💭',
+            // Time & Weather
+            '🌅', '🌙', '⏰', '📅', '🌤️', '🌧️', '❄️', '🔥', '⭐', '✨'
+        ];
 
         let selectedTime = null; // null means anytime
         let selectedFrequency = 'daily';
-        let selectedEmoji = HABIT_EMOJIS[0];
+        let selectedEmoji = null;
         let selectedHabitId = null;
         let debugDayOffset = 0;
         let debugHourOverride = null;
 
-        function renderEmojiPicker(containerId, selected = null) {
+        function getUsedIcons(excludeId = null) {
+            const habits = loadHabits();
+            return new Set(habits.filter(h => h.id !== excludeId && h.icon).map(h => h.icon));
+        }
+
+        function renderEmojiPicker(containerId, selected = null, excludeId = null) {
             const container = document.getElementById(containerId);
             if (!container) return;
-            container.innerHTML = HABIT_EMOJIS.map(e =>
-                `<div class="emoji-option ${e === (selected || selectedEmoji) ? 'selected' : ''}" onclick="selectEmoji('${e}', '${containerId}')">${e}</div>`
-            ).join('');
+            const usedIcons = getUsedIcons(excludeId);
+            container.innerHTML = HABIT_EMOJIS.map(e => {
+                const isUsed = usedIcons.has(e);
+                const isSelected = e === selected;
+                return `<div class="emoji-option ${isSelected ? 'selected' : ''} ${isUsed ? 'used' : ''}"
+                    onclick="${isUsed ? '' : `selectEmoji('${e}', '${containerId}')`}">${e}</div>`;
+            }).join('');
         }
 
         function selectEmoji(emoji, containerId) {
@@ -563,8 +589,10 @@
         function handleOverlayClick(e, id, closeFn) { if (e.target === document.getElementById(id)) closeFn(); }
 
         function openModal() {
-            selectedEmoji = HABIT_EMOJIS[0];
-            renderEmojiPicker('emojiPicker');
+            // Select first unused emoji
+            const usedIcons = getUsedIcons();
+            selectedEmoji = HABIT_EMOJIS.find(e => !usedIcons.has(e)) || HABIT_EMOJIS[0];
+            renderEmojiPicker('emojiPicker', selectedEmoji);
             document.getElementById('modalOverlay').classList.add('active');
             document.getElementById('habitInput').focus();
         }
@@ -1008,47 +1036,89 @@
         function renderHabits() {
             const habits = loadHabits(), container = document.getElementById('habitsContainer');
             if (!habits.length) {
-                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✨</div><div>No habits yet</div></div>';
+                container.innerHTML = '<div class="habits-section"><div class="empty-state"><div class="empty-state-icon">✨</div><div>No habits yet</div></div></div>';
                 return;
             }
 
+            const timeOfDay = getTimeOfDayNow();
             const sortedHabits = sortHabits(habits);
             const nowHabits = sortedHabits.filter(h => canDoNow(h));
             const laterHabits = sortedHabits.filter(h => isForLater(h));
             const completedHabits = sortedHabits.filter(h => isCompletedToday(h));
 
+            // Sub-categorize Now section into Morning and Anytime
+            const morningHabits = nowHabits.filter(h => h.timeOfDay === 'morning');
+            const anytimeHabits = nowHabits.filter(h => !h.timeOfDay || h.timeOfDay === 'anytime' || h.frequency.type === 'twiceDaily');
+
             let html = '';
 
-            // Now section - Icon Grid
-            if (nowHabits.length) {
-                html += `<div class="habits-grid">${nowHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
+            // Morning section (only show in morning, or if there are morning habits)
+            if (morningHabits.length && (timeOfDay === 'morning' || timeOfDay === 'anytime')) {
+                html += `<div class="habits-section">
+                    <div class="section-header">
+                        <span class="section-icon">🌅</span>
+                        <span class="section-title">Morning</span>
+                        <span class="section-count">${morningHabits.length}</span>
+                    </div>
+                    <div class="habits-grid">${morningHabits.map(h => renderHabitIcon(h)).join('')}</div>
+                </div>`;
             }
 
-            // Later section - compact
+            // Anytime section (or all now habits if not morning)
+            const anytimeToShow = (timeOfDay === 'morning' || timeOfDay === 'anytime') ? anytimeHabits :
+                [...morningHabits, ...anytimeHabits];
+            if (anytimeToShow.length) {
+                const title = (timeOfDay === 'morning' || timeOfDay === 'anytime') && morningHabits.length ? 'Anytime' : 'Now';
+                const icon = (timeOfDay === 'morning' || timeOfDay === 'anytime') && morningHabits.length ? '⚡' : '⚡';
+                html += `<div class="habits-section">
+                    <div class="section-header">
+                        <span class="section-icon">${icon}</span>
+                        <span class="section-title">${title}</span>
+                        <span class="section-count">${anytimeToShow.length}</span>
+                    </div>
+                    <div class="habits-grid">${anytimeToShow.map(h => renderHabitIcon(h)).join('')}</div>
+                </div>`;
+            }
+
+            // Later section
             if (laterHabits.length) {
                 if (collapsedSections['later'] === undefined) collapsedSections['later'] = true;
                 const collapsed = collapsedSections['later'];
-                html += `<div class="section-divider" onclick="toggleSection('later')" style="cursor:pointer">
-                    Later <span style="font-size:0.5rem">${collapsed ? '▶' : '▼'}</span> (${laterHabits.length})
+                const contentClass = collapsed ? 'section-content collapsed' : 'section-content';
+                const headerClass = collapsed ? 'section-header collapsible collapsed' : 'section-header collapsible';
+                html += `<div class="habits-section inactive-section">
+                    <div class="${headerClass}" onclick="toggleSection('later')">
+                        <span class="section-icon">🕐</span>
+                        <span class="section-title">Later</span>
+                        <span class="collapse-icon">▼</span>
+                        <span class="section-count">${laterHabits.length}</span>
+                    </div>
+                    <div class="${contentClass}">
+                        <div class="habits-grid">${laterHabits.map(h => renderHabitIcon(h, true)).join('')}</div>
+                    </div>
                 </div>`;
-                if (!collapsed) {
-                    html += `<div class="habits-grid">${laterHabits.map(h => renderHabitIcon(h, true)).join('')}</div>`;
-                }
             }
 
-            // Completed section - compact
+            // Done section
             if (completedHabits.length) {
                 if (collapsedSections['completed'] === undefined) collapsedSections['completed'] = true;
                 const collapsed = collapsedSections['completed'];
-                html += `<div class="section-divider" onclick="toggleSection('completed')" style="cursor:pointer">
-                    Done <span style="font-size:0.5rem">${collapsed ? '▶' : '▼'}</span> (${completedHabits.length})
+                const contentClass = collapsed ? 'section-content collapsed' : 'section-content';
+                const headerClass = collapsed ? 'section-header collapsible collapsed' : 'section-header collapsible';
+                html += `<div class="habits-section inactive-section">
+                    <div class="${headerClass}" onclick="toggleSection('completed')">
+                        <span class="section-icon">✓</span>
+                        <span class="section-title">Done</span>
+                        <span class="collapse-icon">▼</span>
+                        <span class="section-count">${completedHabits.length}</span>
+                    </div>
+                    <div class="${contentClass}">
+                        <div class="habits-grid">${completedHabits.map(h => renderHabitIcon(h, false, true)).join('')}</div>
+                    </div>
                 </div>`;
-                if (!collapsed) {
-                    html += `<div class="habits-grid">${completedHabits.map(h => renderHabitIcon(h, false, true)).join('')}</div>`;
-                }
             }
 
-            if (!html) html = '<div class="empty-state"><div class="empty-state-icon">✓</div><div>All done!</div></div>';
+            if (!html) html = '<div class="habits-section"><div class="empty-state"><div class="empty-state-icon">✓</div><div>All done!</div></div></div>';
             container.innerHTML = html;
         }
 
@@ -1062,12 +1132,17 @@
             let progress = '0%';
             let ringClass = '';
 
+            // Click handlers: left click = complete (or details if completed), right click = details
+            const leftClick = isCompleted ? `openDetails(${habit.id})` : `completeHabit(${habit.id})`;
+            const rightClick = `event.preventDefault();openDetails(${habit.id})`;
+
             if (habit.frequency.type === 'twiceDaily') {
-                // Split ring for twice daily
+                // Split ring for twice daily - left click completes, right click opens details
                 const timeOfDay = getTimeOfDayNow();
                 const morningMissed = timeOfDay === 'night' && !status.morningDone;
-                return `<div class="habit-icon" onclick="openDetails(${habit.id})">
-                    <div class="habit-ring split ${needsAttention ? 'needs-attention' : ''}">
+                const bothDone = status.morningDone && status.nightDone;
+                return `<div class="habit-icon" onclick="${bothDone ? `openDetails(${habit.id})` : `completeTwiceDaily(${habit.id})`}" oncontextmenu="${rightClick}">
+                    <div class="habit-ring split ${needsAttention ? 'needs-attention' : ''} ${bothDone ? 'completed' : ''}">
                         <div class="half-fill left ${status.morningDone ? 'filled' : (morningMissed ? 'missed' : '')}"></div>
                         <div class="half-fill right ${status.nightDone ? 'filled' : ''}"></div>
                         <span class="habit-emoji">${icon}</span>
@@ -1092,7 +1167,7 @@
                 if (needsAttention) ringClass = 'overdue';
             }
 
-            return `<div class="habit-icon" onclick="${isCompleted ? `openDetails(${habit.id})` : `completeHabit(${habit.id})`}" oncontextmenu="event.preventDefault();openDetails(${habit.id})">
+            return `<div class="habit-icon" onclick="${leftClick}" oncontextmenu="${rightClick}">
                 <div class="habit-ring ${ringClass} ${needsAttention && !isCompleted ? 'needs-attention' : ''}" style="--progress: ${progress}">
                     <span class="habit-emoji">${icon}</span>
                 </div>
@@ -1364,7 +1439,7 @@
             editHideSubtasks = habit.showSubtasksOnMain === false;
             editIcon = habit.icon || HABIT_EMOJIS[0];
             renderDetails();
-            renderEditEmojiPicker(habit.icon || HABIT_EMOJIS[0]);
+            renderEditEmojiPicker(habit.icon || HABIT_EMOJIS[0], id);
             document.getElementById('detailsOverlay').classList.add('active');
         }
         function closeDetails() { document.getElementById('detailsOverlay').classList.remove('active'); selectedHabitId = null; editMode = false; }
@@ -1380,7 +1455,7 @@
                 editIcon = habit.icon || HABIT_EMOJIS[0];
             }
             renderDetails();
-            if (editMode) renderEditEmojiPicker(habit.icon || HABIT_EMOJIS[0]);
+            if (editMode) renderEditEmojiPicker(habit.icon || HABIT_EMOJIS[0], selectedHabitId);
         }
 
         function toggleEditTime(t) {
@@ -1404,15 +1479,19 @@
 
         function selectEditIcon(emoji) {
             editIcon = emoji;
-            renderEditEmojiPicker(emoji);
+            renderEditEmojiPicker(emoji, selectedHabitId);
         }
 
-        function renderEditEmojiPicker(selected) {
+        function renderEditEmojiPicker(selected, excludeId = null) {
             const container = document.getElementById('editEmojiPicker');
             if (!container) return;
-            container.innerHTML = HABIT_EMOJIS.map(e =>
-                `<div class="emoji-option ${e === selected ? 'selected' : ''}" onclick="selectEditIcon('${e}')">${e}</div>`
-            ).join('');
+            const usedIcons = getUsedIcons(excludeId);
+            container.innerHTML = HABIT_EMOJIS.map(e => {
+                const isUsed = usedIcons.has(e);
+                const isSelected = e === selected;
+                return `<div class="emoji-option ${isSelected ? 'selected' : ''} ${isUsed ? 'used' : ''}"
+                    onclick="${isUsed ? '' : `selectEditIcon('${e}')`}">${e}</div>`;
+            }).join('');
         }
 
         function saveHabitEdit() {
