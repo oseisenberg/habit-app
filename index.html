@@ -27,8 +27,9 @@
 
         /* Icon Grid Layout */
         .habits-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 8px; }
+        .habit-icon-wrapper { display: flex; flex-direction: column; align-items: center; }
         .habit-icon {
-            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            display: flex; flex-direction: column; align-items: center; gap: 2px;
             cursor: pointer; padding: 4px; border-radius: 12px; transition: background 0.15s;
         }
         .habit-icon:active { background: rgba(255,255,255,0.05); }
@@ -46,31 +47,46 @@
         .habit-ring.completed { background: #4ade80; }
         .habit-ring.completed::before { background: #4ade80; }
         .habit-ring.overdue { background: conic-gradient(#dc2626 var(--progress), #2a2a3e var(--progress)); }
-        .habit-ring.needs-attention::after {
-            content: ''; position: absolute; top: -2px; right: -2px;
-            width: 10px; height: 10px; background: #dc2626; border-radius: 50%;
-            border: 2px solid #1a1a2e;
-        }
+
+        /* Neglect indicators - 1 to 3 red dots */
+        .neglect-dots { position: absolute; top: -4px; right: -4px; display: flex; gap: 2px; }
+        .neglect-dot { width: 8px; height: 8px; background: #dc2626; border-radius: 50%; border: 1.5px solid #1a1a2e; }
 
         .habit-emoji {
             position: relative; z-index: 1; font-size: 1.3rem; line-height: 1;
         }
         .habit-ring.completed .habit-emoji { filter: brightness(1.2); }
 
-        /* Twice daily split ring */
+        /* Twice daily split ring with divider */
         .habit-ring.split { background: #2a2a3e; }
         .habit-ring.split .half-fill {
-            position: absolute; width: 50%; height: 100%; top: 0;
+            position: absolute; width: calc(50% - 1px); height: 100%; top: 0;
         }
         .habit-ring.split .half-fill.left { left: 0; border-radius: 26px 0 0 26px; }
         .habit-ring.split .half-fill.right { right: 0; border-radius: 0 26px 26px 0; }
         .habit-ring.split .half-fill.filled { background: #4ade80; }
         .habit-ring.split .half-fill.missed { background: #dc262666; }
+        .habit-ring.split .divider {
+            position: absolute; width: 2px; height: 100%; left: 50%; transform: translateX(-50%);
+            background: linear-gradient(to bottom, transparent 4px, #555 4px, #555 calc(100% - 4px), transparent calc(100% - 4px));
+            z-index: 0;
+        }
 
-        /* Subtask dots */
-        .subtask-dots { display: flex; gap: 3px; justify-content: center; margin-top: 2px; }
-        .subtask-dot { width: 4px; height: 4px; border-radius: 50%; background: #444; }
-        .subtask-dot.done { background: #4ade80; }
+        /* Subtask icons - smaller, connected to parent */
+        .subtask-icons { display: flex; gap: 4px; margin-top: 2px; justify-content: center; flex-wrap: wrap; max-width: 80px; }
+        .subtask-icon {
+            width: 24px; height: 24px; border-radius: 50%; position: relative;
+            display: flex; align-items: center; justify-content: center;
+            background: #2a2a3e; cursor: pointer; transition: all 0.15s;
+        }
+        .subtask-icon::before {
+            content: ''; position: absolute; width: 18px; height: 18px;
+            background: #1a1a2e; border-radius: 50%;
+        }
+        .subtask-icon.completed { background: #4ade80; }
+        .subtask-icon.completed::before { background: #4ade80; }
+        .subtask-icon .subtask-emoji { position: relative; z-index: 1; font-size: 0.6rem; }
+        .subtask-icon:active { transform: scale(0.9); }
 
         /* Prominent section containers */
         .habits-section { background: #1a1a2e; border-radius: 12px; margin-bottom: 8px; overflow: hidden; }
@@ -1125,7 +1141,7 @@
         function renderHabitIcon(habit, isLater = false, isCompleted = false) {
             const status = getCompletionStatus(habit);
             const scoreData = calculateMomentumScore(habit);
-            const needsAttention = habit.lastScoreUpdate && scoreData.display < 0;
+            const neglectLevel = habit.lastScoreUpdate && scoreData.display < 0 ? Math.min(3, Math.abs(scoreData.display)) : 0;
             const icon = habit.icon || '📌';
 
             // Calculate progress for ring
@@ -1136,18 +1152,26 @@
             const leftClick = isCompleted ? `openDetails(${habit.id})` : `completeHabit(${habit.id})`;
             const rightClick = `event.preventDefault();openDetails(${habit.id})`;
 
+            // Render neglect dots (1-3 based on neglect level)
+            const neglectDots = neglectLevel > 0 ?
+                `<div class="neglect-dots">${'<div class="neglect-dot"></div>'.repeat(neglectLevel)}</div>` : '';
+
             if (habit.frequency.type === 'twiceDaily') {
-                // Split ring for twice daily - left click completes, right click opens details
+                // Split ring for twice daily - with divider line
                 const timeOfDay = getTimeOfDayNow();
                 const morningMissed = timeOfDay === 'night' && !status.morningDone;
                 const bothDone = status.morningDone && status.nightDone;
-                return `<div class="habit-icon" onclick="${bothDone ? `openDetails(${habit.id})` : `completeTwiceDaily(${habit.id})`}" oncontextmenu="${rightClick}">
-                    <div class="habit-ring split ${needsAttention ? 'needs-attention' : ''} ${bothDone ? 'completed' : ''}">
-                        <div class="half-fill left ${status.morningDone ? 'filled' : (morningMissed ? 'missed' : '')}"></div>
-                        <div class="half-fill right ${status.nightDone ? 'filled' : ''}"></div>
-                        <span class="habit-emoji">${icon}</span>
+                return `<div class="habit-icon-wrapper">
+                    <div class="habit-icon" onclick="${bothDone ? `openDetails(${habit.id})` : `completeTwiceDaily(${habit.id})`}" oncontextmenu="${rightClick}">
+                        <div class="habit-ring split ${bothDone ? 'completed' : ''}">
+                            <div class="half-fill left ${status.morningDone ? 'filled' : (morningMissed ? 'missed' : '')}"></div>
+                            <div class="half-fill right ${status.nightDone ? 'filled' : ''}"></div>
+                            <div class="divider"></div>
+                            <span class="habit-emoji">${icon}</span>
+                            ${neglectDots}
+                        </div>
                     </div>
-                    ${renderSubtaskDots(habit)}
+                    ${renderSubtaskIcons(habit)}
                 </div>`;
             }
 
@@ -1157,31 +1181,38 @@
             } else if (habit.frequency.type === 'timesPerWeek' && status.count !== undefined) {
                 const pct = Math.round((status.count / status.target) * 100);
                 progress = pct + '%';
-                if (needsAttention) ringClass = 'overdue';
+                if (neglectLevel > 0) ringClass = 'overdue';
             } else if (habit.frequency.type === 'timesPerMonth' && status.count !== undefined) {
                 const pct = Math.round((status.count / status.target) * 100);
                 progress = pct + '%';
-                if (needsAttention) ringClass = 'overdue';
+                if (neglectLevel > 0) ringClass = 'overdue';
             } else {
                 progress = '0%';
-                if (needsAttention) ringClass = 'overdue';
+                if (neglectLevel > 0) ringClass = 'overdue';
             }
 
-            return `<div class="habit-icon" onclick="${leftClick}" oncontextmenu="${rightClick}">
-                <div class="habit-ring ${ringClass} ${needsAttention && !isCompleted ? 'needs-attention' : ''}" style="--progress: ${progress}">
-                    <span class="habit-emoji">${icon}</span>
+            return `<div class="habit-icon-wrapper">
+                <div class="habit-icon" onclick="${leftClick}" oncontextmenu="${rightClick}">
+                    <div class="habit-ring ${ringClass}" style="--progress: ${progress}">
+                        <span class="habit-emoji">${icon}</span>
+                        ${neglectDots}
+                    </div>
                 </div>
-                ${renderSubtaskDots(habit)}
+                ${renderSubtaskIcons(habit)}
             </div>`;
         }
 
-        function renderSubtaskDots(habit) {
+        function renderSubtaskIcons(habit) {
             if (!habit.subtasks || habit.subtasks.length === 0) return '';
-            const dots = habit.subtasks.map(s => {
+            const icons = habit.subtasks.map((s, idx) => {
                 const done = isSubtaskCompleted(habit, s.id);
-                return `<div class="subtask-dot ${done ? 'done' : ''}"></div>`;
+                // Use numbers or simple symbols for subtasks
+                const subtaskSymbol = (idx + 1);
+                return `<div class="subtask-icon ${done ? 'completed' : ''}" onclick="event.stopPropagation();toggleSubtask(${habit.id}, ${s.id})">
+                    <span class="subtask-emoji">${subtaskSymbol}</span>
+                </div>`;
             }).join('');
-            return `<div class="subtask-dots">${dots}</div>`;
+            return `<div class="subtask-icons">${icons}</div>`;
         }
 
         function renderLaterSection(habits, collapsed) {
@@ -1711,14 +1742,21 @@
             const yesterdayStr = yesterday.toISOString().split('T')[0];
 
             const testHabits = [
-                { id: 1, name: 'Brush teeth', icon: '🦷', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [{ date: today, period: 'morning', timestamp: Date.now() }], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 2, name: 'Meditate', icon: '🧘', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 3, name: 'Exercise', icon: '🏃', timeOfDay: 'morning', frequency: { type: 'timesPerWeek', timesPerWeek: 4, everyXDays: 2 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 4, name: 'Read', icon: '📚', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 5, name: 'Journal', icon: '✍️', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 6, name: 'Water plants', icon: '🌱', timeOfDay: 'morning', frequency: { type: 'everyXDays', timesPerWeek: 3, everyXDays: 3 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 7, name: 'Take vitamins', icon: '💊', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [{ date: today, period: null, timestamp: Date.now() }], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 8, name: 'Skincare', icon: '✨', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr }
+                { id: 1, name: 'Brush teeth', icon: '🦷', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [{ date: today, period: 'morning', timestamp: Date.now() }], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 2, name: 'Meditate', icon: '🧘', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 3, name: 'Exercise', icon: '🏃', timeOfDay: 'morning', frequency: { type: 'timesPerWeek', timesPerWeek: 4, everyXDays: 2 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], snoozedUntil: null, subtasks: [
+                    { id: 301, name: 'Warmup', completedPeriods: {} },
+                    { id: 302, name: 'Cardio', completedPeriods: {} },
+                    { id: 303, name: 'Strength', completedPeriods: {} }
+                ], createdAt: yesterdayStr },
+                { id: 4, name: 'Read', icon: '📚', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 5, name: 'Journal', icon: '✍️', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 6, name: 'Water plants', icon: '🌱', timeOfDay: 'morning', frequency: { type: 'everyXDays', timesPerWeek: 3, everyXDays: 3 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 7, name: 'Take vitamins', icon: '💊', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [{ date: today, period: null, timestamp: Date.now() }], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 8, name: 'Skincare', icon: '✨', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [
+                    { id: 801, name: 'Cleanse', completedPeriods: {} },
+                    { id: 802, name: 'Moisturize', completedPeriods: {} }
+                ], createdAt: yesterdayStr }
             ];
             saveHabits(testHabits);
             renderHabits();
