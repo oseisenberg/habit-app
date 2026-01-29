@@ -126,6 +126,7 @@
         .detail-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2a2a3e; }
         .detail-label { color: #888; font-size: 0.85rem; }
         .detail-value { color: #fff; font-size: 0.85rem; }
+        .detail-value.red { color: #dc2626; }
 
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 16px 0; }
         .stat-box { background: #0f0f1a; border-radius: 10px; padding: 12px 8px; text-align: center; }
@@ -146,7 +147,7 @@
 
         /* Half-circle checkbox for twice daily */
         .half-circle {
-            width: 24px; height: 24px; border-radius: 50%; border: 2px solid #444;
+            width: 28px; height: 28px; border-radius: 50%; border: 2px solid #444;
             background: transparent; cursor: pointer; position: relative; flex-shrink: 0;
             overflow: hidden;
         }
@@ -1134,7 +1135,7 @@
             }
 
             saveHabits(habits);
-            renderDetails();
+            if (selectedHabitId) renderDetails();
             renderHabits();
         }
 
@@ -1397,14 +1398,14 @@
             const yesterdayStr = yesterday.toISOString().split('T')[0];
 
             const testHabits = [
-                { id: 1, name: 'Brush teeth', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [{ date: today, period: 'morning', timestamp: Date.now() }], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 2, name: 'Meditate', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 3, name: 'Exercise', timeOfDay: 'morning', frequency: { type: 'timesPerWeek', timesPerWeek: 4, everyXDays: 2 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 4, name: 'Read', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 5, name: 'Journal', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 6, name: 'Water plants', timeOfDay: 'morning', frequency: { type: 'everyXDays', timesPerWeek: 3, everyXDays: 3 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 7, name: 'Take vitamins', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [{ date: today, period: null, timestamp: Date.now() }], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr },
-                { id: 8, name: 'Skincare', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [], skippedDates: [], snoozedUntil: null, createdAt: yesterdayStr }
+                { id: 1, name: 'Brush teeth', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [{ date: today, period: 'morning', timestamp: Date.now() }], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 2, name: 'Meditate', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 3, name: 'Exercise', timeOfDay: 'morning', frequency: { type: 'timesPerWeek', timesPerWeek: 4, everyXDays: 2 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 4, name: 'Read', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 5, name: 'Journal', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 6, name: 'Water plants', timeOfDay: 'morning', frequency: { type: 'everyXDays', timesPerWeek: 3, everyXDays: 3 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 7, name: 'Take vitamins', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [{ date: today, period: null, timestamp: Date.now() }], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 8, name: 'Skincare', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr }
             ];
             saveHabits(testHabits);
             renderHabits();
