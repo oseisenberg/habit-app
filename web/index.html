@@ -1407,16 +1407,17 @@
             if (nowHabits.length) {
                 let nowContent = '';
 
-                // Anytime habits first (no header), then time-specific with header
-                if (anytimeHabits.length) {
-                    nowContent += `<div class="habits-grid">${anytimeHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
-                }
+                // Time-specific habits first, then Anytime section after
                 if (timeOfDay === 'morning' && morningSpecific.length) {
                     nowContent += `<div class="sub-header"><span class="sub-header-icon">🌅</span>Morning</div>`;
                     nowContent += `<div class="habits-grid">${morningSpecific.map(h => renderHabitIcon(h)).join('')}</div>`;
                 } else if (timeOfDay === 'night' && bedtimeSpecific.length) {
                     nowContent += `<div class="sub-header"><span class="sub-header-icon">🌙</span>Bedtime</div>`;
                     nowContent += `<div class="habits-grid">${bedtimeSpecific.map(h => renderHabitIcon(h)).join('')}</div>`;
+                }
+                if (anytimeHabits.length) {
+                    nowContent += `<div class="sub-header"><span class="sub-header-icon">⚡</span>Anytime</div>`;
+                    nowContent += `<div class="habits-grid">${anytimeHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
                 }
 
                 html += `<div class="habits-section">
