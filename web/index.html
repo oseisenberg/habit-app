@@ -426,14 +426,14 @@
                 <div style="display:flex;gap:8px;margin-bottom:6px">
                     <label class="form-label" style="margin:0;width:48px;flex-shrink:0">Icon</label>
                     <label class="form-label" style="margin:0;flex:1">Name</label>
-                    <label class="form-label" style="margin:0">Time</label>
+                    <label class="form-label" style="margin:0;width:72px;flex-shrink:0">Time</label>
                 </div>
-                <div style="display:flex;gap:8px;align-items:center">
-                    <div class="emoji-select-btn" id="emojiSelectBtn" onclick="openEmojiPopup('new')" style="padding:8px;flex-shrink:0;width:48px;justify-content:center">
+                <div style="display:flex;gap:8px;align-items:stretch;height:44px">
+                    <div class="emoji-select-btn" id="emojiSelectBtn" onclick="openEmojiPopup('new')" style="flex-shrink:0;width:48px;justify-content:center;box-sizing:border-box">
                         <span class="emoji-select-icon" id="selectedEmojiDisplay" style="width:auto;height:auto">📌</span>
                     </div>
-                    <input type="text" class="form-input" id="habitInput" placeholder="e.g., Brush teeth..." style="flex:1;margin:0" />
-                    <div class="time-toggle" id="timeToggle">
+                    <input type="text" class="form-input" id="habitInput" placeholder="e.g., Brush teeth..." style="flex:1;margin:0;box-sizing:border-box" />
+                    <div class="time-toggle" id="timeToggle" style="height:100%">
                         <button type="button" class="time-toggle-btn" data-time="morning" onclick="toggleTime('morning')">🌅</button>
                         <button type="button" class="time-toggle-btn" data-time="night" onclick="toggleTime('night')">🌙</button>
                     </div>
@@ -2024,14 +2024,14 @@
                         <div style="display:flex;gap:8px;margin-bottom:6px">
                             <label class="form-label" style="margin:0;width:48px;flex-shrink:0">Icon</label>
                             <label class="form-label" style="margin:0;flex:1">Name</label>
-                            <label class="form-label" style="margin:0">Time</label>
+                            <label class="form-label" style="margin:0;width:72px;flex-shrink:0">Time</label>
                         </div>
-                        <div style="display:flex;gap:8px;align-items:center">
-                            <div class="emoji-select-btn" onclick="openEmojiPopup('edit', ${habit.id})" style="padding:8px;flex-shrink:0;width:48px;justify-content:center">
+                        <div style="display:flex;gap:8px;align-items:stretch;height:44px">
+                            <div class="emoji-select-btn" onclick="openEmojiPopup('edit', ${habit.id})" style="flex-shrink:0;width:48px;justify-content:center;box-sizing:border-box">
                                 <span class="emoji-select-icon" id="editSelectedEmojiDisplay" style="width:auto;height:auto">${currentIcon}</span>
                             </div>
-                            <input type="text" class="form-input" id="editHabitName" value="${escapeHtml(habit.name)}" style="flex:1;margin:0" />
-                            <div class="time-toggle" id="editTimeToggle">
+                            <input type="text" class="form-input" id="editHabitName" value="${escapeHtml(habit.name)}" style="flex:1;margin:0;box-sizing:border-box" />
+                            <div class="time-toggle" id="editTimeToggle" style="height:100%">
                                 <button type="button" class="time-toggle-btn ${currentTime === 'morning' ? 'active' : ''} ${currentFreq === 'twiceDaily' ? 'disabled' : ''}" data-time="morning" onclick="toggleEditTime('morning')">🌅</button>
                                 <button type="button" class="time-toggle-btn ${currentTime === 'night' ? 'active' : ''} ${currentFreq === 'twiceDaily' ? 'disabled' : ''}" data-time="night" onclick="toggleEditTime('night')">🌙</button>
                             </div>
