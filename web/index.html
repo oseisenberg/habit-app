@@ -744,9 +744,8 @@
         function getTimeOfDayNow() {
             const s = getSettings();
             const hour = debugHourOverride !== null ? debugHourOverride : new Date().getHours();
-            if (hour < s.morningStart) return 'night';
-            if (hour < 12) return 'morning';
-            if (hour < s.nightStart) return 'anytime';
+            // Only two periods: morning (until nightStart) and night/bedtime
+            if (hour >= s.morningStart && hour < s.nightStart) return 'morning';
             return 'night';
         }
 
@@ -1318,10 +1317,8 @@
             // Twice daily: special handling - only fully done if BOTH periods complete
             if (habit.frequency.type === 'twiceDaily') {
                 if (status.morningDone && status.nightDone) return false; // Fully done
-                // Morning done, waiting for bedtime (during anytime or morning periods)
-                if (status.morningDone && !status.nightDone && timeOfDay !== 'night') return true;
-                // During anytime, if morning not done yet, still goes to Later (waiting for bedtime, skip anytime)
-                if (!status.morningDone && timeOfDay === 'anytime') return true;
+                // Morning done, waiting for bedtime (during morning period)
+                if (status.morningDone && !status.nightDone && timeOfDay === 'morning') return true;
                 return false;
             }
 
@@ -1383,8 +1380,8 @@
             if (nowHabits.length) {
                 let nowContent = '';
 
-                if (timeOfDay === 'morning' || timeOfDay === 'anytime') {
-                    // Morning/daytime: show Morning and Anytime sub-sections
+                if (timeOfDay === 'morning') {
+                    // Morning: show Morning and Anytime sub-sections
                     const showMorningSections = morningHabits.length > 0 && anytimeHabits.length > 0;
                     if (showMorningSections) {
                         nowContent += `<div class="sub-header"><span class="sub-header-icon">🌅</span>Morning</div>`;
@@ -1411,8 +1408,6 @@
                     } else {
                         nowContent += `<div class="habits-grid">${nowHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
                     }
-                } else {
-                    nowContent += `<div class="habits-grid">${nowHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
                 }
 
                 html += `<div class="habits-section">
