@@ -965,8 +965,8 @@
             document.getElementById('reminderPill').classList.toggle('active', isReminderMode);
             document.getElementById('frequencyRow').style.display = isReminderMode ? 'none' : 'flex';
             document.getElementById('reminderRow').style.display = isReminderMode ? 'flex' : 'none';
-            // Update other pill states
-            updatePillStates();
+            // Re-run frequency selection to update inputs and pill states
+            selectFrequency(selectedFrequency);
         }
 
         function togglePointsMode() {
