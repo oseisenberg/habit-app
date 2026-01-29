@@ -578,9 +578,8 @@
     <!-- Debug -->
     <button class="debug-toggle" id="debugToggle" onclick="toggleDebug()">🐛</button>
     <div class="debug-panel" id="debugPanel">
-        <div class="debug-row"><span class="debug-label">Real:</span><span class="debug-value" id="debugRealDate"></span></div>
-        <div class="debug-row"><span class="debug-label">Sim:</span><span class="debug-value" id="debugSimDate"></span></div>
-        <div class="debug-row"><span class="debug-label">Period:</span><span class="debug-value" id="debugPeriod"></span></div>
+        <div class="debug-row"><span class="debug-label">Real:</span><span class="debug-value"><span id="debugRealDate"></span> <span id="debugRealPeriod" style="color:#888"></span></span></div>
+        <div class="debug-row"><span class="debug-label">Sim:</span><span class="debug-value"><span id="debugSimDate"></span> <span id="debugSimPeriod" style="color:#888"></span></span></div>
         <div class="debug-controls">
             <button class="debug-btn debug-btn-nav" onclick="debugChangeDay(-1)">←</button>
             <button class="debug-btn debug-btn-nav" onclick="debugChangeDay(1)">→</button>
@@ -734,9 +733,13 @@
             updateDisplay();
         }
         function updateDebugDisplay() {
+            const s = getSettings();
+            const realHour = new Date().getHours();
+            const realPeriod = (realHour >= s.morningStart && realHour < s.nightStart) ? 'morning' : 'night';
             document.getElementById('debugRealDate').textContent = new Date().toLocaleDateString();
+            document.getElementById('debugRealPeriod').textContent = realPeriod;
             document.getElementById('debugSimDate').textContent = getSimulatedDate().toLocaleDateString();
-            document.getElementById('debugPeriod').textContent = getTimeOfDayNow();
+            document.getElementById('debugSimPeriod').textContent = getTimeOfDayNow();
         }
 
         function getSimulatedDate() {
