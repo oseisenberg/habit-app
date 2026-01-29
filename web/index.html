@@ -160,16 +160,10 @@
         .form-input:focus { border-color: #667eea; }
         .form-input::placeholder { color: #444; }
 
-        .time-options { display: flex; gap: 6px; }
-        .time-option {
-            flex: 1; padding: 8px 4px; border: 1px solid #2a2a3e; border-radius: 8px;
-            background: #0f0f1a; cursor: pointer; text-align: center; transition: all 0.15s;
-        }
-        .time-option.selected { border-color: #667eea; background: rgba(102, 126, 234, 0.15); }
-        .time-option.disabled { opacity: 0.4; pointer-events: none; }
-        .time-option-icon { font-size: 1rem; display: block; margin-bottom: 1px; }
-        .time-option-label { font-size: 0.65rem; color: #888; }
-        .time-option.selected .time-option-label { color: #667eea; }
+        .time-toggle { display: inline-flex; background: #0a0a14; border-radius: 6px; overflow: hidden; flex-shrink: 0; }
+        .time-toggle-btn { padding: 6px 8px; font-size: 0.85rem; color: #666; cursor: pointer; border: none; background: transparent; min-width: 36px; }
+        .time-toggle-btn.active { background: #667eea; color: white; }
+        .time-toggle-btn.disabled { opacity: 0.4; pointer-events: none; }
 
         .frequency-options { display: flex; flex-direction: column; gap: 4px; }
         .frequency-option {
@@ -432,24 +426,16 @@
                 <div style="display:flex;gap:8px;margin-bottom:6px">
                     <label class="form-label" style="margin:0;width:48px;flex-shrink:0">Icon</label>
                     <label class="form-label" style="margin:0;flex:1">Name</label>
+                    <label class="form-label" style="margin:0">Time</label>
                 </div>
-                <div style="display:flex;gap:8px;align-items:stretch">
+                <div style="display:flex;gap:8px;align-items:center">
                     <div class="emoji-select-btn" id="emojiSelectBtn" onclick="openEmojiPopup('new')" style="padding:8px;flex-shrink:0;width:48px;justify-content:center">
                         <span class="emoji-select-icon" id="selectedEmojiDisplay" style="width:auto;height:auto">📌</span>
                     </div>
                     <input type="text" class="form-input" id="habitInput" placeholder="e.g., Brush teeth..." style="flex:1;margin:0" />
-                </div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Time of Day <span style="font-weight:normal;text-transform:none">(optional)</span></label>
-                <div class="time-options">
-                    <div class="time-option" data-time="morning" onclick="toggleTime('morning')">
-                        <span class="time-option-icon">🌅</span>
-                        <span class="time-option-label">Morning</span>
-                    </div>
-                    <div class="time-option" data-time="night" onclick="toggleTime('night')">
-                        <span class="time-option-icon">🌙</span>
-                        <span class="time-option-label">Bedtime</span>
+                    <div class="time-toggle" id="timeToggle">
+                        <button type="button" class="time-toggle-btn" data-time="morning" onclick="toggleTime('morning')">🌅</button>
+                        <button type="button" class="time-toggle-btn" data-time="night" onclick="toggleTime('night')">🌙</button>
                     </div>
                 </div>
             </div>
@@ -833,7 +819,7 @@
             document.getElementById('selectedEmojiDisplay').textContent = '📌';
             selectedTime = null;
             selectedEmoji = HABIT_EMOJIS[0];
-            document.querySelectorAll('.time-option').forEach(el => el.classList.remove('selected'));
+            document.querySelectorAll('#timeToggle .time-toggle-btn').forEach(el => el.classList.remove('active'));
             selectFrequency('daily');
             // Reset period toggles
             timesPeriod = 'week';
@@ -868,7 +854,7 @@
         function toggleTime(t) {
             // Toggle: if already selected, deselect (set to null/anytime)
             selectedTime = selectedTime === t ? null : t;
-            document.querySelectorAll('.time-option').forEach(el => el.classList.toggle('selected', el.dataset.time === selectedTime));
+            document.querySelectorAll('#timeToggle .time-toggle-btn').forEach(el => el.classList.toggle('active', el.dataset.time === selectedTime));
         }
 
         function selectFrequency(f) {
@@ -880,10 +866,10 @@
             });
             // Disable time options for Twice Daily (it has its own Morning/Bedtime structure)
             const isTwiceDaily = f === 'twiceDaily';
-            document.querySelectorAll('.time-option').forEach(el => {
+            document.querySelectorAll('#timeToggle .time-toggle-btn').forEach(el => {
                 el.classList.toggle('disabled', isTwiceDaily);
                 if (isTwiceDaily) {
-                    el.classList.remove('selected');
+                    el.classList.remove('active');
                     selectedTime = null;
                 }
             });
@@ -2038,24 +2024,16 @@
                         <div style="display:flex;gap:8px;margin-bottom:6px">
                             <label class="form-label" style="margin:0;width:48px;flex-shrink:0">Icon</label>
                             <label class="form-label" style="margin:0;flex:1">Name</label>
+                            <label class="form-label" style="margin:0">Time</label>
                         </div>
-                        <div style="display:flex;gap:8px;align-items:stretch">
+                        <div style="display:flex;gap:8px;align-items:center">
                             <div class="emoji-select-btn" onclick="openEmojiPopup('edit', ${habit.id})" style="padding:8px;flex-shrink:0;width:48px;justify-content:center">
                                 <span class="emoji-select-icon" id="editSelectedEmojiDisplay" style="width:auto;height:auto">${currentIcon}</span>
                             </div>
                             <input type="text" class="form-input" id="editHabitName" value="${escapeHtml(habit.name)}" style="flex:1;margin:0" />
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Time of Day <span style="font-weight:normal;text-transform:none">(optional)</span></label>
-                        <div class="time-options">
-                            <div class="time-option ${currentTime === 'morning' ? 'selected' : ''} ${currentFreq === 'twiceDaily' ? 'disabled' : ''}" onclick="toggleEditTime('morning')">
-                                <span class="time-option-icon">🌅</span>
-                                <span class="time-option-label">Morning</span>
-                            </div>
-                            <div class="time-option ${currentTime === 'night' ? 'selected' : ''} ${currentFreq === 'twiceDaily' ? 'disabled' : ''}" onclick="toggleEditTime('night')">
-                                <span class="time-option-icon">🌙</span>
-                                <span class="time-option-label">Bedtime</span>
+                            <div class="time-toggle" id="editTimeToggle">
+                                <button type="button" class="time-toggle-btn ${currentTime === 'morning' ? 'active' : ''} ${currentFreq === 'twiceDaily' ? 'disabled' : ''}" data-time="morning" onclick="toggleEditTime('morning')">🌅</button>
+                                <button type="button" class="time-toggle-btn ${currentTime === 'night' ? 'active' : ''} ${currentFreq === 'twiceDaily' ? 'disabled' : ''}" data-time="night" onclick="toggleEditTime('night')">🌙</button>
                             </div>
                         </div>
                     </div>
