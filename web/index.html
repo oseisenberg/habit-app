@@ -2189,6 +2189,11 @@
         document.getElementById('habitInput').addEventListener('keypress', e => { if (e.key === 'Enter') addHabit(); });
         document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetails(); closeSettings(); closeSubtaskPopup(); closePointsPopup(); closeEmojiPopup(); closeSnoozePopup(); } });
 
+        // On first visit (no data), load test data as initial experience
+        if (!localStorage.getItem('habits_v3')) {
+            loadTestData();
+        }
+
         // Update scores on page load to persist momentum for missed days
         updateAllHabitScores();
         updateDisplay();
