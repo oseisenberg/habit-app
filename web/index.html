@@ -456,6 +456,10 @@
                         <span class="option-pill-check">✓</span>
                         <span>Reminder</span>
                     </label>
+                    <label class="option-pill" id="pointsPill" onclick="togglePointsMode()" style="display:none">
+                        <span class="option-pill-check">✓</span>
+                        <span>Points</span>
+                    </label>
                     <label class="option-pill" id="subtasksPill" onclick="toggleSubtasksSection()">
                         <span class="option-pill-check">✓</span>
                         <span>Subtasks</span>
@@ -474,7 +478,6 @@
                         <option value="twiceDaily">Twice daily</option>
                         <option value="everyXDays">Every</option>
                         <option value="timesPerPeriod">Times per</option>
-                        <option value="pointsPerPeriod">Points per</option>
                     </select>
                     <div id="frequencyInputs"></div>
                 </div>
@@ -610,6 +613,7 @@
         let newHabitSubtasks = []; // Subtasks for new habit creation
         let showSubtasksInput = false; // Toggle for subtasks input area
         let isReminderMode = false; // Task type: reminder vs regular habit
+        let isPointsMode = false; // Measurement mode: points vs completions
 
         function setTimesPeriod(period) {
             timesPeriod = period;
@@ -826,6 +830,9 @@
             document.getElementById('reminderPill').classList.remove('active');
             document.getElementById('frequencyGroup').style.display = 'block';
             document.getElementById('reminderGroup').style.display = 'none';
+            // Reset points mode
+            isPointsMode = false;
+            document.getElementById('pointsPill').classList.remove('active');
             // Reset frequency dropdown and inputs
             document.getElementById('frequencySelect').value = 'daily';
             selectFrequency('daily');
@@ -872,24 +879,33 @@
             selectedFrequency = f;
             const container = document.getElementById('frequencyInputs');
 
-            // Render inline inputs based on frequency type
+            // Render inline inputs based on frequency type and points mode
             let inputsHtml = '';
-            if (f === 'everyXDays') {
-                inputsHtml = `<input type="number" class="frequency-input" id="everyXDays" value="2" min="1"><span style="color:#888">days</span>`;
+            if (f === 'daily') {
+                if (isPointsMode) {
+                    inputsHtml = `<input type="number" class="frequency-input" id="pointsPerDay" value="5" min="1"><span style="color:#888">pts / day</span>`;
+                }
+            } else if (f === 'everyXDays') {
+                if (isPointsMode) {
+                    inputsHtml = `<input type="number" class="frequency-input" id="pointsTarget" value="5" min="1"><span style="color:#888">pts /</span>
+                        <input type="number" class="frequency-input" id="everyXDays" value="2" min="1"><span style="color:#888">days</span>`;
+                } else {
+                    inputsHtml = `<input type="number" class="frequency-input" id="everyXDays" value="2" min="1"><span style="color:#888">days</span>`;
+                }
             } else if (f === 'timesPerPeriod') {
-                inputsHtml = `<input type="number" class="frequency-input" id="timesPerPeriod" value="3" min="1" max="31">
-                    <div class="period-toggle">
-                        <button type="button" class="period-toggle-btn active" id="timesWeekBtn" onclick="setTimesPeriod('week')">wk</button>
-                        <button type="button" class="period-toggle-btn" id="timesMonthBtn" onclick="setTimesPeriod('month')">mo</button>
-                    </div>`;
-            } else if (f === 'pointsPerPeriod') {
-                inputsHtml = `<input type="number" class="frequency-input" id="pointsPerPeriod" value="12" min="1"><span style="color:#888">pts /</span>
-                    <div class="period-toggle">
-                        <button type="button" class="period-toggle-btn active" id="pointsWeekBtn" onclick="setPointsPeriod('week')">wk</button>
-                        <button type="button" class="period-toggle-btn" id="pointsMonthBtn" onclick="setPointsPeriod('month')">mo</button>
-                    </div>`;
-            } else if (f === 'reminder') {
-                inputsHtml = `<span style="color:#888">every</span><input type="number" class="frequency-input" id="reminderDays" value="1" min="1"><span style="color:#888">days</span>`;
+                if (isPointsMode) {
+                    inputsHtml = `<input type="number" class="frequency-input" id="pointsPerPeriod" value="12" min="1"><span style="color:#888">pts /</span>
+                        <div class="period-toggle">
+                            <button type="button" class="period-toggle-btn ${pointsPeriod === 'week' ? 'active' : ''}" id="pointsWeekBtn" onclick="setPointsPeriod('week')">wk</button>
+                            <button type="button" class="period-toggle-btn ${pointsPeriod === 'month' ? 'active' : ''}" id="pointsMonthBtn" onclick="setPointsPeriod('month')">mo</button>
+                        </div>`;
+                } else {
+                    inputsHtml = `<input type="number" class="frequency-input" id="timesPerPeriod" value="3" min="1" max="31">
+                        <div class="period-toggle">
+                            <button type="button" class="period-toggle-btn ${timesPeriod === 'week' ? 'active' : ''}" id="timesWeekBtn" onclick="setTimesPeriod('week')">wk</button>
+                            <button type="button" class="period-toggle-btn ${timesPeriod === 'month' ? 'active' : ''}" id="timesMonthBtn" onclick="setTimesPeriod('month')">mo</button>
+                        </div>`;
+                }
             }
             container.innerHTML = inputsHtml;
 
@@ -902,13 +918,19 @@
                     selectedTime = null;
                 }
             });
-            // Show optional pill only for frequency types that support it
-            const supportsOptional = f === 'timesPerPeriod' || f === 'pointsPerPeriod';
+            // Show Points pill for frequencies that support it (not twiceDaily)
+            const supportsPoints = f !== 'twiceDaily';
+            document.getElementById('pointsPill').style.display = supportsPoints ? 'inline-flex' : 'none';
+            if (!supportsPoints && isPointsMode) {
+                isPointsMode = false;
+                document.getElementById('pointsPill').classList.remove('active');
+            }
+            // Show optional pill for timesPerPeriod (works with both completions and points)
+            const supportsOptional = f === 'timesPerPeriod';
             document.getElementById('optionalPill').style.display = supportsOptional ? 'inline-flex' : 'none';
-            // Hide subtasks pill for points-based habits
-            const isPointsBased = f === 'pointsPerPeriod';
-            document.getElementById('subtasksPill').style.display = isPointsBased ? 'none' : 'inline-flex';
-            if (isPointsBased && showSubtasksInput) {
+            // Hide subtasks pill when in points mode
+            document.getElementById('subtasksPill').style.display = isPointsMode ? 'none' : 'inline-flex';
+            if (isPointsMode && showSubtasksInput) {
                 showSubtasksInput = false;
                 document.getElementById('subtasksPill').classList.remove('active');
                 document.getElementById('subtasksInputArea').style.display = 'none';
@@ -920,13 +942,21 @@
             document.getElementById('reminderPill').classList.toggle('active', isReminderMode);
             document.getElementById('frequencyGroup').style.display = isReminderMode ? 'none' : 'block';
             document.getElementById('reminderGroup').style.display = isReminderMode ? 'block' : 'none';
-            // Hide optional pill when in reminder mode, restore based on frequency when off
+            // Hide points and optional pills when in reminder mode
             if (isReminderMode) {
+                document.getElementById('pointsPill').style.display = 'none';
                 document.getElementById('optionalPill').style.display = 'none';
             } else {
-                const supportsOptional = selectedFrequency === 'timesPerPeriod' || selectedFrequency === 'pointsPerPeriod';
-                document.getElementById('optionalPill').style.display = supportsOptional ? 'inline-flex' : 'none';
+                // Restore pills based on current frequency
+                selectFrequency(selectedFrequency);
             }
+        }
+
+        function togglePointsMode() {
+            isPointsMode = !isPointsMode;
+            document.getElementById('pointsPill').classList.toggle('active', isPointsMode);
+            // Re-render frequency inputs to show points or times
+            selectFrequency(selectedFrequency);
         }
 
         function toggleAllowOptional() {
@@ -988,17 +1018,24 @@
             let freqType;
             if (isReminderMode) {
                 freqType = 'reminder';
+            } else if (isPointsMode) {
+                // Points mode: frequency determines the period, points mode determines measurement
+                if (selectedFrequency === 'timesPerPeriod') {
+                    freqType = pointsPeriod === 'week' ? 'pointsPerWeek' : 'pointsPerMonth';
+                } else {
+                    freqType = selectedFrequency; // daily, everyXDays with points
+                }
             } else {
-                // Convert combined frequency types to actual types
+                // Normal completion mode
                 freqType = selectedFrequency;
                 if (selectedFrequency === 'timesPerPeriod') {
                     freqType = timesPeriod === 'week' ? 'timesPerWeek' : 'timesPerMonth';
-                } else if (selectedFrequency === 'pointsPerPeriod') {
-                    freqType = pointsPeriod === 'week' ? 'pointsPerWeek' : 'pointsPerMonth';
                 }
             }
             const timesVal = parseInt(document.getElementById('timesPerPeriod')?.value) || 3;
             const pointsVal = parseInt(document.getElementById('pointsPerPeriod')?.value) || 12;
+            const pointsPerDayVal = parseInt(document.getElementById('pointsPerDay')?.value) || 5;
+            const pointsTargetVal = parseInt(document.getElementById('pointsTarget')?.value) || 5;
             const reminderDaysVal = parseInt(document.getElementById('reminderDays')?.value) || 3;
             const everyXDaysVal = parseInt(document.getElementById('everyXDays')?.value) || 2;
             habits.push({
@@ -1012,8 +1049,11 @@
                     timesPerMonth: timesVal,
                     pointsPerWeek: pointsVal,
                     pointsPerMonth: pointsVal,
+                    pointsPerDay: pointsPerDayVal,
+                    pointsTarget: pointsTargetVal, // For everyXDays + points
                     reminderDays: reminderDaysVal
                 },
+                usePoints: isPointsMode, // Whether to measure by points vs completions
                 allowOptional: allowOptional, // Whether habit can appear in Optional section after target met
                 completions: [], skippedDates: [], snoozedUntil: null, subtasks: [...newHabitSubtasks], createdAt: getTodayString()
             });
