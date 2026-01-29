@@ -183,8 +183,9 @@
         .frequency-row #frequencyInputs { display: flex; align-items: center; gap: 8px; }
         .task-options { display: flex; flex-wrap: wrap; gap: 8px; }
         .option-pill { display: inline-flex; align-items: center; gap: 5px; padding: 8px 14px; background: #0f0f1a; border: 1px solid #2a2a3e; border-radius: 18px; cursor: pointer; font-size: 0.9rem; color: #888; transition: all 0.15s; }
-        .option-pill:hover { border-color: #444; }
+        .option-pill:hover:not(.disabled) { border-color: #444; }
         .option-pill.active { background: rgba(102, 126, 234, 0.15); border-color: #667eea; color: #667eea; }
+        .option-pill.disabled { opacity: 0.35; cursor: not-allowed; }
         .option-pill-check { display: none; font-size: 0.75rem; }
         .option-pill.active .option-pill-check { display: inline; }
 
@@ -456,7 +457,7 @@
                         <span class="option-pill-check">✓</span>
                         <span>Reminder</span>
                     </label>
-                    <label class="option-pill" id="pointsPill" onclick="togglePointsMode()" style="display:none">
+                    <label class="option-pill" id="pointsPill" onclick="togglePointsMode()">
                         <span class="option-pill-check">✓</span>
                         <span>Points</span>
                     </label>
@@ -464,7 +465,7 @@
                         <span class="option-pill-check">✓</span>
                         <span>Subtasks</span>
                     </label>
-                    <label class="option-pill" id="optionalPill" onclick="toggleAllowOptional()" style="display:none">
+                    <label class="option-pill" id="optionalPill" onclick="toggleAllowOptional()">
                         <span class="option-pill-check">✓</span>
                         <span>Allow extra</span>
                     </label>
@@ -918,22 +919,32 @@
                     selectedTime = null;
                 }
             });
-            // Show Points pill for frequencies that support it (not twiceDaily)
-            const supportsPoints = f !== 'twiceDaily';
-            document.getElementById('pointsPill').style.display = supportsPoints ? 'inline-flex' : 'none';
-            if (!supportsPoints && isPointsMode) {
+            // Update pill states based on frequency and current mode
+            updatePillStates();
+        }
+
+        function updatePillStates() {
+            const f = selectedFrequency;
+            // Points: disabled for twiceDaily or when Reminder is active
+            const pointsDisabled = f === 'twiceDaily' || isReminderMode;
+            document.getElementById('pointsPill').classList.toggle('disabled', pointsDisabled);
+            if (pointsDisabled && isPointsMode) {
                 isPointsMode = false;
                 document.getElementById('pointsPill').classList.remove('active');
             }
-            // Show optional pill for timesPerPeriod (works with both completions and points)
-            const supportsOptional = f === 'timesPerPeriod';
-            document.getElementById('optionalPill').style.display = supportsOptional ? 'inline-flex' : 'none';
-            // Hide subtasks pill when in points mode
-            document.getElementById('subtasksPill').style.display = isPointsMode ? 'none' : 'inline-flex';
-            if (isPointsMode && showSubtasksInput) {
+            // Subtasks: disabled when Points is active
+            const subtasksDisabled = isPointsMode;
+            document.getElementById('subtasksPill').classList.toggle('disabled', subtasksDisabled);
+            if (subtasksDisabled && showSubtasksInput) {
                 showSubtasksInput = false;
                 document.getElementById('subtasksPill').classList.remove('active');
                 document.getElementById('subtasksInputArea').style.display = 'none';
+            }
+            // Allow extra: disabled when not timesPerPeriod or when Reminder is active
+            const optionalDisabled = f !== 'timesPerPeriod' || isReminderMode;
+            document.getElementById('optionalPill').classList.toggle('disabled', optionalDisabled);
+            if (optionalDisabled && !allowOptional) {
+                allowOptional = true; // Reset to default when disabled
             }
         }
 
@@ -942,29 +953,26 @@
             document.getElementById('reminderPill').classList.toggle('active', isReminderMode);
             document.getElementById('frequencyGroup').style.display = isReminderMode ? 'none' : 'block';
             document.getElementById('reminderGroup').style.display = isReminderMode ? 'block' : 'none';
-            // Hide points and optional pills when in reminder mode
-            if (isReminderMode) {
-                document.getElementById('pointsPill').style.display = 'none';
-                document.getElementById('optionalPill').style.display = 'none';
-            } else {
-                // Restore pills based on current frequency
-                selectFrequency(selectedFrequency);
-            }
+            // Update other pill states
+            updatePillStates();
         }
 
         function togglePointsMode() {
+            if (document.getElementById('pointsPill').classList.contains('disabled')) return;
             isPointsMode = !isPointsMode;
             document.getElementById('pointsPill').classList.toggle('active', isPointsMode);
-            // Re-render frequency inputs to show points or times
+            // Re-render frequency inputs and update pill states
             selectFrequency(selectedFrequency);
         }
 
         function toggleAllowOptional() {
+            if (document.getElementById('optionalPill').classList.contains('disabled')) return;
             allowOptional = !allowOptional;
             document.getElementById('optionalPill').classList.toggle('active', allowOptional);
         }
 
         function toggleSubtasksSection() {
+            if (document.getElementById('subtasksPill').classList.contains('disabled')) return;
             showSubtasksInput = !showSubtasksInput;
             document.getElementById('subtasksPill').classList.toggle('active', showSubtasksInput);
             document.getElementById('subtasksInputArea').style.display = showSubtasksInput ? 'block' : 'none';
