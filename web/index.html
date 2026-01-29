@@ -943,8 +943,8 @@
 
         function updatePillStates() {
             const f = selectedFrequency;
-            // Points: disabled for twiceDaily or when Reminder is active
-            const pointsDisabled = f === 'twiceDaily' || isReminderMode;
+            // Points: only for everyXDays and timesPerPeriod (accumulating toward a target)
+            const pointsDisabled = f === 'daily' || f === 'twiceDaily' || isReminderMode;
             document.getElementById('pointsPill').classList.toggle('disabled', pointsDisabled);
             if (pointsDisabled && isPointsMode) {
                 isPointsMode = false;
@@ -952,7 +952,7 @@
             }
             // Subtasks: always available (user decides when useful)
             document.getElementById('subtasksPill').classList.remove('disabled');
-            // Allow extra: disabled when not timesPerPeriod or when Reminder is active
+            // Allow extra: only for timesPerPeriod (doing more than target)
             const optionalDisabled = f !== 'timesPerPeriod' || isReminderMode;
             document.getElementById('optionalPill').classList.toggle('disabled', optionalDisabled);
             if (optionalDisabled && !allowOptional) {
