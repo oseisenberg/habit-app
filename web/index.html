@@ -950,14 +950,8 @@
                 isPointsMode = false;
                 document.getElementById('pointsPill').classList.remove('active');
             }
-            // Subtasks: disabled when Points is active
-            const subtasksDisabled = isPointsMode;
-            document.getElementById('subtasksPill').classList.toggle('disabled', subtasksDisabled);
-            if (subtasksDisabled && showSubtasksInput) {
-                showSubtasksInput = false;
-                document.getElementById('subtasksPill').classList.remove('active');
-                document.getElementById('subtasksInputArea').style.display = 'none';
-            }
+            // Subtasks: always available (user decides when useful)
+            document.getElementById('subtasksPill').classList.remove('disabled');
             // Allow extra: disabled when not timesPerPeriod or when Reminder is active
             const optionalDisabled = f !== 'timesPerPeriod' || isReminderMode;
             document.getElementById('optionalPill').classList.toggle('disabled', optionalDisabled);
