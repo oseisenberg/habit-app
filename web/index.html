@@ -1282,12 +1282,17 @@
 
         function isCompletedToday(habit) {
             const today = getTodayString();
-            // For twice daily, only fully completed (both periods) goes to Done
+            // For twice daily, only fully completed (both periods) counts as "completed"
             if (habit.frequency.type === 'twiceDaily') {
                 const status = getCompletionStatus(habit);
                 return status.morningDone && status.nightDone;
             }
-            // Any completion today should show in Done section
+            return habit.completions.some(c => c.date === today);
+        }
+
+        function hasCompletionToday(habit) {
+            // Any completion today (including partial twice daily) - for Done section display
+            const today = getTodayString();
             return habit.completions.some(c => c.date === today);
         }
 
@@ -1359,11 +1364,14 @@
 
             const timeOfDay = getTimeOfDayNow();
             const sortedHabits = sortHabits(habits);
-            // Make sections mutually exclusive: Now > Done > Optional > Later
+            // Section logic: Now and Done can overlap for partial completions (e.g., twice daily)
+            // Done shows anything completed today, Later shows what's waiting
             const nowHabits = sortedHabits.filter(h => canDoNow(h));
             const nowIds = new Set(nowHabits.map(h => h.id));
-            const completedHabits = sortedHabits.filter(h => !nowIds.has(h.id) && isCompletedToday(h));
+            // Done includes ANY completion today (including partial twice daily)
+            const completedHabits = sortedHabits.filter(h => hasCompletionToday(h));
             const completedIds = new Set(completedHabits.map(h => h.id));
+            // Optional and Later exclude habits in Now, but Done can overlap
             const optionalHabits = sortedHabits.filter(h => !nowIds.has(h.id) && !completedIds.has(h.id) && isOptional(h));
             const optionalIds = new Set(optionalHabits.map(h => h.id));
             const laterHabits = sortedHabits.filter(h => !nowIds.has(h.id) && !completedIds.has(h.id) && !optionalIds.has(h.id) && isForLater(h));
