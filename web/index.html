@@ -141,27 +141,27 @@
         .modal-overlay.active { opacity: 1; visibility: visible; }
 
         .modal {
-            background: #1a1a2e; border-radius: 14px 14px 0 0; padding: 14px;
+            background: #1a1a2e; border-radius: 16px 16px 0 0; padding: 18px;
             width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto;
             transform: translateY(100%); transition: transform 0.25s ease-out;
         }
         .modal-overlay.active .modal { transform: translateY(0); }
 
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .modal-title { font-size: 1rem; font-weight: 600; color: #fff; }
-        .modal-close { background: none; border: none; font-size: 1.3rem; color: #666; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .modal-title { font-size: 1.1rem; font-weight: 600; color: #fff; }
+        .modal-close { background: none; border: none; font-size: 1.4rem; color: #666; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
 
-        .form-group { margin-bottom: 10px; }
-        .form-label { display: block; font-size: 0.65rem; color: #888; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group { margin-bottom: 14px; }
+        .form-label { display: block; font-size: 0.7rem; color: #888; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
         .form-input {
-            width: 100%; padding: 10px; border: 1px solid #2a2a3e; border-radius: 8px;
-            font-size: 0.9rem; background: #0f0f1a; color: #fff; outline: none;
+            width: 100%; padding: 12px; border: 1px solid #2a2a3e; border-radius: 8px;
+            font-size: 1rem; background: #0f0f1a; color: #fff; outline: none;
         }
         .form-input:focus { border-color: #667eea; }
         .form-input::placeholder { color: #444; }
 
-        .time-toggle { display: inline-flex; background: #0a0a14; border-radius: 6px; overflow: hidden; flex-shrink: 0; }
-        .time-toggle-btn { padding: 6px 8px; font-size: 0.85rem; color: #666; cursor: pointer; border: none; background: transparent; min-width: 36px; }
+        .time-toggle { display: inline-flex; background: #0a0a14; border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+        .time-toggle-btn { padding: 8px 10px; font-size: 0.95rem; color: #666; cursor: pointer; border: none; background: transparent; min-width: 42px; }
         .time-toggle-btn.active { background: #667eea; color: white; }
         .time-toggle-btn.disabled { opacity: 0.4; pointer-events: none; }
 
@@ -175,23 +175,23 @@
         .frequency-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #444; flex-shrink: 0; }
         .frequency-option.selected .frequency-dot { border-color: #667eea; background: #667eea; }
         .frequency-label { color: #ccc; font-size: 0.85rem; }
-        .frequency-input { width: 48px; padding: 6px; border: 1px solid #2a2a3e; border-radius: 6px; text-align: center; font-size: 0.85rem; background: #1a1a2e; color: #fff; }
-        .period-toggle { display: inline-flex; border: 1px solid #2a2a3e; border-radius: 6px; overflow: hidden; margin-left: auto; }
-        .period-toggle-btn { padding: 6px 10px; font-size: 0.8rem; color: #666; cursor: pointer; border: none; background: #0a0a14; }
+        .frequency-input { width: 54px; padding: 8px; border: 1px solid #2a2a3e; border-radius: 8px; text-align: center; font-size: 0.95rem; background: #1a1a2e; color: #fff; }
+        .period-toggle { display: inline-flex; border: 1px solid #2a2a3e; border-radius: 8px; overflow: hidden; margin-left: auto; }
+        .period-toggle-btn { padding: 8px 12px; font-size: 0.85rem; color: #666; cursor: pointer; border: none; background: #0a0a14; }
         .period-toggle-btn.active { background: #667eea; color: white; }
-        .frequency-row { display: flex; align-items: center; gap: 8px; }
-        .frequency-row #frequencyInputs { display: flex; align-items: center; gap: 6px; }
-        .task-options { display: flex; flex-wrap: wrap; gap: 6px; }
-        .option-pill { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; background: #0f0f1a; border: 1px solid #2a2a3e; border-radius: 16px; cursor: pointer; font-size: 0.8rem; color: #888; transition: all 0.15s; }
+        .frequency-row { display: flex; align-items: center; gap: 10px; }
+        .frequency-row #frequencyInputs { display: flex; align-items: center; gap: 8px; }
+        .task-options { display: flex; flex-wrap: wrap; gap: 8px; }
+        .option-pill { display: inline-flex; align-items: center; gap: 5px; padding: 8px 14px; background: #0f0f1a; border: 1px solid #2a2a3e; border-radius: 18px; cursor: pointer; font-size: 0.9rem; color: #888; transition: all 0.15s; }
         .option-pill:hover { border-color: #444; }
         .option-pill.active { background: rgba(102, 126, 234, 0.15); border-color: #667eea; color: #667eea; }
-        .option-pill-check { display: none; font-size: 0.7rem; }
+        .option-pill-check { display: none; font-size: 0.75rem; }
         .option-pill.active .option-pill-check { display: inline; }
 
         .submit-btn {
-            width: 100%; padding: 12px; background: #667eea; color: white; border: none;
-            border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; margin-top: 4px;
-            min-height: 44px;
+            width: 100%; padding: 14px; background: #667eea; color: white; border: none;
+            border-radius: 10px; font-size: 0.95rem; font-weight: 600; cursor: pointer; margin-top: 6px;
+            min-height: 48px;
         }
         .submit-btn:active { opacity: 0.9; }
         .submit-btn.danger { background: #dc2626; }
@@ -403,12 +403,12 @@
         .emoji-category-header { font-size: 0.7rem; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
         .emoji-category-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
         .emoji-select-btn {
-            display: flex; align-items: center; gap: 8px; padding: 8px 12px;
-            background: #0f0f1a; border: 2px solid #2a2a3e; border-radius: 8px;
+            display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+            background: #0f0f1a; border: 2px solid #2a2a3e; border-radius: 10px;
             cursor: pointer; transition: all 0.15s;
         }
         .emoji-select-btn:active { border-color: #667eea; }
-        .emoji-select-icon { font-size: 1.4rem; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
+        .emoji-select-icon { font-size: 1.5rem; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; }
         .emoji-select-text { color: #888; font-size: 0.85rem; }
     </style>
 </head>
@@ -433,13 +433,13 @@
                 <button class="modal-close" onclick="closeModal()">&times;</button>
             </div>
             <div class="form-group">
-                <div style="display:flex;gap:8px;margin-bottom:6px">
-                    <label class="form-label" style="margin:0;width:48px;flex-shrink:0">Icon</label>
+                <div style="display:flex;gap:10px;margin-bottom:6px">
+                    <label class="form-label" style="margin:0;width:52px;flex-shrink:0">Icon</label>
                     <label class="form-label" style="margin:0;flex:1">Name</label>
-                    <label class="form-label" style="margin:0;width:72px;flex-shrink:0">Time</label>
+                    <label class="form-label" style="margin:0;width:86px;flex-shrink:0">Time</label>
                 </div>
-                <div style="display:flex;gap:8px;align-items:stretch;height:44px">
-                    <div class="emoji-select-btn" id="emojiSelectBtn" onclick="openEmojiPopup('new')" style="flex-shrink:0;width:48px;justify-content:center;box-sizing:border-box">
+                <div style="display:flex;gap:10px;align-items:stretch;height:48px">
+                    <div class="emoji-select-btn" id="emojiSelectBtn" onclick="openEmojiPopup('new')" style="flex-shrink:0;width:52px;justify-content:center;box-sizing:border-box;font-size:1.3rem">
                         <span class="emoji-select-icon" id="selectedEmojiDisplay" style="width:auto;height:auto">📌</span>
                     </div>
                     <input type="text" class="form-input" id="habitInput" placeholder="e.g., Brush teeth..." style="flex:1;margin:0;box-sizing:border-box" />
@@ -2134,13 +2134,13 @@
                 document.getElementById('detailsModal').innerHTML = `
                     <div class="modal-header"><h2 class="modal-title">Edit Habit</h2><button class="modal-close" onclick="closeDetails()">&times;</button></div>
                     <div class="form-group">
-                        <div style="display:flex;gap:8px;margin-bottom:6px">
-                            <label class="form-label" style="margin:0;width:48px;flex-shrink:0">Icon</label>
+                        <div style="display:flex;gap:10px;margin-bottom:6px">
+                            <label class="form-label" style="margin:0;width:52px;flex-shrink:0">Icon</label>
                             <label class="form-label" style="margin:0;flex:1">Name</label>
-                            <label class="form-label" style="margin:0;width:72px;flex-shrink:0">Time</label>
+                            <label class="form-label" style="margin:0;width:86px;flex-shrink:0">Time</label>
                         </div>
-                        <div style="display:flex;gap:8px;align-items:stretch;height:44px">
-                            <div class="emoji-select-btn" onclick="openEmojiPopup('edit', ${habit.id})" style="flex-shrink:0;width:48px;justify-content:center;box-sizing:border-box">
+                        <div style="display:flex;gap:10px;align-items:stretch;height:48px">
+                            <div class="emoji-select-btn" onclick="openEmojiPopup('edit', ${habit.id})" style="flex-shrink:0;width:52px;justify-content:center;box-sizing:border-box;font-size:1.3rem">
                                 <span class="emoji-select-icon" id="editSelectedEmojiDisplay" style="width:auto;height:auto">${currentIcon}</span>
                             </div>
                             <input type="text" class="form-input" id="editHabitName" value="${escapeHtml(habit.name)}" style="flex:1;margin:0;box-sizing:border-box" />
