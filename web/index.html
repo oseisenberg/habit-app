@@ -179,6 +179,7 @@
         .period-toggle { display: inline-flex; border: 1px solid #2a2a3e; border-radius: 6px; overflow: hidden; margin-left: auto; }
         .period-toggle-btn { padding: 6px 10px; font-size: 0.8rem; color: #666; cursor: pointer; border: none; background: #0a0a14; }
         .period-toggle-btn.active { background: #667eea; color: white; }
+        .frequency-input-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #0f0f1a; border: 1px solid #2a2a3e; border-radius: 8px; }
 
         .submit-btn {
             width: 100%; padding: 12px; background: #667eea; color: white; border: none;
@@ -443,53 +444,15 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Frequency</label>
-                <div class="frequency-options">
-                    <label class="frequency-option selected" onclick="selectFrequency('daily')">
-                        <input type="radio" name="frequency" class="frequency-radio" value="daily" checked>
-                        <span class="frequency-dot"></span>
-                        <span class="frequency-label">Daily</span>
-                    </label>
-                    <label class="frequency-option" onclick="selectFrequency('reminder')">
-                        <input type="radio" name="frequency" class="frequency-radio" value="reminder">
-                        <span class="frequency-dot"></span>
-                        <span class="frequency-label">Every</span>
-                        <input type="number" class="frequency-input" id="reminderDays" value="1" min="1" onclick="event.stopPropagation()">
-                        <span style="color:#666">days</span>
-                        <span style="color:#666;font-size:0.75rem;margin-left:auto">no penalty</span>
-                    </label>
-                    <label class="frequency-option" onclick="selectFrequency('twiceDaily')">
-                        <input type="radio" name="frequency" class="frequency-radio" value="twiceDaily">
-                        <span class="frequency-dot"></span>
-                        <span class="frequency-label">Twice daily</span>
-                    </label>
-                    <label class="frequency-option" onclick="selectFrequency('everyXDays')">
-                        <input type="radio" name="frequency" class="frequency-radio" value="everyXDays">
-                        <span class="frequency-dot"></span>
-                        <span class="frequency-label">Every</span>
-                        <input type="number" class="frequency-input" id="everyXDays" value="2" min="1" onclick="event.stopPropagation()">
-                        <span style="color:#666">days</span>
-                    </label>
-                    <label class="frequency-option" onclick="selectFrequency('timesPerPeriod')">
-                        <input type="radio" name="frequency" class="frequency-radio" value="timesPerPeriod">
-                        <span class="frequency-dot"></span>
-                        <input type="number" class="frequency-input" id="timesPerPeriod" value="3" min="1" max="31" onclick="event.stopPropagation()">
-                        <span class="frequency-label">times /</span>
-                        <div class="period-toggle" onclick="event.stopPropagation()">
-                            <button type="button" class="period-toggle-btn active" id="timesWeekBtn" onclick="setTimesPeriod('week')">week</button>
-                            <button type="button" class="period-toggle-btn" id="timesMonthBtn" onclick="setTimesPeriod('month')">month</button>
-                        </div>
-                    </label>
-                    <label class="frequency-option" onclick="selectFrequency('pointsPerPeriod')">
-                        <input type="radio" name="frequency" class="frequency-radio" value="pointsPerPeriod">
-                        <span class="frequency-dot"></span>
-                        <input type="number" class="frequency-input" id="pointsPerPeriod" value="12" min="1" onclick="event.stopPropagation()">
-                        <span class="frequency-label">pts /</span>
-                        <div class="period-toggle" onclick="event.stopPropagation()">
-                            <button type="button" class="period-toggle-btn active" id="pointsWeekBtn" onclick="setPointsPeriod('week')">week</button>
-                            <button type="button" class="period-toggle-btn" id="pointsMonthBtn" onclick="setPointsPeriod('month')">month</button>
-                        </div>
-                    </label>
-                </div>
+                <select class="form-input" id="frequencySelect" onchange="selectFrequency(this.value)">
+                    <option value="daily">Daily</option>
+                    <option value="twiceDaily">Twice daily</option>
+                    <option value="everyXDays">Every X days</option>
+                    <option value="timesPerPeriod">X times per week/month</option>
+                    <option value="pointsPerPeriod">Points target</option>
+                    <option value="reminder">Reminder (no penalty)</option>
+                </select>
+                <div id="frequencyInputs" style="margin-top:10px"></div>
             </div>
             <div class="form-group" id="optionalCheckboxGroup" style="display:none">
                 <div class="settings-row" style="border:none;padding:8px 0">
@@ -837,14 +800,12 @@
             selectedTime = null;
             selectedEmoji = HABIT_EMOJIS[0];
             document.querySelectorAll('#timeToggle .time-toggle-btn').forEach(el => el.classList.remove('active'));
+            // Reset frequency dropdown and inputs
+            document.getElementById('frequencySelect').value = 'daily';
             selectFrequency('daily');
             // Reset period toggles
             timesPeriod = 'week';
             pointsPeriod = 'week';
-            document.getElementById('timesWeekBtn').classList.add('active');
-            document.getElementById('timesMonthBtn').classList.remove('active');
-            document.getElementById('pointsWeekBtn').classList.add('active');
-            document.getElementById('pointsMonthBtn').classList.remove('active');
             // Reset optional toggle
             allowOptional = true;
             document.getElementById('allowOptionalToggle').classList.add('active');
@@ -883,19 +844,43 @@
 
         function selectFrequency(f) {
             selectedFrequency = f;
-            const isReminder = f === 'reminder';
-            document.querySelectorAll('.frequency-option').forEach(el => {
-                const r = el.querySelector('input[type="radio"]');
-                const isSelected = r.value === f;
-                el.classList.toggle('selected', isSelected);
-                r.checked = isSelected;
-                // Hide non-reminder options when reminder is selected (except the selected one)
-                if (isReminder && r.value !== 'reminder') {
-                    el.style.display = 'none';
-                } else {
-                    el.style.display = 'flex';
-                }
-            });
+            const container = document.getElementById('frequencyInputs');
+
+            // Render contextual inputs based on frequency type
+            let inputsHtml = '';
+            if (f === 'everyXDays') {
+                inputsHtml = `<div class="frequency-input-row">
+                    <span style="color:#888">Every</span>
+                    <input type="number" class="frequency-input" id="everyXDays" value="2" min="1">
+                    <span style="color:#888">days</span>
+                </div>`;
+            } else if (f === 'timesPerPeriod') {
+                inputsHtml = `<div class="frequency-input-row">
+                    <input type="number" class="frequency-input" id="timesPerPeriod" value="3" min="1" max="31">
+                    <span style="color:#888">times per</span>
+                    <div class="period-toggle">
+                        <button type="button" class="period-toggle-btn active" id="timesWeekBtn" onclick="setTimesPeriod('week')">week</button>
+                        <button type="button" class="period-toggle-btn" id="timesMonthBtn" onclick="setTimesPeriod('month')">month</button>
+                    </div>
+                </div>`;
+            } else if (f === 'pointsPerPeriod') {
+                inputsHtml = `<div class="frequency-input-row">
+                    <input type="number" class="frequency-input" id="pointsPerPeriod" value="12" min="1">
+                    <span style="color:#888">points per</span>
+                    <div class="period-toggle">
+                        <button type="button" class="period-toggle-btn active" id="pointsWeekBtn" onclick="setPointsPeriod('week')">week</button>
+                        <button type="button" class="period-toggle-btn" id="pointsMonthBtn" onclick="setPointsPeriod('month')">month</button>
+                    </div>
+                </div>`;
+            } else if (f === 'reminder') {
+                inputsHtml = `<div class="frequency-input-row">
+                    <span style="color:#888">Remind every</span>
+                    <input type="number" class="frequency-input" id="reminderDays" value="1" min="1">
+                    <span style="color:#888">days</span>
+                </div>`;
+            }
+            container.innerHTML = inputsHtml;
+
             // Disable time options for Twice Daily (it has its own Morning/Bedtime structure)
             const isTwiceDaily = f === 'twiceDaily';
             document.querySelectorAll('#timeToggle .time-toggle-btn').forEach(el => {
@@ -975,9 +960,10 @@
             } else if (selectedFrequency === 'pointsPerPeriod') {
                 freqType = pointsPeriod === 'week' ? 'pointsPerWeek' : 'pointsPerMonth';
             }
-            const timesVal = parseInt(document.getElementById('timesPerPeriod').value) || 3;
-            const pointsVal = parseInt(document.getElementById('pointsPerPeriod').value) || 12;
-            const reminderDaysVal = parseInt(document.getElementById('reminderDays').value) || 1;
+            const timesVal = parseInt(document.getElementById('timesPerPeriod')?.value) || 3;
+            const pointsVal = parseInt(document.getElementById('pointsPerPeriod')?.value) || 12;
+            const reminderDaysVal = parseInt(document.getElementById('reminderDays')?.value) || 1;
+            const everyXDaysVal = parseInt(document.getElementById('everyXDays')?.value) || 2;
             habits.push({
                 id: Date.now(), name,
                 icon: selectedEmoji,
@@ -985,7 +971,7 @@
                 frequency: {
                     type: freqType,
                     timesPerWeek: timesVal,
-                    everyXDays: parseInt(document.getElementById('everyXDays').value) || 2,
+                    everyXDays: everyXDaysVal,
                     timesPerMonth: timesVal,
                     pointsPerWeek: pointsVal,
                     pointsPerMonth: pointsVal,
