@@ -1283,8 +1283,12 @@
 
         function isCompletedToday(habit) {
             const today = getTodayString();
+            // For twice daily, only fully completed (both periods) goes to Done
+            if (habit.frequency.type === 'twiceDaily') {
+                const status = getCompletionStatus(habit);
+                return status.morningDone && status.nightDone;
+            }
             // Any completion today should show in Done section
-            // This includes partial completions (e.g., morning done of twice daily)
             return habit.completions.some(c => c.date === today);
         }
 
