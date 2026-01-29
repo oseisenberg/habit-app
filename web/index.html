@@ -703,7 +703,16 @@
             updateDebugDisplay();
         }
 
-        function debugChangeDay(d) { debugDayOffset += d; updateDebugDisplay(); updateDisplay(); }
+        function debugChangeDay(d) {
+            debugDayOffset += d;
+            // Sync all habits' lastScoreUpdate to new simulated date to prevent false neglect
+            const newToday = getTodayString();
+            const habits = getHabits();
+            habits.forEach(h => { h.lastScoreUpdate = newToday; });
+            saveHabits(habits);
+            updateDebugDisplay();
+            updateDisplay();
+        }
         function debugSetTime(p) {
             const s = getSettings();
             if (p === 'morning') {
@@ -713,7 +722,17 @@
             }
             updateDebugDisplay(); updateDisplay();
         }
-        function debugResetTime() { debugDayOffset = 0; debugHourOverride = null; updateDebugDisplay(); updateDisplay(); }
+        function debugResetTime() {
+            debugDayOffset = 0;
+            debugHourOverride = null;
+            // Sync all habits' lastScoreUpdate to real date to prevent false neglect
+            const newToday = getTodayString();
+            const habits = getHabits();
+            habits.forEach(h => { h.lastScoreUpdate = newToday; });
+            saveHabits(habits);
+            updateDebugDisplay();
+            updateDisplay();
+        }
         function updateDebugDisplay() {
             document.getElementById('debugRealDate').textContent = new Date().toLocaleDateString();
             document.getElementById('debugSimDate').textContent = getSimulatedDate().toLocaleDateString();
