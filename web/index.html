@@ -249,6 +249,8 @@
         .subtask-checkbox.checked::after { content: '✓'; color: white; font-size: 10px; }
         .subtask-name { flex: 1; color: #ccc; font-size: 0.8rem; }
         .subtask-name.completed { color: #555; text-decoration: line-through; }
+        .subtask-name-input { flex: 1; color: #ccc; font-size: 0.8rem; background: transparent; border: none; border-bottom: 1px solid transparent; outline: none; padding: 2px 0; }
+        .subtask-name-input:focus { border-bottom-color: #667eea; }
         .subtask-delete { color: #666; font-size: 0.7rem; cursor: pointer; padding: 4px 8px; min-width: 32px; min-height: 32px; display: flex; align-items: center; justify-content: center; }
         .add-subtask { display: flex; gap: 6px; margin-top: 6px; }
         .add-subtask input { flex: 1; padding: 8px; border: 1px solid #2a2a3e; border-radius: 6px; background: #0f0f1a; color: #fff; font-size: 0.8rem; }
@@ -496,11 +498,16 @@
                 </div>
             </div>
             <div class="form-group" id="subtasksGroup">
-                <label class="form-label">Subtasks <span style="font-weight:normal;text-transform:none">(optional)</span></label>
-                <div id="newHabitSubtasksList"></div>
-                <div class="add-subtask">
-                    <input type="text" id="newHabitSubtaskInput" placeholder="Add subtask..." onkeypress="if(event.key==='Enter'){event.preventDefault();addNewHabitSubtask();}">
-                    <button type="button" onclick="addNewHabitSubtask()">+</button>
+                <div class="settings-row" style="border:none;padding:8px 0">
+                    <span class="settings-label" style="font-size:0.85rem">Add subtasks</span>
+                    <div class="toggle-switch" id="subtasksToggle" onclick="toggleSubtasksSection()"></div>
+                </div>
+                <div id="subtasksInputArea" style="display:none">
+                    <div id="newHabitSubtasksList"></div>
+                    <div class="add-subtask">
+                        <input type="text" id="newHabitSubtaskInput" placeholder="Add subtask..." onkeypress="if(event.key==='Enter'){event.preventDefault();addNewHabitSubtask();}">
+                        <button type="button" onclick="addNewHabitSubtask()">+</button>
+                    </div>
                 </div>
             </div>
             <button class="submit-btn" onclick="addHabit()">Add Habit</button>
@@ -618,6 +625,7 @@
         let timesPeriod = 'week'; // 'week' or 'month' for timesPerPeriod
         let pointsPeriod = 'week'; // 'week' or 'month' for pointsPerPeriod
         let newHabitSubtasks = []; // Subtasks for new habit creation
+        let showSubtasksInput = false; // Toggle for subtasks input area
 
         function setTimesPeriod(period) {
             timesPeriod = period;
@@ -842,6 +850,9 @@
             document.getElementById('allowOptionalToggle').classList.add('active');
             // Reset subtasks
             newHabitSubtasks = [];
+            showSubtasksInput = false;
+            document.getElementById('subtasksToggle').classList.remove('active');
+            document.getElementById('subtasksInputArea').style.display = 'none';
             document.getElementById('newHabitSubtasksList').innerHTML = '';
             document.getElementById('newHabitSubtaskInput').value = '';
         }
@@ -872,10 +883,18 @@
 
         function selectFrequency(f) {
             selectedFrequency = f;
+            const isReminder = f === 'reminder';
             document.querySelectorAll('.frequency-option').forEach(el => {
                 const r = el.querySelector('input[type="radio"]');
-                el.classList.toggle('selected', r.value === f);
-                r.checked = r.value === f;
+                const isSelected = r.value === f;
+                el.classList.toggle('selected', isSelected);
+                r.checked = isSelected;
+                // Hide non-reminder options when reminder is selected (except the selected one)
+                if (isReminder && r.value !== 'reminder') {
+                    el.style.display = 'none';
+                } else {
+                    el.style.display = 'flex';
+                }
             });
             // Disable time options for Twice Daily (it has its own Morning/Bedtime structure)
             const isTwiceDaily = f === 'twiceDaily';
@@ -897,6 +916,15 @@
         function toggleAllowOptional() {
             allowOptional = !allowOptional;
             document.getElementById('allowOptionalToggle').classList.toggle('active', allowOptional);
+        }
+
+        function toggleSubtasksSection() {
+            showSubtasksInput = !showSubtasksInput;
+            document.getElementById('subtasksToggle').classList.toggle('active', showSubtasksInput);
+            document.getElementById('subtasksInputArea').style.display = showSubtasksInput ? 'block' : 'none';
+            if (showSubtasksInput) {
+                document.getElementById('newHabitSubtaskInput').focus();
+            }
         }
 
         function addNewHabitSubtask() {
@@ -921,10 +949,19 @@
             }
             container.innerHTML = newHabitSubtasks.map(s => `
                 <div class="subtask-item">
-                    <span class="subtask-name">${escapeHtml(s.name)}</span>
+                    <input type="text" class="subtask-name-input" value="${escapeHtml(s.name)}"
+                        onchange="updateNewHabitSubtask(${s.id}, this.value)"
+                        onkeypress="if(event.key==='Enter')this.blur()">
                     <span class="subtask-delete" onclick="removeNewHabitSubtask(${s.id})">✕</span>
                 </div>
             `).join('');
+        }
+
+        function updateNewHabitSubtask(id, newName) {
+            const subtask = newHabitSubtasks.find(s => s.id === id);
+            if (subtask && newName.trim()) {
+                subtask.name = newName.trim();
+            }
         }
 
         function addHabit() {
