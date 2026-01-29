@@ -26,22 +26,22 @@
         .time-note { color: #f59e0b; font-size: 0.65rem; margin-bottom: 6px; }
 
         /* Icon Grid Layout */
-        .habits-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 8px; }
+        .habits-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 8px; }
         .habit-icon-wrapper { display: flex; flex-direction: column; align-items: center; }
         .habit-icon {
             display: flex; flex-direction: column; align-items: center; gap: 2px;
-            cursor: pointer; padding: 4px; border-radius: 12px; transition: background 0.15s;
+            cursor: pointer; padding: 2px; border-radius: 12px; transition: background 0.15s;
         }
         .habit-icon:active { background: rgba(255,255,255,0.05); }
 
         .habit-ring {
-            width: 52px; height: 52px; border-radius: 50%; position: relative;
+            width: 64px; height: 64px; border-radius: 50%; position: relative;
             display: flex; align-items: center; justify-content: center;
             background: conic-gradient(#667eea var(--progress), #2a2a3e var(--progress));
             transition: all 0.2s;
         }
         .habit-ring::before {
-            content: ''; position: absolute; width: 44px; height: 44px;
+            content: ''; position: absolute; width: 54px; height: 54px;
             background: #1a1a2e; border-radius: 50%;
         }
         .habit-ring.completed { background: #4ade80; }
@@ -69,8 +69,8 @@
         .habit-ring.split .half-fill {
             position: absolute; width: calc(50% - 1px); height: 100%; top: 0;
         }
-        .habit-ring.split .half-fill.left { left: 0; border-radius: 26px 0 0 26px; }
-        .habit-ring.split .half-fill.right { right: 0; border-radius: 0 26px 26px 0; }
+        .habit-ring.split .half-fill.left { left: 0; border-radius: 32px 0 0 32px; }
+        .habit-ring.split .half-fill.right { right: 0; border-radius: 0 32px 32px 0; }
         .habit-ring.split .half-fill.filled { background: #4ade80; }
         .habit-ring.split .half-fill.missed { background: #dc262666; }
         .habit-ring.split .divider {
@@ -181,6 +181,9 @@
         .frequency-option.selected .frequency-dot { border-color: #667eea; background: #667eea; }
         .frequency-label { flex: 1; color: #ccc; font-size: 0.85rem; }
         .frequency-input { width: 44px; padding: 5px; border: 1px solid #2a2a3e; border-radius: 6px; text-align: center; font-size: 0.8rem; background: #1a1a2e; color: #fff; }
+        .period-toggle { display: inline-flex; background: #0a0a14; border-radius: 6px; margin-left: 4px; overflow: hidden; }
+        .period-toggle-btn { padding: 4px 8px; font-size: 0.7rem; color: #666; cursor: pointer; border: none; background: transparent; }
+        .period-toggle-btn.active { background: #667eea; color: white; }
 
         .submit-btn {
             width: 100%; padding: 12px; background: #667eea; color: white; border: none;
@@ -376,6 +379,32 @@
             cursor: pointer; transition: all 0.15s;
         }
         .points-btn:active { transform: scale(0.95); background: #667eea; border-color: #667eea; }
+
+        /* Emoji picker popup */
+        .emoji-popup-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5); display: flex; align-items: center;
+            justify-content: center; z-index: 260; opacity: 0; visibility: hidden;
+            transition: opacity 0.15s, visibility 0.15s;
+        }
+        .emoji-popup-overlay.active { opacity: 1; visibility: visible; }
+        .emoji-popup {
+            background: #1a1a2e; border-radius: 12px; padding: 16px; width: 340px;
+            max-width: 95%; max-height: 80vh; overflow-y: auto;
+            transform: scale(0.95); transition: transform 0.15s;
+        }
+        .emoji-popup-overlay.active .emoji-popup { transform: scale(1); }
+        .emoji-category { margin-bottom: 12px; }
+        .emoji-category-header { font-size: 0.7rem; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .emoji-category-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
+        .emoji-select-btn {
+            display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+            background: #0f0f1a; border: 2px solid #2a2a3e; border-radius: 8px;
+            cursor: pointer; transition: all 0.15s;
+        }
+        .emoji-select-btn:active { border-color: #667eea; }
+        .emoji-select-icon { font-size: 1.4rem; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
+        .emoji-select-text { color: #888; font-size: 0.85rem; }
     </style>
 </head>
 <body>
@@ -400,7 +429,10 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Icon</label>
-                <div class="emoji-picker" id="emojiPicker"></div>
+                <div class="emoji-select-btn" id="emojiSelectBtn" onclick="openEmojiPopup('new')">
+                    <span class="emoji-select-icon" id="selectedEmojiDisplay">📌</span>
+                    <span class="emoji-select-text">Tap to choose icon</span>
+                </div>
             </div>
             <div class="form-group">
                 <label class="form-label">Name</label>
@@ -415,7 +447,7 @@
                     </div>
                     <div class="time-option" data-time="night" onclick="toggleTime('night')">
                         <span class="time-option-icon">🌙</span>
-                        <span class="time-option-label">Night</span>
+                        <span class="time-option-label">Bedtime</span>
                     </div>
                 </div>
             </div>
@@ -432,11 +464,15 @@
                         <span class="frequency-dot"></span>
                         <span class="frequency-label">Twice daily</span>
                     </label>
-                    <label class="frequency-option" onclick="selectFrequency('timesPerWeek')">
-                        <input type="radio" name="frequency" class="frequency-radio" value="timesPerWeek">
+                    <label class="frequency-option" onclick="selectFrequency('timesPerPeriod')">
+                        <input type="radio" name="frequency" class="frequency-radio" value="timesPerPeriod">
                         <span class="frequency-dot"></span>
-                        <span class="frequency-label">Per week:</span>
-                        <input type="number" class="frequency-input" id="timesPerWeek" value="3" min="1" max="7" onclick="event.stopPropagation()">
+                        <input type="number" class="frequency-input" id="timesPerPeriod" value="3" min="1" max="31" onclick="event.stopPropagation()">
+                        <span class="frequency-label">times /</span>
+                        <div class="period-toggle" onclick="event.stopPropagation()">
+                            <button type="button" class="period-toggle-btn active" id="timesWeekBtn" onclick="setTimesPeriod('week')">week</button>
+                            <button type="button" class="period-toggle-btn" id="timesMonthBtn" onclick="setTimesPeriod('month')">month</button>
+                        </div>
                     </label>
                     <label class="frequency-option" onclick="selectFrequency('everyXDays')">
                         <input type="radio" name="frequency" class="frequency-radio" value="everyXDays">
@@ -445,23 +481,15 @@
                         <input type="number" class="frequency-input" id="everyXDays" value="2" min="1" onclick="event.stopPropagation()">
                         <span style="color:#666;margin-left:4px">days</span>
                     </label>
-                    <label class="frequency-option" onclick="selectFrequency('timesPerMonth')">
-                        <input type="radio" name="frequency" class="frequency-radio" value="timesPerMonth">
+                    <label class="frequency-option" onclick="selectFrequency('pointsPerPeriod')">
+                        <input type="radio" name="frequency" class="frequency-radio" value="pointsPerPeriod">
                         <span class="frequency-dot"></span>
-                        <span class="frequency-label">Per month:</span>
-                        <input type="number" class="frequency-input" id="timesPerMonth" value="4" min="1" max="31" onclick="event.stopPropagation()">
-                    </label>
-                    <label class="frequency-option" onclick="selectFrequency('pointsPerWeek')">
-                        <input type="radio" name="frequency" class="frequency-radio" value="pointsPerWeek">
-                        <span class="frequency-dot"></span>
-                        <input type="number" class="frequency-input" id="pointsPerWeek" value="12" min="1" style="width:40px" onclick="event.stopPropagation()">
-                        <span class="frequency-label">pts / week</span>
-                    </label>
-                    <label class="frequency-option" onclick="selectFrequency('pointsPerMonth')">
-                        <input type="radio" name="frequency" class="frequency-radio" value="pointsPerMonth">
-                        <span class="frequency-dot"></span>
-                        <input type="number" class="frequency-input" id="pointsPerMonth" value="30" min="1" style="width:40px" onclick="event.stopPropagation()">
-                        <span class="frequency-label">pts / month</span>
+                        <input type="number" class="frequency-input" id="pointsPerPeriod" value="12" min="1" style="width:40px" onclick="event.stopPropagation()">
+                        <span class="frequency-label">pts /</span>
+                        <div class="period-toggle" onclick="event.stopPropagation()">
+                            <button type="button" class="period-toggle-btn active" id="pointsWeekBtn" onclick="setPointsPeriod('week')">week</button>
+                            <button type="button" class="period-toggle-btn" id="pointsMonthBtn" onclick="setPointsPeriod('month')">month</button>
+                        </div>
                     </label>
                 </div>
             </div>
@@ -498,7 +526,7 @@
                 </div>
             </div>
             <div class="settings-row">
-                <span class="settings-label">Night starts at</span>
+                <span class="settings-label">Bedtime starts at</span>
                 <div class="settings-value">
                     <input type="number" class="settings-input" id="nightStart" min="0" max="23" value="18">
                     <span style="color:#666">:00</span>
@@ -521,6 +549,11 @@
         <div class="points-popup" id="pointsPopup"></div>
     </div>
 
+    <!-- Emoji Picker Popup -->
+    <div class="emoji-popup-overlay" id="emojiPopupOverlay" onclick="handleOverlayClick(event, 'emojiPopupOverlay', closeEmojiPopup)">
+        <div class="emoji-popup" id="emojiPopup"></div>
+    </div>
+
     <!-- Debug -->
     <button class="debug-toggle" id="debugToggle" onclick="toggleDebug()">🐛</button>
     <div class="debug-panel" id="debugPanel">
@@ -534,7 +567,7 @@
         </div>
         <div class="debug-controls">
             <button class="debug-btn debug-btn-time" onclick="debugSetTime('morning')">🌅 Morning</button>
-            <button class="debug-btn debug-btn-time" onclick="debugSetTime('night')">🌙 Night</button>
+            <button class="debug-btn debug-btn-time" onclick="debugSetTime('night')">🌙 Bedtime</button>
         </div>
         <div class="debug-controls" style="margin-top:8px;">
             <button class="debug-btn" style="background:#059669;color:white" onclick="loadTestData()">Test Data</button>
@@ -545,24 +578,19 @@
     <script>
         const DAY_NAMES = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
         const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const HABIT_EMOJIS = [
-            // Health & Fitness
-            '💪', '🏃', '🚴', '🏊', '🧘', '🤸', '⚽', '🏀', '🎾', '🏋️',
-            // Self-care
-            '🦷', '💊', '💉', '🧴', '🛁', '💅', '💇', '😴', '🛌', '☀️',
-            // Food & Drink
-            '🥗', '🍎', '🥤', '💧', '☕', '🍵', '🥛', '🥕', '🥦', '🍳',
-            // Productivity
-            '📚', '✍️', '💼', '📝', '💻', '📧', '📱', '🗂️', '📊', '🎯',
-            // Creative
-            '🎨', '🎵', '🎸', '🎹', '📷', '✏️', '🖌️', '🎭', '🎬', '🎤',
-            // Home
-            '🧹', '🧺', '🍳', '🛒', '🌱', '🪴', '🐕', '🐈', '🏠', '🛠️',
-            // Social & Spiritual
-            '🙏', '📿', '❤️', '👨‍👩‍👧', '📞', '💬', '🤝', '😊', '🧠', '💭',
-            // Time & Weather
-            '🌅', '🌙', '⏰', '📅', '🌤️', '🌧️', '❄️', '🔥', '⭐', '✨'
-        ];
+        const EMOJI_CATEGORIES = {
+            'Health & Fitness': ['💪', '🏃', '🚴', '🏊', '🧘', '🤸', '⚽', '🏀', '🎾', '🏋️', '🏈', '⛳', '🥊', '🏄', '🧗', '🚶'],
+            'Self-care': ['🦷', '💊', '💉', '🧴', '🛁', '💅', '💇', '😴', '🛌', '☀️', '🧖', '💆', '🩺', '🩹', '👁️', '🧘‍♀️'],
+            'Food & Drink': ['🥗', '🍎', '🥤', '💧', '☕', '🍵', '🥛', '🥕', '🥦', '🍳', '🥑', '🍌', '🫐', '🥜', '🍽️', '🧊'],
+            'Productivity': ['📚', '✍️', '💼', '📝', '💻', '📧', '📱', '🗂️', '📊', '🎯', '📈', '🗓️', '⏱️', '📋', '✅', '🔔'],
+            'Creative': ['🎨', '🎵', '🎸', '🎹', '📷', '✏️', '🖌️', '🎭', '🎬', '🎤', '🎻', '📺', '🎮', '🎲', '📖', '🖼️'],
+            'Home': ['🧹', '🧺', '🍳', '🛒', '🌱', '🪴', '🐕', '🐈', '🏠', '🛠️', '🗑️', '🧽', '🪥', '🛏️', '🚿', '🔧'],
+            'Social & Spiritual': ['🙏', '📿', '❤️', '👨‍👩‍👧', '📞', '💬', '🤝', '😊', '🧠', '💭', '🫂', '👋', '💝', '🕯️', '✝️', '☮️'],
+            'Nature & Weather': ['🌅', '🌙', '⏰', '📅', '🌤️', '🌧️', '❄️', '🔥', '⭐', '✨', '🌳', '🌻', '🦋', '🐝', '🌈', '🍂'],
+            'Finance & Goals': ['💰', '💵', '🏦', '📉', '🎖️', '🏆', '🥇', '💎', '🎁', '🛍️', '💳', '🧾', '📑', '🔐', '🚀', '🌟']
+        };
+        // Flat array for compatibility
+        const HABIT_EMOJIS = Object.values(EMOJI_CATEGORIES).flat();
 
         let selectedTime = null; // null means anytime
         let selectedFrequency = 'daily';
@@ -570,28 +598,77 @@
         let selectedHabitId = null;
         let debugDayOffset = 0;
         let debugHourOverride = null;
+        let emojiPopupMode = null; // 'new' or habit id for edit
+        let editModeHabitId = null; // Track which habit is being edited for emoji exclusion
+        let timesPeriod = 'week'; // 'week' or 'month' for timesPerPeriod
+        let pointsPeriod = 'week'; // 'week' or 'month' for pointsPerPeriod
+
+        function setTimesPeriod(period) {
+            timesPeriod = period;
+            document.getElementById('timesWeekBtn').classList.toggle('active', period === 'week');
+            document.getElementById('timesMonthBtn').classList.toggle('active', period === 'month');
+            selectFrequency('timesPerPeriod');
+        }
+
+        function setPointsPeriod(period) {
+            pointsPeriod = period;
+            document.getElementById('pointsWeekBtn').classList.toggle('active', period === 'week');
+            document.getElementById('pointsMonthBtn').classList.toggle('active', period === 'month');
+            selectFrequency('pointsPerPeriod');
+        }
 
         function getUsedIcons(excludeId = null) {
             const habits = loadHabits();
             return new Set(habits.filter(h => h.id !== excludeId && h.icon).map(h => h.icon));
         }
 
-        function renderEmojiPicker(containerId, selected = null, excludeId = null) {
-            const container = document.getElementById(containerId);
-            if (!container) return;
-            const usedIcons = getUsedIcons(excludeId);
-            container.innerHTML = HABIT_EMOJIS.map(e => {
-                const isUsed = usedIcons.has(e);
-                const isSelected = e === selected;
-                return `<div class="emoji-option ${isSelected ? 'selected' : ''} ${isUsed ? 'used' : ''}"
-                    onclick="${isUsed ? '' : `selectEmoji('${e}', '${containerId}')`}">${e}</div>`;
-            }).join('');
+        function openEmojiPopup(mode, habitId = null) {
+            emojiPopupMode = mode;
+            editModeHabitId = habitId;
+            renderEmojiPopup();
+            document.getElementById('emojiPopupOverlay').classList.add('active');
         }
 
-        function selectEmoji(emoji, containerId) {
-            selectedEmoji = emoji;
-            renderEmojiPicker(containerId, emoji);
+        function closeEmojiPopup() {
+            document.getElementById('emojiPopupOverlay').classList.remove('active');
+            emojiPopupMode = null;
+            editModeHabitId = null;
         }
+
+        function renderEmojiPopup() {
+            const excludeId = emojiPopupMode === 'new' ? null : editModeHabitId;
+            const usedIcons = getUsedIcons(excludeId);
+            let html = '';
+            for (const [category, emojis] of Object.entries(EMOJI_CATEGORIES)) {
+                html += `<div class="emoji-category">
+                    <div class="emoji-category-header">${category}</div>
+                    <div class="emoji-category-grid">
+                        ${emojis.map(e => {
+                            const isUsed = usedIcons.has(e);
+                            const isSelected = e === selectedEmoji;
+                            return `<div class="emoji-option ${isSelected ? 'selected' : ''} ${isUsed ? 'used' : ''}"
+                                onclick="${isUsed ? '' : `selectEmojiFromPopup('${e}')`}">${e}</div>`;
+                        }).join('')}
+                    </div>
+                </div>`;
+            }
+            document.getElementById('emojiPopup').innerHTML = html;
+        }
+
+        function selectEmojiFromPopup(emoji) {
+            selectedEmoji = emoji;
+            if (emojiPopupMode === 'new') {
+                document.getElementById('selectedEmojiDisplay').textContent = emoji;
+            } else if (emojiPopupMode === 'edit') {
+                document.getElementById('editSelectedEmojiDisplay').textContent = emoji;
+                editIcon = emoji; // Update the editIcon variable for saving
+            }
+            closeEmojiPopup();
+        }
+
+        // Legacy function for backwards compatibility
+        function renderEmojiPicker(containerId, selected = null, excludeId = null) {}
+        function selectEmoji(emoji, containerId) { selectedEmoji = emoji; }
 
         function getSettings() {
             const s = localStorage.getItem('habit_settings');
@@ -664,6 +741,9 @@
                 document.getElementById('timeNote').textContent = '';
             }
             renderHabits();
+            // Re-render open panels to update subtask states for new day
+            if (selectedHabitId) renderDetails();
+            if (subtaskPopupHabitId) renderSubtaskPopup();
         }
 
         function loadHabits() { const h = localStorage.getItem('habits_v3'); return h ? JSON.parse(h) : []; }
@@ -675,17 +755,25 @@
             // Select first unused emoji
             const usedIcons = getUsedIcons();
             selectedEmoji = HABIT_EMOJIS.find(e => !usedIcons.has(e)) || HABIT_EMOJIS[0];
-            renderEmojiPicker('emojiPicker', selectedEmoji);
+            document.getElementById('selectedEmojiDisplay').textContent = selectedEmoji;
             document.getElementById('modalOverlay').classList.add('active');
             document.getElementById('habitInput').focus();
         }
         function closeModal() {
             document.getElementById('modalOverlay').classList.remove('active');
             document.getElementById('habitInput').value = '';
+            document.getElementById('selectedEmojiDisplay').textContent = '📌';
             selectedTime = null;
             selectedEmoji = HABIT_EMOJIS[0];
             document.querySelectorAll('.time-option').forEach(el => el.classList.remove('selected'));
             selectFrequency('daily');
+            // Reset period toggles
+            timesPeriod = 'week';
+            pointsPeriod = 'week';
+            document.getElementById('timesWeekBtn').classList.add('active');
+            document.getElementById('timesMonthBtn').classList.remove('active');
+            document.getElementById('pointsWeekBtn').classList.add('active');
+            document.getElementById('pointsMonthBtn').classList.remove('active');
         }
 
         function openSettings() {
@@ -725,17 +813,26 @@
             const name = document.getElementById('habitInput').value.trim();
             if (!name) return;
             const habits = loadHabits();
+            // Convert combined frequency types to actual types
+            let freqType = selectedFrequency;
+            if (selectedFrequency === 'timesPerPeriod') {
+                freqType = timesPeriod === 'week' ? 'timesPerWeek' : 'timesPerMonth';
+            } else if (selectedFrequency === 'pointsPerPeriod') {
+                freqType = pointsPeriod === 'week' ? 'pointsPerWeek' : 'pointsPerMonth';
+            }
+            const timesVal = parseInt(document.getElementById('timesPerPeriod').value) || 3;
+            const pointsVal = parseInt(document.getElementById('pointsPerPeriod').value) || 12;
             habits.push({
                 id: Date.now(), name,
                 icon: selectedEmoji,
                 timeOfDay: selectedTime, // null = anytime, 'morning', 'night', or 'both' for twice daily
                 frequency: {
-                    type: selectedFrequency,
-                    timesPerWeek: parseInt(document.getElementById('timesPerWeek').value) || 3,
+                    type: freqType,
+                    timesPerWeek: timesVal,
                     everyXDays: parseInt(document.getElementById('everyXDays').value) || 2,
-                    timesPerMonth: parseInt(document.getElementById('timesPerMonth').value) || 4,
-                    pointsPerWeek: parseInt(document.getElementById('pointsPerWeek').value) || 12,
-                    pointsPerMonth: parseInt(document.getElementById('pointsPerMonth').value) || 30
+                    timesPerMonth: timesVal,
+                    pointsPerWeek: pointsVal,
+                    pointsPerMonth: pointsVal
                 },
                 completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: getTodayString()
             });
@@ -940,14 +1037,14 @@
                         // Completion: +15 points
                         score = Math.min(100, score + 15);
                     } else {
-                        // Missed: -10 points, but diminishing returns when already negative
-                        const penalty = score < 0 ? Math.max(3, 10 + score * 0.1) : 10;
+                        // Missed: -15 points, but diminishing returns when already negative
+                        const penalty = score < 0 ? Math.max(5, 15 + score * 0.15) : 15;
                         score = Math.max(-100, score - penalty);
                     }
                 }
 
-                // Apply small daily decay (1% towards 0)
-                score = score * 0.99;
+                // Apply daily decay (3% towards 0)
+                score = score * 0.97;
             }
 
             return { raw: Math.round(score), display: getDisplayScore(score) };
@@ -1076,14 +1173,11 @@
 
             const status = getCompletionStatus(habit);
 
-            // Twice daily: show in Now only if current period not done
+            // Twice daily: only show in Morning and Bedtime periods
             if (habit.frequency.type === 'twiceDaily') {
                 if (timeOfDay === 'morning' && !status.morningDone) return true;
                 if (timeOfDay === 'night' && !status.nightDone) return true;
-                if (timeOfDay === 'anytime') {
-                    // During anytime period, only show if morning not done yet
-                    if (!status.morningDone) return true;
-                }
+                // During anytime period, twice daily goes to Later (waiting for bedtime)
                 return false;
             }
 
@@ -1103,15 +1197,9 @@
 
         function isCompletedToday(habit) {
             const today = getTodayString();
-            const status = getCompletionStatus(habit);
-            if (habit.frequency.type === 'twiceDaily') return status.morningDone && status.nightDone;
-            // For times/points per week/month: only show in Done if actually done today
-            // (allows doing extra beyond target, which stays in Now until done today)
-            if (habit.frequency.type === 'timesPerWeek' || habit.frequency.type === 'timesPerMonth' ||
-                habit.frequency.type === 'pointsPerWeek' || habit.frequency.type === 'pointsPerMonth') {
-                return habit.completions.some(c => c.date === today);
-            }
-            return status.completed;
+            // Any completion today should show in Done section
+            // This includes partial completions (e.g., morning done of twice daily)
+            return habit.completions.some(c => c.date === today);
         }
 
         function isOptional(habit) {
@@ -1132,17 +1220,26 @@
             const today = getTodayString();
             const timeOfDay = getTimeOfDayNow();
             if (habit.skippedDates?.includes(today)) return false;
-            if (isCompletedToday(habit)) return false;
+
+            const status = getCompletionStatus(habit);
+
+            // Twice daily: special handling - only fully done if BOTH periods complete
+            if (habit.frequency.type === 'twiceDaily') {
+                if (status.morningDone && status.nightDone) return false; // Fully done
+                // Morning done, waiting for bedtime (during anytime or morning periods)
+                if (status.morningDone && !status.nightDone && timeOfDay !== 'night') return true;
+                // During anytime, if morning not done yet, still goes to Later (waiting for bedtime, skip anytime)
+                if (!status.morningDone && timeOfDay === 'anytime') return true;
+                return false;
+            }
+
+            // For other habits: if fully completed, not for later
+            if (status.completed) return false;
 
             // Night habits during non-night = later
             if (habit.timeOfDay === 'night' && timeOfDay !== 'night') return true;
             // Snoozed until night
             if (habit.snoozedUntil === 'night' && timeOfDay !== 'night') return true;
-            // Twice daily with morning done = later until night
-            if (habit.frequency.type === 'twiceDaily') {
-                const status = getCompletionStatus(habit);
-                if (status.morningDone && !status.nightDone && timeOfDay !== 'night') return true;
-            }
             return false;
         }
 
@@ -1175,29 +1272,46 @@
             const laterHabits = sortedHabits.filter(h => isForLater(h));
             const completedHabits = sortedHabits.filter(h => isCompletedToday(h));
 
-            // Sub-categorize Now section into Morning and Anytime
+            // Sub-categorize Now section
             const morningHabits = nowHabits.filter(h => h.timeOfDay === 'morning');
-            const anytimeHabits = nowHabits.filter(h => !h.timeOfDay || h.timeOfDay === 'anytime' || h.frequency.type === 'twiceDaily');
+            const anytimeHabits = nowHabits.filter(h => !h.timeOfDay || h.timeOfDay === 'anytime');
+            const bedtimeHabits = nowHabits.filter(h => h.timeOfDay === 'night' || h.frequency.type === 'twiceDaily');
 
             let html = '';
 
-            // Now section with Morning and Anytime sub-sections
+            // Now section with sub-sections based on time of day
             if (nowHabits.length) {
                 let nowContent = '';
-                const showSubSections = morningHabits.length > 0 && anytimeHabits.length > 0 && (timeOfDay === 'morning' || timeOfDay === 'anytime');
 
-                if (showSubSections) {
-                    // Show both sub-sections
-                    nowContent += `<div class="sub-header"><span class="sub-header-icon">🌅</span>Morning</div>`;
-                    nowContent += `<div class="habits-grid">${morningHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
-                    nowContent += `<div class="sub-header"><span class="sub-header-icon">⚡</span>Anytime</div>`;
-                    nowContent += `<div class="habits-grid">${anytimeHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
-                } else if (morningHabits.length && (timeOfDay === 'morning' || timeOfDay === 'anytime')) {
-                    // Only morning habits
-                    nowContent += `<div class="sub-header"><span class="sub-header-icon">🌅</span>Morning</div>`;
-                    nowContent += `<div class="habits-grid">${morningHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
+                if (timeOfDay === 'morning' || timeOfDay === 'anytime') {
+                    // Morning/daytime: show Morning and Anytime sub-sections
+                    const showMorningSections = morningHabits.length > 0 && anytimeHabits.length > 0;
+                    if (showMorningSections) {
+                        nowContent += `<div class="sub-header"><span class="sub-header-icon">🌅</span>Morning</div>`;
+                        nowContent += `<div class="habits-grid">${morningHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
+                        nowContent += `<div class="sub-header"><span class="sub-header-icon">⚡</span>Anytime</div>`;
+                        nowContent += `<div class="habits-grid">${anytimeHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
+                    } else if (morningHabits.length) {
+                        nowContent += `<div class="sub-header"><span class="sub-header-icon">🌅</span>Morning</div>`;
+                        nowContent += `<div class="habits-grid">${morningHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
+                    } else {
+                        nowContent += `<div class="habits-grid">${nowHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
+                    }
+                } else if (timeOfDay === 'night') {
+                    // Night/Bedtime: show Anytime and Bedtime sub-sections
+                    const showNightSections = anytimeHabits.length > 0 && bedtimeHabits.length > 0;
+                    if (showNightSections) {
+                        nowContent += `<div class="sub-header"><span class="sub-header-icon">⚡</span>Anytime</div>`;
+                        nowContent += `<div class="habits-grid">${anytimeHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
+                        nowContent += `<div class="sub-header"><span class="sub-header-icon">🌙</span>Bedtime</div>`;
+                        nowContent += `<div class="habits-grid">${bedtimeHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
+                    } else if (bedtimeHabits.length) {
+                        nowContent += `<div class="sub-header"><span class="sub-header-icon">🌙</span>Bedtime</div>`;
+                        nowContent += `<div class="habits-grid">${bedtimeHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
+                    } else {
+                        nowContent += `<div class="habits-grid">${nowHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
+                    }
                 } else {
-                    // All habits without sub-sections (night time or no morning habits)
                     nowContent += `<div class="habits-grid">${nowHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
                 }
 
@@ -1208,6 +1322,19 @@
                         <span class="section-count">${nowHabits.length}</span>
                     </div>
                     ${nowContent}
+                </div>`;
+            } else {
+                // Show empty Now section with encouraging message
+                html += `<div class="habits-section">
+                    <div class="section-header">
+                        <span class="section-icon">⚡</span>
+                        <span class="section-title">Now</span>
+                        <span class="section-count">0</span>
+                    </div>
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✨</div>
+                        <div>All caught up!</div>
+                    </div>
                 </div>`;
             }
 
@@ -1328,7 +1455,14 @@
                     if (neglectLevel > 0) ringClass = 'overdue';
                 }
             } else {
-                progress = '0%';
+                // Show partial fill based on subtask progress
+                const subtaskProgress = getSubtaskProgress(habit);
+                if (subtaskProgress && subtaskProgress.total > 0) {
+                    const pct = Math.round((subtaskProgress.completed / subtaskProgress.total) * 100);
+                    progress = `${pct}%`;
+                } else {
+                    progress = '0%';
+                }
                 if (neglectLevel > 0) ringClass = 'overdue';
             }
 
@@ -1401,6 +1535,17 @@
                 delete subtask.completedPeriods[periodKey];
             } else {
                 subtask.completedPeriods[periodKey] = Date.now();
+            }
+
+            // Auto-complete main habit when all subtasks are done
+            const allCompleted = habit.subtasks.every(s => s.completedPeriods && s.completedPeriods[periodKey]);
+            const today = getTodayString();
+            const alreadyCompleted = habit.completions.some(c => c.date === today);
+
+            if (allCompleted && !alreadyCompleted) {
+                habit.completions.push({ date: today, timestamp: Date.now() });
+                habit.momentumScore = (habit.momentumScore || 0) + 15;
+                habit.lastScoreUpdate = today;
             }
 
             saveHabits(habits);
@@ -1599,8 +1744,10 @@
             editFrequency = habit.frequency.type;
             editHideSubtasks = habit.showSubtasksOnMain === false;
             editIcon = habit.icon || HABIT_EMOJIS[0];
+            // Initialize period toggles based on current frequency
+            editTimesPeriod = (habit.frequency.type === 'timesPerMonth') ? 'month' : 'week';
+            editPointsPeriod = (habit.frequency.type === 'pointsPerMonth') ? 'month' : 'week';
             renderDetails();
-            renderEditEmojiPicker(habit.icon || HABIT_EMOJIS[0], id);
             document.getElementById('detailsOverlay').classList.add('active');
         }
         function closeDetails() { document.getElementById('detailsOverlay').classList.remove('active'); selectedHabitId = null; editMode = false; }
@@ -1614,9 +1761,11 @@
                 editFrequency = habit.frequency.type;
                 editHideSubtasks = habit.showSubtasksOnMain === false;
                 editIcon = habit.icon || HABIT_EMOJIS[0];
+                // Initialize period toggles based on current frequency
+                editTimesPeriod = (habit.frequency.type === 'timesPerMonth') ? 'month' : 'week';
+                editPointsPeriod = (habit.frequency.type === 'pointsPerMonth') ? 'month' : 'week';
             }
             renderDetails();
-            if (editMode) renderEditEmojiPicker(habit.icon || HABIT_EMOJIS[0], selectedHabitId);
         }
 
         function toggleEditTime(t) {
@@ -1631,6 +1780,20 @@
 
         let editHideSubtasks = false;
         let editIcon = null;
+        let editTimesPeriod = 'week';
+        let editPointsPeriod = 'week';
+
+        function setEditTimesPeriod(period) {
+            editTimesPeriod = period;
+            selectEditFrequency('timesPerPeriod');
+            renderDetails();
+        }
+
+        function setEditPointsPeriod(period) {
+            editPointsPeriod = period;
+            selectEditFrequency('pointsPerPeriod');
+            renderDetails();
+        }
 
         function toggleHideSubtasks() {
             editHideSubtasks = !editHideSubtasks;
@@ -1638,22 +1801,7 @@
             if (toggle) toggle.classList.toggle('active', editHideSubtasks);
         }
 
-        function selectEditIcon(emoji) {
-            editIcon = emoji;
-            renderEditEmojiPicker(emoji, selectedHabitId);
-        }
-
-        function renderEditEmojiPicker(selected, excludeId = null) {
-            const container = document.getElementById('editEmojiPicker');
-            if (!container) return;
-            const usedIcons = getUsedIcons(excludeId);
-            container.innerHTML = HABIT_EMOJIS.map(e => {
-                const isUsed = usedIcons.has(e);
-                const isSelected = e === selected;
-                return `<div class="emoji-option ${isSelected ? 'selected' : ''} ${isUsed ? 'used' : ''}"
-                    onclick="${isUsed ? '' : `selectEditIcon('${e}')`}">${e}</div>`;
-            }).join('');
-        }
+        // selectEditIcon is now handled by selectEmojiFromPopup
 
         function saveHabitEdit() {
             const habits = loadHabits();
@@ -1667,27 +1815,31 @@
             habit.name = newName;
             habit.icon = editIcon || habit.icon || HABIT_EMOJIS[0];
             habit.timeOfDay = editTimeOfDay;
-            habit.frequency.type = editFrequency;
 
-            if (editFrequency === 'timesPerWeek') {
-                const input = document.getElementById('editTimesPerWeek');
-                habit.frequency.timesPerWeek = parseInt(input?.value) || 3;
+            // Convert combined frequency types to actual types
+            let finalFreqType = editFrequency;
+            if (editFrequency === 'timesPerPeriod') {
+                finalFreqType = editTimesPeriod === 'week' ? 'timesPerWeek' : 'timesPerMonth';
+            } else if (editFrequency === 'pointsPerPeriod') {
+                finalFreqType = editPointsPeriod === 'week' ? 'pointsPerWeek' : 'pointsPerMonth';
             }
-            if (editFrequency === 'everyXDays') {
+            habit.frequency.type = finalFreqType;
+
+            if (finalFreqType === 'timesPerWeek' || finalFreqType === 'timesPerMonth') {
+                const input = document.getElementById('editTimesPerPeriod');
+                const val = parseInt(input?.value) || 3;
+                habit.frequency.timesPerWeek = val;
+                habit.frequency.timesPerMonth = val;
+            }
+            if (finalFreqType === 'everyXDays') {
                 const input = document.getElementById('editEveryXDays');
                 habit.frequency.everyXDays = parseInt(input?.value) || 2;
             }
-            if (editFrequency === 'timesPerMonth') {
-                const input = document.getElementById('editTimesPerMonth');
-                habit.frequency.timesPerMonth = parseInt(input?.value) || 4;
-            }
-            if (editFrequency === 'pointsPerWeek') {
-                const input = document.getElementById('editPointsPerWeek');
-                habit.frequency.pointsPerWeek = parseInt(input?.value) || 12;
-            }
-            if (editFrequency === 'pointsPerMonth') {
-                const input = document.getElementById('editPointsPerMonth');
-                habit.frequency.pointsPerMonth = parseInt(input?.value) || 30;
+            if (finalFreqType === 'pointsPerWeek' || finalFreqType === 'pointsPerMonth') {
+                const input = document.getElementById('editPointsPerPeriod');
+                const val = parseInt(input?.value) || 12;
+                habit.frequency.pointsPerWeek = val;
+                habit.frequency.pointsPerMonth = val;
             }
 
             // Save subtask visibility preference (false means hidden, undefined/true means shown)
@@ -1731,7 +1883,10 @@
                     <div class="modal-header"><h2 class="modal-title">Edit Habit</h2><button class="modal-close" onclick="closeDetails()">&times;</button></div>
                     <div class="form-group">
                         <label class="form-label">Icon</label>
-                        <div class="emoji-picker" id="editEmojiPicker"></div>
+                        <div class="emoji-select-btn" onclick="openEmojiPopup('edit', ${habit.id})">
+                            <span class="emoji-select-icon" id="editSelectedEmojiDisplay">${currentIcon}</span>
+                            <span class="emoji-select-text">Tap to change icon</span>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Name</label>
@@ -1746,7 +1901,7 @@
                             </div>
                             <div class="time-option ${currentTime === 'night' ? 'selected' : ''}" onclick="toggleEditTime('night')">
                                 <span class="time-option-icon">🌙</span>
-                                <span class="time-option-label">Night</span>
+                                <span class="time-option-label">Bedtime</span>
                             </div>
                         </div>
                     </div>
@@ -1761,10 +1916,14 @@
                                 <span class="frequency-dot"></span>
                                 <span class="frequency-label">Twice daily</span>
                             </div>
-                            <div class="frequency-option ${currentFreq === 'timesPerWeek' ? 'selected' : ''}" onclick="selectEditFrequency('timesPerWeek')">
+                            <div class="frequency-option ${currentFreq === 'timesPerWeek' || currentFreq === 'timesPerMonth' ? 'selected' : ''}" onclick="selectEditFrequency('timesPerPeriod')">
                                 <span class="frequency-dot"></span>
-                                <span class="frequency-label">Per week:</span>
-                                <input type="number" class="frequency-input" id="editTimesPerWeek" value="${habit.frequency.timesPerWeek || 3}" min="1" max="7" onclick="event.stopPropagation()">
+                                <input type="number" class="frequency-input" id="editTimesPerPeriod" value="${habit.frequency.timesPerWeek || habit.frequency.timesPerMonth || 3}" min="1" max="31" onclick="event.stopPropagation()">
+                                <span class="frequency-label">times /</span>
+                                <div class="period-toggle" onclick="event.stopPropagation()">
+                                    <button type="button" class="period-toggle-btn ${editTimesPeriod === 'week' ? 'active' : ''}" onclick="setEditTimesPeriod('week')">week</button>
+                                    <button type="button" class="period-toggle-btn ${editTimesPeriod === 'month' ? 'active' : ''}" onclick="setEditTimesPeriod('month')">month</button>
+                                </div>
                             </div>
                             <div class="frequency-option ${currentFreq === 'everyXDays' ? 'selected' : ''}" onclick="selectEditFrequency('everyXDays')">
                                 <span class="frequency-dot"></span>
@@ -1772,20 +1931,14 @@
                                 <input type="number" class="frequency-input" id="editEveryXDays" value="${habit.frequency.everyXDays || 2}" min="1" onclick="event.stopPropagation()">
                                 <span style="color:#666;margin-left:4px">days</span>
                             </div>
-                            <div class="frequency-option ${currentFreq === 'timesPerMonth' ? 'selected' : ''}" onclick="selectEditFrequency('timesPerMonth')">
+                            <div class="frequency-option ${currentFreq === 'pointsPerWeek' || currentFreq === 'pointsPerMonth' ? 'selected' : ''}" onclick="selectEditFrequency('pointsPerPeriod')">
                                 <span class="frequency-dot"></span>
-                                <span class="frequency-label">Per month:</span>
-                                <input type="number" class="frequency-input" id="editTimesPerMonth" value="${habit.frequency.timesPerMonth || 4}" min="1" max="31" onclick="event.stopPropagation()">
-                            </div>
-                            <div class="frequency-option ${currentFreq === 'pointsPerWeek' ? 'selected' : ''}" onclick="selectEditFrequency('pointsPerWeek')">
-                                <span class="frequency-dot"></span>
-                                <input type="number" class="frequency-input" id="editPointsPerWeek" value="${habit.frequency.pointsPerWeek || 12}" min="1" style="width:40px" onclick="event.stopPropagation()">
-                                <span class="frequency-label">pts / week</span>
-                            </div>
-                            <div class="frequency-option ${currentFreq === 'pointsPerMonth' ? 'selected' : ''}" onclick="selectEditFrequency('pointsPerMonth')">
-                                <span class="frequency-dot"></span>
-                                <input type="number" class="frequency-input" id="editPointsPerMonth" value="${habit.frequency.pointsPerMonth || 30}" min="1" style="width:40px" onclick="event.stopPropagation()">
-                                <span class="frequency-label">pts / month</span>
+                                <input type="number" class="frequency-input" id="editPointsPerPeriod" value="${habit.frequency.pointsPerWeek || habit.frequency.pointsPerMonth || 12}" min="1" style="width:40px" onclick="event.stopPropagation()">
+                                <span class="frequency-label">pts /</span>
+                                <div class="period-toggle" onclick="event.stopPropagation()">
+                                    <button type="button" class="period-toggle-btn ${editPointsPeriod === 'week' ? 'active' : ''}" onclick="setEditPointsPeriod('week')">week</button>
+                                    <button type="button" class="period-toggle-btn ${editPointsPeriod === 'month' ? 'active' : ''}" onclick="setEditPointsPeriod('month')">month</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1803,7 +1956,7 @@
             } else {
                 // View mode
                 const freqLabel = { daily: 'Daily', twiceDaily: 'Twice daily', timesPerWeek: `${habit.frequency.timesPerWeek || 3}x/week`, timesPerMonth: `${habit.frequency.timesPerMonth || 4}x/month`, everyXDays: `Every ${habit.frequency.everyXDays || 2} days`, pointsPerWeek: `${habit.frequency.pointsPerWeek || 12} pts/week`, pointsPerMonth: `${habit.frequency.pointsPerMonth || 30} pts/month` }[habit.frequency.type];
-                const timeLabel = habit.timeOfDay ? { morning: 'Morning', night: 'Night' }[habit.timeOfDay] : 'Anytime';
+                const timeLabel = habit.timeOfDay ? { morning: 'Morning', night: 'Bedtime' }[habit.timeOfDay] : 'Anytime';
 
                 // Momentum score
                 const scoreData = calculateMomentumScore(habit);
@@ -1820,10 +1973,11 @@
                     recoveryText = `<div style="color:#888;font-size:0.8rem;margin-top:8px;text-align:center">${completionsNeeded} completion${completionsNeeded > 1 ? 's' : ''} to recover</div>`;
                 }
 
-                // Subtasks section
+                // Subtasks section (not for points-based habits)
                 const subtasks = habit.subtasks || [];
+                const isPointsBased = habit.frequency.type === 'pointsPerWeek' || habit.frequency.type === 'pointsPerMonth';
                 let subtasksHtml = '';
-                if (subtasks.length > 0 || true) { // Always show subtasks section
+                if (!isPointsBased && (subtasks.length > 0 || true)) { // Show subtasks section except for points-based
                     subtasksHtml = `
                         <div class="subtask-list">
                             <div class="form-label" style="margin-bottom:8px">Subtasks</div>
@@ -1865,14 +2019,16 @@
                     ${recoveryText}
                     ${subtasksHtml}
                     <div class="action-buttons">
-                        <button class="submit-btn" onclick="toggleEditMode()">Edit Habit</button>
                         <div style="display:flex;gap:6px">
+                            <button class="submit-btn" style="flex:1" onclick="toggleEditMode()">Edit</button>
                             ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="snoozeHabit(${habit.id})">Snooze</button>` : ''}
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
-                            <button class="submit-btn secondary" style="flex:1" onclick="skipHabit(${habit.id})">Skip Today</button>
+                            <button class="submit-btn secondary" style="flex:1" onclick="skipHabit(${habit.id})">Skip</button>
                         </div>
-                        ${canFreshStart ? `<button class="submit-btn secondary" onclick="freshStartHabit(${habit.id})">Fresh Start</button>` : ''}
-                        <button class="submit-btn danger" onclick="deleteHabit(${habit.id})">Delete</button>
+                        <div style="display:flex;gap:6px">
+                            ${canFreshStart ? `<button class="submit-btn secondary" style="flex:1" onclick="freshStartHabit(${habit.id})">Fresh Start</button>` : ''}
+                            <button class="submit-btn danger" style="flex:1" onclick="deleteHabit(${habit.id})">Delete</button>
+                        </div>
                     </div>`;
             }
         }
@@ -1922,7 +2078,7 @@
         }
 
         document.getElementById('habitInput').addEventListener('keypress', e => { if (e.key === 'Enter') addHabit(); });
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetails(); closeSettings(); closeSubtaskPopup(); closePointsPopup(); } });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetails(); closeSettings(); closeSubtaskPopup(); closePointsPopup(); closeEmojiPopup(); } });
 
         // Update scores on page load to persist momentum for missed days
         updateAllHabitScores();
