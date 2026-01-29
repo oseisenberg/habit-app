@@ -1499,7 +1499,7 @@
             // Collapsible sections using helper
             html += renderSection(optionalHabits, 'optional', '⭐', 'Optional', false);
             html += renderSection(laterHabits, 'later', '🕐', 'Later', true, { inactive: true, isLater: true });
-            html += renderSection(completedHabits, 'completed', '✓', 'Done', true, { inactive: true, isCompleted: true });
+            html += renderSection(completedHabits, 'completed', '✓', 'Finished', true, { inactive: true, isCompleted: true });
 
             if (!html) html = '<div class="habits-section"><div class="empty-state"><div class="empty-state-icon">✓</div><div>All done!</div></div></div>';
             container.innerHTML = html;
