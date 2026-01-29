@@ -1024,13 +1024,15 @@
                 return false;
             }
 
-            // Times per week/month: only allow one completion per day
+            // Times per week/month: allow doing it even after target is met (e.g., extra exercise)
+            // Just check if already done today
             if (habit.frequency.type === 'timesPerWeek' || habit.frequency.type === 'timesPerMonth') {
                 const completedToday = habit.completions.some(c => c.date === today);
                 if (completedToday) return false;
+                // Don't check status.completed - allow going beyond target
+            } else if (status.completed) {
+                return false;
             }
-
-            if (status.completed) return false;
             if (!isDueToday(habit)) return false;
             if (habit.timeOfDay === 'night' && timeOfDay !== 'night') return false;
             return true;
@@ -1040,10 +1042,10 @@
             const today = getTodayString();
             const status = getCompletionStatus(habit);
             if (habit.frequency.type === 'twiceDaily') return status.morningDone && status.nightDone;
-            // For times per week/month: show as completed for today if done today (even if quota not met)
+            // For times per week/month: only show in Done if actually done today
+            // (allows doing extra beyond target, which stays in Now until done today)
             if (habit.frequency.type === 'timesPerWeek' || habit.frequency.type === 'timesPerMonth') {
-                const completedToday = habit.completions.some(c => c.date === today);
-                return completedToday || status.completed;
+                return habit.completions.some(c => c.date === today);
             }
             return status.completed;
         }
@@ -1214,14 +1216,18 @@
             if (isCompleted || status.completed) {
                 ringClass = 'completed';
                 progress = '100%';
-            } else if (habit.frequency.type === 'timesPerWeek' && status.count !== undefined) {
-                const pct = Math.round((status.count / status.target) * 100);
-                progress = pct + '%';
-                if (neglectLevel > 0) ringClass = 'overdue';
-            } else if (habit.frequency.type === 'timesPerMonth' && status.count !== undefined) {
-                const pct = Math.round((status.count / status.target) * 100);
-                progress = pct + '%';
-                if (neglectLevel > 0) ringClass = 'overdue';
+            } else if (habit.frequency.type === 'timesPerWeek' || habit.frequency.type === 'timesPerMonth') {
+                // For weekly/monthly habits, just show done/not-done for today
+                // Red dots already indicate if behind schedule
+                const today = getTodayString();
+                const completedToday = habit.completions.some(c => c.date === today);
+                if (completedToday) {
+                    ringClass = 'completed';
+                    progress = '100%';
+                } else {
+                    progress = '0%';
+                    if (neglectLevel > 0) ringClass = 'overdue';
+                }
             } else {
                 progress = '0%';
                 if (neglectLevel > 0) ringClass = 'overdue';
