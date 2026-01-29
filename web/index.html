@@ -181,6 +181,12 @@
         .period-toggle-btn.active { background: #667eea; color: white; }
         .frequency-row { display: flex; align-items: center; gap: 8px; }
         .frequency-row #frequencyInputs { display: flex; align-items: center; gap: 6px; }
+        .task-options { display: flex; flex-wrap: wrap; gap: 6px; }
+        .option-pill { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; background: #0f0f1a; border: 1px solid #2a2a3e; border-radius: 16px; cursor: pointer; font-size: 0.8rem; color: #888; transition: all 0.15s; }
+        .option-pill:hover { border-color: #444; }
+        .option-pill.active { background: rgba(102, 126, 234, 0.15); border-color: #667eea; color: #667eea; }
+        .option-pill-check { display: none; font-size: 0.7rem; }
+        .option-pill.active .option-pill-check { display: inline; }
 
         .submit-btn {
             width: 100%; padding: 12px; background: #667eea; color: white; border: none;
@@ -444,6 +450,23 @@
                 </div>
             </div>
             <div class="form-group">
+                <label class="form-label">Options</label>
+                <div class="task-options">
+                    <label class="option-pill" id="reminderPill" onclick="toggleReminderMode()">
+                        <span class="option-pill-check">✓</span>
+                        <span>Reminder</span>
+                    </label>
+                    <label class="option-pill" id="subtasksPill" onclick="toggleSubtasksSection()">
+                        <span class="option-pill-check">✓</span>
+                        <span>Subtasks</span>
+                    </label>
+                    <label class="option-pill" id="optionalPill" onclick="toggleAllowOptional()" style="display:none">
+                        <span class="option-pill-check">✓</span>
+                        <span>Allow extra</span>
+                    </label>
+                </div>
+            </div>
+            <div class="form-group" id="frequencyGroup">
                 <label class="form-label">Frequency</label>
                 <div class="frequency-row">
                     <select class="form-input" id="frequencySelect" onchange="selectFrequency(this.value)" style="flex:1">
@@ -452,28 +475,22 @@
                         <option value="everyXDays">Every</option>
                         <option value="timesPerPeriod">Times per</option>
                         <option value="pointsPerPeriod">Points per</option>
-                        <option value="reminder">Reminder</option>
                     </select>
                     <div id="frequencyInputs"></div>
                 </div>
             </div>
-            <div class="form-group" id="optionalCheckboxGroup" style="display:none">
-                <div class="settings-row" style="border:none;padding:8px 0">
-                    <span class="settings-label" style="font-size:0.85rem">Allow extra completions after target</span>
-                    <div class="toggle-switch active" id="allowOptionalToggle" onclick="toggleAllowOptional()"></div>
+            <div class="form-group" id="reminderGroup" style="display:none">
+                <label class="form-label">Remind every</label>
+                <div class="frequency-row">
+                    <input type="number" class="frequency-input" id="reminderDays" value="3" min="1">
+                    <span style="color:#888">days</span>
                 </div>
             </div>
-            <div class="form-group" id="subtasksGroup">
-                <div class="settings-row" style="border:none;padding:8px 0">
-                    <span class="settings-label" style="font-size:0.85rem">Add subtasks</span>
-                    <div class="toggle-switch" id="subtasksToggle" onclick="toggleSubtasksSection()"></div>
-                </div>
-                <div id="subtasksInputArea" style="display:none">
-                    <div id="newHabitSubtasksList"></div>
-                    <div class="add-subtask">
-                        <input type="text" id="newHabitSubtaskInput" placeholder="Add subtask..." onkeypress="if(event.key==='Enter'){event.preventDefault();addNewHabitSubtask();}">
-                        <button type="button" onclick="addNewHabitSubtask()">+</button>
-                    </div>
+            <div id="subtasksInputArea" style="display:none">
+                <div id="newHabitSubtasksList"></div>
+                <div class="add-subtask">
+                    <input type="text" id="newHabitSubtaskInput" placeholder="Add subtask..." onkeypress="if(event.key==='Enter'){event.preventDefault();addNewHabitSubtask();}">
+                    <button type="button" onclick="addNewHabitSubtask()">+</button>
                 </div>
             </div>
             <button class="submit-btn" onclick="addHabit()">Add Habit</button>
@@ -592,6 +609,7 @@
         let pointsPeriod = 'week'; // 'week' or 'month' for pointsPerPeriod
         let newHabitSubtasks = []; // Subtasks for new habit creation
         let showSubtasksInput = false; // Toggle for subtasks input area
+        let isReminderMode = false; // Task type: reminder vs regular habit
 
         function setTimesPeriod(period) {
             timesPeriod = period;
@@ -803,6 +821,11 @@
             selectedTime = null;
             selectedEmoji = HABIT_EMOJIS[0];
             document.querySelectorAll('#timeToggle .time-toggle-btn').forEach(el => el.classList.remove('active'));
+            // Reset reminder mode
+            isReminderMode = false;
+            document.getElementById('reminderPill').classList.remove('active');
+            document.getElementById('frequencyGroup').style.display = 'block';
+            document.getElementById('reminderGroup').style.display = 'none';
             // Reset frequency dropdown and inputs
             document.getElementById('frequencySelect').value = 'daily';
             selectFrequency('daily');
@@ -811,11 +834,11 @@
             pointsPeriod = 'week';
             // Reset optional toggle
             allowOptional = true;
-            document.getElementById('allowOptionalToggle').classList.add('active');
+            document.getElementById('optionalPill').classList.remove('active');
             // Reset subtasks
             newHabitSubtasks = [];
             showSubtasksInput = false;
-            document.getElementById('subtasksToggle').classList.remove('active');
+            document.getElementById('subtasksPill').classList.remove('active');
             document.getElementById('subtasksInputArea').style.display = 'none';
             document.getElementById('newHabitSubtasksList').innerHTML = '';
             document.getElementById('newHabitSubtaskInput').value = '';
@@ -879,22 +902,41 @@
                     selectedTime = null;
                 }
             });
-            // Show optional checkbox only for frequency types that support it
+            // Show optional pill only for frequency types that support it
             const supportsOptional = f === 'timesPerPeriod' || f === 'pointsPerPeriod';
-            document.getElementById('optionalCheckboxGroup').style.display = supportsOptional ? 'block' : 'none';
-            // Hide subtasks for points-based habits
+            document.getElementById('optionalPill').style.display = supportsOptional ? 'inline-flex' : 'none';
+            // Hide subtasks pill for points-based habits
             const isPointsBased = f === 'pointsPerPeriod';
-            document.getElementById('subtasksGroup').style.display = isPointsBased ? 'none' : 'block';
+            document.getElementById('subtasksPill').style.display = isPointsBased ? 'none' : 'inline-flex';
+            if (isPointsBased && showSubtasksInput) {
+                showSubtasksInput = false;
+                document.getElementById('subtasksPill').classList.remove('active');
+                document.getElementById('subtasksInputArea').style.display = 'none';
+            }
+        }
+
+        function toggleReminderMode() {
+            isReminderMode = !isReminderMode;
+            document.getElementById('reminderPill').classList.toggle('active', isReminderMode);
+            document.getElementById('frequencyGroup').style.display = isReminderMode ? 'none' : 'block';
+            document.getElementById('reminderGroup').style.display = isReminderMode ? 'block' : 'none';
+            // Hide optional pill when in reminder mode, restore based on frequency when off
+            if (isReminderMode) {
+                document.getElementById('optionalPill').style.display = 'none';
+            } else {
+                const supportsOptional = selectedFrequency === 'timesPerPeriod' || selectedFrequency === 'pointsPerPeriod';
+                document.getElementById('optionalPill').style.display = supportsOptional ? 'inline-flex' : 'none';
+            }
         }
 
         function toggleAllowOptional() {
             allowOptional = !allowOptional;
-            document.getElementById('allowOptionalToggle').classList.toggle('active', allowOptional);
+            document.getElementById('optionalPill').classList.toggle('active', allowOptional);
         }
 
         function toggleSubtasksSection() {
             showSubtasksInput = !showSubtasksInput;
-            document.getElementById('subtasksToggle').classList.toggle('active', showSubtasksInput);
+            document.getElementById('subtasksPill').classList.toggle('active', showSubtasksInput);
             document.getElementById('subtasksInputArea').style.display = showSubtasksInput ? 'block' : 'none';
             if (showSubtasksInput) {
                 document.getElementById('newHabitSubtaskInput').focus();
@@ -942,16 +984,22 @@
             const name = document.getElementById('habitInput').value.trim();
             if (!name) return;
             const habits = loadHabits();
-            // Convert combined frequency types to actual types
-            let freqType = selectedFrequency;
-            if (selectedFrequency === 'timesPerPeriod') {
-                freqType = timesPeriod === 'week' ? 'timesPerWeek' : 'timesPerMonth';
-            } else if (selectedFrequency === 'pointsPerPeriod') {
-                freqType = pointsPeriod === 'week' ? 'pointsPerWeek' : 'pointsPerMonth';
+            // Handle reminder mode vs regular habit frequency
+            let freqType;
+            if (isReminderMode) {
+                freqType = 'reminder';
+            } else {
+                // Convert combined frequency types to actual types
+                freqType = selectedFrequency;
+                if (selectedFrequency === 'timesPerPeriod') {
+                    freqType = timesPeriod === 'week' ? 'timesPerWeek' : 'timesPerMonth';
+                } else if (selectedFrequency === 'pointsPerPeriod') {
+                    freqType = pointsPeriod === 'week' ? 'pointsPerWeek' : 'pointsPerMonth';
+                }
             }
             const timesVal = parseInt(document.getElementById('timesPerPeriod')?.value) || 3;
             const pointsVal = parseInt(document.getElementById('pointsPerPeriod')?.value) || 12;
-            const reminderDaysVal = parseInt(document.getElementById('reminderDays')?.value) || 1;
+            const reminderDaysVal = parseInt(document.getElementById('reminderDays')?.value) || 3;
             const everyXDaysVal = parseInt(document.getElementById('everyXDays')?.value) || 2;
             habits.push({
                 id: Date.now(), name,
