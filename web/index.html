@@ -538,6 +538,7 @@
                 Completions before morning count as previous day's night.
             </div>
             <button class="submit-btn" onclick="saveSettings()">Save Settings</button>
+            <button class="submit-btn secondary" onclick="exportData()" style="margin-top:8px">Export All Data (JSON)</button>
         </div>
     </div>
 
@@ -866,6 +867,25 @@
             }));
             closeSettings();
             updateDisplay();
+        }
+
+        function exportData() {
+            const data = {
+                exportedAt: new Date().toISOString(),
+                version: 'habits_v3',
+                settings: getSettings(),
+                habits: loadHabits()
+            };
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `habits-export-${getTodayString()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         function toggleTime(t) {
