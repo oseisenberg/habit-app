@@ -1348,10 +1348,14 @@
 
             const timeOfDay = getTimeOfDayNow();
             const sortedHabits = sortHabits(habits);
+            // Make sections mutually exclusive: Now > Done > Optional > Later
             const nowHabits = sortedHabits.filter(h => canDoNow(h));
-            const optionalHabits = sortedHabits.filter(h => isOptional(h));
-            const laterHabits = sortedHabits.filter(h => isForLater(h));
-            const completedHabits = sortedHabits.filter(h => isCompletedToday(h));
+            const nowIds = new Set(nowHabits.map(h => h.id));
+            const completedHabits = sortedHabits.filter(h => !nowIds.has(h.id) && isCompletedToday(h));
+            const completedIds = new Set(completedHabits.map(h => h.id));
+            const optionalHabits = sortedHabits.filter(h => !nowIds.has(h.id) && !completedIds.has(h.id) && isOptional(h));
+            const optionalIds = new Set(optionalHabits.map(h => h.id));
+            const laterHabits = sortedHabits.filter(h => !nowIds.has(h.id) && !completedIds.has(h.id) && !optionalIds.has(h.id) && isForLater(h));
 
             // Sub-categorize Now section
             // Twice daily habits should appear in Morning section during morning, Bedtime section during night
