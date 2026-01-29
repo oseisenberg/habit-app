@@ -581,8 +581,8 @@
         <div class="debug-row"><span class="debug-label">Real:</span><span class="debug-value"><span id="debugRealDate"></span> <span id="debugRealPeriod" style="color:#888"></span></span></div>
         <div class="debug-row"><span class="debug-label">Sim:</span><span class="debug-value"><span id="debugSimDate"></span> <span id="debugSimPeriod" style="color:#888"></span></span></div>
         <div class="debug-controls">
-            <button class="debug-btn debug-btn-nav" onclick="debugChangeDay(-1)">←</button>
-            <button class="debug-btn debug-btn-nav" onclick="debugChangeDay(1)">→</button>
+            <button class="debug-btn debug-btn-nav" onclick="debugChangePeriod(-1)">←</button>
+            <button class="debug-btn debug-btn-nav" onclick="debugChangePeriod(1)">→</button>
             <button class="debug-btn debug-btn-reset" onclick="debugResetTime()">Reset Time</button>
         </div>
         <div class="debug-controls">
@@ -702,8 +702,28 @@
             updateDebugDisplay();
         }
 
-        function debugChangeDay(d) {
-            debugDayOffset += d;
+        function debugChangePeriod(direction) {
+            const s = getSettings();
+            const currentPeriod = getTimeOfDayNow();
+
+            if (direction > 0) {
+                // Forward: morning → night (same day), night → morning (next day)
+                if (currentPeriod === 'morning') {
+                    debugHourOverride = s.nightStart + 1;
+                } else {
+                    debugDayOffset += 1;
+                    debugHourOverride = s.morningStart + 1;
+                }
+            } else {
+                // Backward: morning → night (prev day), night → morning (same day)
+                if (currentPeriod === 'morning') {
+                    debugDayOffset -= 1;
+                    debugHourOverride = s.nightStart + 1;
+                } else {
+                    debugHourOverride = s.morningStart + 1;
+                }
+            }
+
             // Sync all habits' lastScoreUpdate to new simulated date to prevent false neglect
             const newToday = getTodayString();
             const habits = loadHabits();
@@ -1382,24 +1402,47 @@
             return habits;
         }
 
-        // Categorize habits into sections (Now, Optional, Later, Done) with sub-categories
+        // Categorize habits into sections (Now, Optional, Later, Done) - each habit in ONE section only
         function categorizeHabits(habits) {
             const timeOfDay = getTimeOfDayNow();
             const sorted = sortHabits(habits);
             const now = [], optional = [], later = [], done = [];
-            const nowIds = new Set(), doneIds = new Set();
 
-            // First pass: categorize into Now and Done (can overlap)
             sorted.forEach(h => {
-                if (canDoNow(h)) { now.push(h); nowIds.add(h.id); }
-                if (hasCompletionToday(h)) { done.push(h); doneIds.add(h.id); }
-            });
+                const status = getCompletionStatus(h);
 
-            // Second pass: Optional and Later (mutually exclusive with Now/Done)
-            sorted.forEach(h => {
-                if (nowIds.has(h.id) || doneIds.has(h.id)) return;
-                if (isOptional(h)) optional.push(h);
-                else if (isForLater(h)) later.push(h);
+                // Twice daily: special handling
+                if (h.frequency.type === 'twiceDaily') {
+                    if (status.morningDone && status.nightDone) {
+                        done.push(h); // Both done → Done
+                    } else if (status.morningDone && !status.nightDone) {
+                        // Morning done, night pending
+                        if (timeOfDay === 'morning') {
+                            later.push(h); // Wait for night
+                        } else {
+                            now.push(h); // Can do night now
+                        }
+                    } else {
+                        // Morning not done
+                        if (timeOfDay === 'morning') {
+                            now.push(h); // Can do morning now
+                        } else {
+                            now.push(h); // Show in now for night (morning shows as missed)
+                        }
+                    }
+                    return;
+                }
+
+                // Regular habits: one section only
+                if (isCompletedToday(h)) {
+                    done.push(h);
+                } else if (canDoNow(h)) {
+                    now.push(h);
+                } else if (isOptional(h)) {
+                    optional.push(h);
+                } else if (isForLater(h)) {
+                    later.push(h);
+                }
             });
 
             // Sub-categorize Now section by time
