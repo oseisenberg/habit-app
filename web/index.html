@@ -473,19 +473,17 @@
             </div>
             <div class="form-group" id="frequencyGroup">
                 <label class="form-label">Frequency</label>
-                <div class="frequency-row">
+                <div class="frequency-row" id="frequencyRow">
                     <select class="form-input" id="frequencySelect" onchange="selectFrequency(this.value)" style="flex:1">
                         <option value="daily">Daily</option>
                         <option value="twiceDaily">Twice daily</option>
-                        <option value="everyXDays">Every</option>
-                        <option value="timesPerPeriod">Times per</option>
+                        <option value="everyXDays">Every X days</option>
+                        <option value="timesPerPeriod">X per week/month</option>
                     </select>
                     <div id="frequencyInputs"></div>
                 </div>
-            </div>
-            <div class="form-group" id="reminderGroup" style="display:none">
-                <label class="form-label">Remind every</label>
-                <div class="frequency-row">
+                <div class="frequency-row" id="reminderRow" style="display:none">
+                    <span style="color:#888">Every</span>
                     <input type="number" class="frequency-input" id="reminderDays" value="3" min="1">
                     <span style="color:#888">days</span>
                 </div>
@@ -829,8 +827,8 @@
             // Reset reminder mode
             isReminderMode = false;
             document.getElementById('reminderPill').classList.remove('active');
-            document.getElementById('frequencyGroup').style.display = 'block';
-            document.getElementById('reminderGroup').style.display = 'none';
+            document.getElementById('frequencyRow').style.display = 'flex';
+            document.getElementById('reminderRow').style.display = 'none';
             // Reset points mode
             isPointsMode = false;
             document.getElementById('pointsPill').classList.remove('active');
@@ -951,8 +949,8 @@
         function toggleReminderMode() {
             isReminderMode = !isReminderMode;
             document.getElementById('reminderPill').classList.toggle('active', isReminderMode);
-            document.getElementById('frequencyGroup').style.display = isReminderMode ? 'none' : 'block';
-            document.getElementById('reminderGroup').style.display = isReminderMode ? 'block' : 'none';
+            document.getElementById('frequencyRow').style.display = isReminderMode ? 'none' : 'flex';
+            document.getElementById('reminderRow').style.display = isReminderMode ? 'flex' : 'none';
             // Update other pill states
             updatePillStates();
         }
