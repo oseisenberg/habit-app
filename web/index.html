@@ -332,6 +332,35 @@
             margin-bottom: 8px;
         }
         .details-habit-name { font-size: 1.1rem; font-weight: 600; color: #fff; text-align: center; }
+
+        /* Lightweight subtask popup */
+        .subtask-popup-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5); display: flex; align-items: center;
+            justify-content: center; z-index: 250; opacity: 0; visibility: hidden;
+            transition: opacity 0.15s, visibility 0.15s;
+        }
+        .subtask-popup-overlay.active { opacity: 1; visibility: visible; }
+        .subtask-popup {
+            background: #1a1a2e; border-radius: 12px; padding: 12px; width: 280px;
+            max-width: 90%; transform: scale(0.95); transition: transform 0.15s;
+        }
+        .subtask-popup-overlay.active .subtask-popup { transform: scale(1); }
+        .subtask-popup-header {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+            padding-bottom: 8px; border-bottom: 1px solid #2a2a3e;
+        }
+        .subtask-popup-icon { font-size: 1.2rem; }
+        .subtask-popup-title { font-size: 0.9rem; font-weight: 600; color: #fff; flex: 1; }
+        .subtask-popup-close { background: none; border: none; color: #666; font-size: 1.2rem; cursor: pointer; padding: 4px; }
+        .subtask-popup-list { display: flex; flex-direction: column; gap: 2px; }
+        .subtask-popup-item {
+            display: flex; align-items: center; gap: 10px; padding: 8px;
+            background: #0f0f1a; border-radius: 8px; cursor: pointer; transition: background 0.1s;
+        }
+        .subtask-popup-item:active { background: #252540; }
+        .subtask-popup-item .subtask-checkbox { width: 20px; height: 20px; }
+        .subtask-popup-item .subtask-name { font-size: 0.85rem; }
     </style>
 </head>
 <body>
@@ -453,6 +482,11 @@
             </div>
             <button class="submit-btn" onclick="saveSettings()">Save Settings</button>
         </div>
+    </div>
+
+    <!-- Subtask Popup -->
+    <div class="subtask-popup-overlay" id="subtaskPopupOverlay" onclick="handleOverlayClick(event, 'subtaskPopupOverlay', closeSubtaskPopup)">
+        <div class="subtask-popup" id="subtaskPopup"></div>
     </div>
 
     <!-- Debug -->
@@ -1204,13 +1238,13 @@
             if (!habit.subtasks || habit.subtasks.length === 0) return '';
             const icons = habit.subtasks.map((s, idx) => {
                 const done = isSubtaskCompleted(habit, s.id);
-                // Use numbers or simple symbols for subtasks
                 const subtaskSymbol = (idx + 1);
-                return `<div class="subtask-icon ${done ? 'completed' : ''}" onclick="event.stopPropagation();toggleSubtask(${habit.id}, ${s.id})">
+                return `<div class="subtask-icon ${done ? 'completed' : ''}">
                     <span class="subtask-emoji">${subtaskSymbol}</span>
                 </div>`;
             }).join('');
-            return `<div class="subtask-icons">${icons}</div>`;
+            // Tapping subtask icons opens popup to see names and toggle
+            return `<div class="subtask-icons" onclick="event.stopPropagation();openSubtaskPopup(${habit.id})">${icons}</div>`;
         }
 
         function toggleSection(sectionId) {
@@ -1305,6 +1339,66 @@
             habit.subtasks = habit.subtasks.filter(s => s.id !== subtaskId);
             saveHabits(habits);
             renderDetails();
+            renderHabits();
+        }
+
+        // Subtask popup functions
+        let subtaskPopupHabitId = null;
+
+        function openSubtaskPopup(habitId) {
+            subtaskPopupHabitId = habitId;
+            renderSubtaskPopup();
+            document.getElementById('subtaskPopupOverlay').classList.add('active');
+        }
+
+        function closeSubtaskPopup() {
+            document.getElementById('subtaskPopupOverlay').classList.remove('active');
+            subtaskPopupHabitId = null;
+        }
+
+        function renderSubtaskPopup() {
+            const habit = loadHabits().find(h => h.id === subtaskPopupHabitId);
+            if (!habit) return;
+
+            const icon = habit.icon || '📌';
+            const subtasks = habit.subtasks || [];
+
+            const subtaskItems = subtasks.map(s => {
+                const completed = isSubtaskCompleted(habit, s.id);
+                return `<div class="subtask-popup-item" onclick="toggleSubtaskFromPopup(${habit.id}, ${s.id})">
+                    <div class="subtask-checkbox ${completed ? 'checked' : ''}"></div>
+                    <span class="subtask-name ${completed ? 'completed' : ''}">${escapeHtml(s.name)}</span>
+                </div>`;
+            }).join('');
+
+            document.getElementById('subtaskPopup').innerHTML = `
+                <div class="subtask-popup-header">
+                    <span class="subtask-popup-icon">${icon}</span>
+                    <span class="subtask-popup-title">${escapeHtml(habit.name)}</span>
+                    <button class="subtask-popup-close" onclick="closeSubtaskPopup()">&times;</button>
+                </div>
+                <div class="subtask-popup-list">${subtaskItems}</div>`;
+        }
+
+        function toggleSubtaskFromPopup(habitId, subtaskId) {
+            const habits = loadHabits();
+            const habit = habits.find(h => h.id === habitId);
+            if (!habit || !habit.subtasks) return;
+
+            const subtask = habit.subtasks.find(s => s.id === subtaskId);
+            if (!subtask) return;
+
+            const periodKey = getSubtaskPeriodKey(habit);
+            if (!subtask.completedPeriods) subtask.completedPeriods = {};
+
+            if (subtask.completedPeriods[periodKey]) {
+                delete subtask.completedPeriods[periodKey];
+            } else {
+                subtask.completedPeriods[periodKey] = Date.now();
+            }
+
+            saveHabits(habits);
+            renderSubtaskPopup();
             renderHabits();
         }
 
@@ -1625,7 +1719,7 @@
         }
 
         document.getElementById('habitInput').addEventListener('keypress', e => { if (e.key === 'Enter') addHabit(); });
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetails(); closeSettings(); } });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetails(); closeSettings(); closeSubtaskPopup(); } });
 
         // Update scores on page load to persist momentum for missed days
         updateAllHabitScores();
