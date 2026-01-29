@@ -79,22 +79,6 @@
             z-index: 0;
         }
 
-        /* Subtask icons - smaller, connected to parent */
-        .subtask-icons { display: flex; gap: 4px; margin-top: 2px; justify-content: center; flex-wrap: wrap; max-width: 80px; }
-        .subtask-icon {
-            width: 24px; height: 24px; border-radius: 50%; position: relative;
-            display: flex; align-items: center; justify-content: center;
-            background: #2a2a3e; cursor: pointer; transition: all 0.15s;
-        }
-        .subtask-icon::before {
-            content: ''; position: absolute; width: 18px; height: 18px;
-            background: #1a1a2e; border-radius: 50%;
-        }
-        .subtask-icon.completed { background: #4ade80; }
-        .subtask-icon.completed::before { background: #4ade80; }
-        .subtask-icon .subtask-emoji { position: relative; z-index: 1; font-size: 0.6rem; }
-        .subtask-icon:active { transform: scale(0.9); }
-
         /* Prominent section containers */
         .habits-section { background: #1a1a2e; border-radius: 12px; margin-bottom: 8px; overflow: hidden; }
         .section-header {
@@ -1059,6 +1043,13 @@
         function completeHabit(id, period = null) {
             const habits = loadHabits(), habit = habits.find(h => h.id === id), today = getTodayString();
             if (!habit) return;
+
+            // If habit has subtasks, show popup instead of completing directly
+            if (habit.subtasks && habit.subtasks.length > 0) {
+                openSubtaskPopup(id);
+                return;
+            }
+
             if (habit.frequency.type === 'twiceDaily' && !period) period = getTimeOfDayNow() === 'morning' ? 'morning' : 'night';
             const existing = habit.completions.find(c => c.date === today && (habit.frequency.type !== 'twiceDaily' || c.period === period));
             if (existing) {
@@ -1317,7 +1308,6 @@
                             ${neglectDots}
                         </div>
                     </div>
-                    ${renderSubtaskIcons(habit)}
                 </div>`;
             }
 
@@ -1349,21 +1339,7 @@
                         ${neglectDots}
                     </div>
                 </div>
-                ${renderSubtaskIcons(habit)}
             </div>`;
-        }
-
-        function renderSubtaskIcons(habit) {
-            if (!habit.subtasks || habit.subtasks.length === 0) return '';
-            const icons = habit.subtasks.map((s, idx) => {
-                const done = isSubtaskCompleted(habit, s.id);
-                const subtaskSymbol = (idx + 1);
-                return `<div class="subtask-icon ${done ? 'completed' : ''}">
-                    <span class="subtask-emoji">${subtaskSymbol}</span>
-                </div>`;
-            }).join('');
-            // Tapping subtask icons opens popup to see names and toggle
-            return `<div class="subtask-icons" onclick="event.stopPropagation();openSubtaskPopup(${habit.id})">${icons}</div>`;
         }
 
         function toggleSection(sectionId) {
@@ -1496,7 +1472,34 @@
                     <span class="subtask-popup-title">${escapeHtml(habit.name)}</span>
                     <button class="subtask-popup-close" onclick="closeSubtaskPopup()">&times;</button>
                 </div>
-                <div class="subtask-popup-list">${subtaskItems}</div>`;
+                <div class="subtask-popup-list">${subtaskItems}</div>
+                <button class="submit-btn" style="margin-top:12px;width:100%" onclick="completeHabitWithAllSubtasks(${habit.id})">Complete All</button>`;
+        }
+
+        function completeHabitWithAllSubtasks(habitId) {
+            const habits = loadHabits();
+            const habit = habits.find(h => h.id === habitId);
+            if (!habit) return;
+
+            const today = getTodayString();
+            const periodKey = getSubtaskPeriodKey(habit);
+
+            // Complete all subtasks
+            if (habit.subtasks) {
+                habit.subtasks.forEach(s => {
+                    if (!s.completedPeriods) s.completedPeriods = {};
+                    s.completedPeriods[periodKey] = Date.now();
+                });
+            }
+
+            // Complete the habit itself
+            habit.completions.push({ date: today, timestamp: Date.now() });
+            habit.momentumScore = (habit.momentumScore || 0) + 15;
+            habit.lastScoreUpdate = today;
+
+            saveHabits(habits);
+            closeSubtaskPopup();
+            renderHabits();
         }
 
         function toggleSubtaskFromPopup(habitId, subtaskId) {
