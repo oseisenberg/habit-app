@@ -166,6 +166,7 @@
             background: #0f0f1a; cursor: pointer; text-align: center; transition: all 0.15s;
         }
         .time-option.selected { border-color: #667eea; background: rgba(102, 126, 234, 0.15); }
+        .time-option.disabled { opacity: 0.4; pointer-events: none; }
         .time-option-icon { font-size: 1rem; display: block; margin-bottom: 1px; }
         .time-option-label { font-size: 0.65rem; color: #888; }
         .time-option.selected .time-option-label { color: #667eea; }
@@ -806,6 +807,15 @@
                 const r = el.querySelector('input[type="radio"]');
                 el.classList.toggle('selected', r.value === f);
                 r.checked = r.value === f;
+            });
+            // Disable time options for Twice Daily (it has its own Morning/Bedtime structure)
+            const isTwiceDaily = f === 'twiceDaily';
+            document.querySelectorAll('.time-option').forEach(el => {
+                el.classList.toggle('disabled', isTwiceDaily);
+                if (isTwiceDaily) {
+                    el.classList.remove('selected');
+                    selectedTime = null;
+                }
             });
         }
 
@@ -1775,6 +1785,10 @@
 
         function selectEditFrequency(f) {
             editFrequency = f;
+            // Clear time selection for Twice Daily (has its own Morning/Bedtime structure)
+            if (f === 'twiceDaily') {
+                editTimeOfDay = null;
+            }
             renderDetails();
         }
 
@@ -1895,11 +1909,11 @@
                     <div class="form-group">
                         <label class="form-label">Time of Day <span style="font-weight:normal;text-transform:none">(optional)</span></label>
                         <div class="time-options">
-                            <div class="time-option ${currentTime === 'morning' ? 'selected' : ''}" onclick="toggleEditTime('morning')">
+                            <div class="time-option ${currentTime === 'morning' ? 'selected' : ''} ${currentFreq === 'twiceDaily' ? 'disabled' : ''}" onclick="toggleEditTime('morning')">
                                 <span class="time-option-icon">🌅</span>
                                 <span class="time-option-label">Morning</span>
                             </div>
-                            <div class="time-option ${currentTime === 'night' ? 'selected' : ''}" onclick="toggleEditTime('night')">
+                            <div class="time-option ${currentTime === 'night' ? 'selected' : ''} ${currentFreq === 'twiceDaily' ? 'disabled' : ''}" onclick="toggleEditTime('night')">
                                 <span class="time-option-icon">🌙</span>
                                 <span class="time-option-label">Bedtime</span>
                             </div>
