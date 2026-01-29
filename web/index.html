@@ -229,12 +229,6 @@
         .action-row { display: flex; gap: 6px; }
         .action-row .submit-btn { flex: 1; }
 
-        .section-header.collapsible { cursor: pointer; }
-        .section-header .collapse-icon { margin-left: 4px; transition: transform 0.2s; color: #666; font-size: 0.7rem; }
-        .section-header.collapsed .collapse-icon { transform: rotate(-90deg); }
-        .section-content { transition: max-height 0.2s ease-out; overflow: hidden; }
-        .section-content.collapsed { max-height: 0 !important; }
-
         .dual-checkbox { display: flex; gap: 4px; }
         .dual-checkbox .habit-checkbox { width: 20px; height: 20px; }
         .dual-checkbox .habit-checkbox::after { font-size: 10px; }
@@ -751,7 +745,7 @@
                 return { completed: m && n, morningDone: m, nightDone: n };
             }
             if (habit.frequency.type === 'timesPerWeek') {
-                const ws = getWeekStart(today), count = countCompletionsInRange(habit, ws, today), target = habit.frequency.timesPerWeek;
+                const ws = getWeekStart(today), count = countCompletionsInRange(habit, ws, today), target = habit.frequency.timesPerWeek || 3;
                 return { completed: count >= target, count, target, text: `${count}/${target}` };
             }
             if (habit.frequency.type === 'timesPerMonth') {
@@ -762,7 +756,7 @@
             if (habit.frequency.type === 'everyXDays') {
                 const last = getLastCompletionDate(habit);
                 if (!last) return { completed: false, due: true, daysOverdue: 0 };
-                const since = daysBetween(last, today), target = habit.frequency.everyXDays;
+                const since = daysBetween(last, today), target = habit.frequency.everyXDays || 2;
                 return { completed: since === 0, due: since >= target, daysOverdue: Math.max(0, since - target) };
             }
             return { completed: getCompletionsForDate(habit, today).length > 0 };
@@ -784,15 +778,16 @@
             if (habit.frequency.type === 'everyXDays') {
                 const last = getLastCompletionDate(habit);
                 if (!last) return 0;
-                return Math.max(0, daysBetween(last, today) - habit.frequency.everyXDays);
+                return Math.max(0, daysBetween(last, today) - (habit.frequency.everyXDays || 2));
             }
             return 0;
         }
 
         function getWeekStart(d) { const dt = new Date(d); dt.setDate(dt.getDate() - dt.getDay()); return dt.toISOString().split('T')[0]; }
         function countCompletionsInRange(habit, start, end) {
-            const s = new Date(start), e = new Date(end), dates = new Set();
-            habit.completions.forEach(c => { const d = new Date(c.date); if (d >= s && d <= e) dates.add(c.date); });
+            // Use string comparison for YYYY-MM-DD dates to avoid timezone issues
+            const dates = new Set();
+            habit.completions.forEach(c => { if (c.date >= start && c.date <= end) dates.add(c.date); });
             return dates.size;
         }
         function getLastCompletionDate(habit) {
@@ -809,9 +804,9 @@
             // Determine the cycle length for this habit type
             let cycleDays = 1;
             if (freq.type === 'daily' || freq.type === 'twiceDaily') cycleDays = 1;
-            else if (freq.type === 'timesPerWeek') cycleDays = 7 / freq.timesPerWeek;
+            else if (freq.type === 'timesPerWeek') cycleDays = 7 / (freq.timesPerWeek || 3);
             else if (freq.type === 'timesPerMonth') cycleDays = 30 / (freq.timesPerMonth || 4);
-            else if (freq.type === 'everyXDays') cycleDays = freq.everyXDays;
+            else if (freq.type === 'everyXDays') cycleDays = freq.everyXDays || 2;
 
             // Time window is 2-3x the cycle length, minimum 14 days
             const windowDays = Math.max(14, Math.round(cycleDays * 2.5));
@@ -875,7 +870,7 @@
                 const last = getLastCompletionBefore(habit, dateStr);
                 if (!last) return true;
                 const since = daysBetween(last, dateStr);
-                return since >= freq.everyXDays;
+                return since >= (freq.everyXDays || 2);
             }
             return true;
         }
@@ -1040,20 +1035,12 @@
             const method = settings.sortMethod || 'default';
             if (method === 'default') return habits;
             if (method === 'alphabetical') return [...habits].sort((a, b) => a.name.localeCompare(b.name));
-            if (method === 'overdue') {
-                // Sort by momentum score (most negative first = most overdue)
-                return [...habits].sort((a, b) => {
-                    const scoreA = calculateMomentumScore(a).raw;
-                    const scoreB = calculateMomentumScore(b).raw;
-                    return scoreA - scoreB;
-                });
-            }
-            if (method === 'score') {
-                return [...habits].sort((a, b) => {
-                    const scoreA = calculateMomentumScore(a).raw;
-                    const scoreB = calculateMomentumScore(b).raw;
-                    return scoreA - scoreB; // Lower (more negative) scores first
-                });
+            if (method === 'overdue' || method === 'score') {
+                // Pre-compute scores once to avoid expensive recalculations during sort comparisons
+                const scoresMap = new Map();
+                habits.forEach(h => scoresMap.set(h.id, calculateMomentumScore(h).raw));
+                // Sort by momentum score (most negative first = most overdue/needs attention)
+                return [...habits].sort((a, b) => scoresMap.get(a.id) - scoresMap.get(b.id));
             }
             return habits;
         }
@@ -1151,7 +1138,7 @@
             const status = getCompletionStatus(habit);
             const scoreData = calculateMomentumScore(habit);
             // Show neglect indicators if habit has history (lastScoreUpdate or createdAt) and negative score
-            const hasHistory = habit.lastScoreUpdate || habit.createdAt;
+            const hasHistory = !!(habit.lastScoreUpdate || habit.createdAt);
             const neglectLevel = hasHistory && scoreData.display < 0 ? Math.min(3, Math.abs(scoreData.display)) : 0;
             const icon = habit.icon || '📌';
 
@@ -1226,153 +1213,9 @@
             return `<div class="subtask-icons">${icons}</div>`;
         }
 
-        function renderLaterSection(habits, collapsed) {
-            const contentClass = collapsed ? 'section-content collapsed' : 'section-content';
-            const headerClass = collapsed ? 'section-header collapsible collapsed' : 'section-header collapsible';
-            const contentStyle = collapsed ? '' : `style="max-height: ${habits.length * 60}px"`;
-            return `<div class="habits-section"><div class="${headerClass}" onclick="toggleSection('later')"><span class="section-icon">🕐</span><span class="section-title">Later</span><span class="collapse-icon">▼</span><span class="section-count">${habits.length}</span></div><div class="${contentClass}" ${contentStyle}>${habits.map(h => renderLaterItem(h)).join('')}</div></div>`;
-        }
-
-        function renderCompletedSection(habits, collapsed) {
-            const contentClass = collapsed ? 'section-content collapsed' : 'section-content';
-            const headerClass = collapsed ? 'section-header collapsible collapsed' : 'section-header collapsible';
-            const contentStyle = collapsed ? '' : `style="max-height: ${habits.length * 60}px"`;
-            return `<div class="habits-section inactive-section"><div class="${headerClass}" onclick="toggleSection('completed')"><span class="section-icon">✓</span><span class="section-title">Done</span><span class="collapse-icon">▼</span><span class="section-count">${habits.length}</span></div><div class="${contentClass}" ${contentStyle}>${habits.map(h => renderCompletedItem(h)).join('')}</div></div>`;
-        }
-
-        function renderLaterItem(habit) {
-            const status = getCompletionStatus(habit);
-            const timeOfDay = getTimeOfDayNow();
-            let reason = '';
-
-            if (habit.frequency.type === 'twiceDaily' && status.morningDone && !status.nightDone) {
-                reason = 'tonight';
-            } else if (habit.timeOfDay === 'night' && timeOfDay !== 'night') {
-                reason = 'tonight';
-            } else if (habit.snoozedUntil === 'night') {
-                reason = 'snoozed';
-            }
-
-            // Show half-circle for twice daily - allow completing even from Later
-            if (habit.frequency.type === 'twiceDaily') {
-                return `<div class="habit-item">
-                    <div class="half-circle" onclick="completeTwiceDaily(${habit.id})">
-                        <div class="half left ${status.morningDone ? 'filled' : ''}"></div>
-                        <div class="half right ${status.nightDone ? 'filled' : ''}"></div>
-                    </div>
-                    <div class="habit-info" onclick="openDetails(${habit.id})">
-                        <span class="habit-name">${escapeHtml(habit.name)}</span>
-                        <span class="habit-meta">${reason}</span>
-                    </div>
-                    <button class="habit-edit-btn" onclick="event.stopPropagation();openDetailsEdit(${habit.id})">✎</button>
-                </div>`;
-            }
-
-            // Allow completing from Later section (uncommon but allowed)
-            return `<div class="habit-item">
-                <div class="habit-checkbox" onclick="completeHabit(${habit.id})"></div>
-                <div class="habit-info" onclick="openDetails(${habit.id})">
-                    <span class="habit-name">${escapeHtml(habit.name)}</span>
-                    <span class="habit-meta">${reason}</span>
-                </div>
-                <button class="habit-edit-btn" onclick="event.stopPropagation();openDetailsEdit(${habit.id})">✎</button>
-            </div>`;
-        }
-
-        function renderCompletedItem(habit) {
-            if (habit.frequency.type === 'twiceDaily') {
-                return `<div class="habit-item completed">
-                    <div class="half-circle both-filled">
-                        <div class="half left filled"></div>
-                        <div class="half right filled"></div>
-                    </div>
-                    <div class="habit-info" onclick="openDetails(${habit.id})">
-                        <span class="habit-name">${escapeHtml(habit.name)}</span>
-                    </div>
-                    <button class="habit-edit-btn" onclick="event.stopPropagation();openDetailsEdit(${habit.id})">✎</button>
-                </div>`;
-            }
-            return `<div class="habit-item completed">
-                <div class="habit-checkbox checked"></div>
-                <div class="habit-info" onclick="openDetails(${habit.id})">
-                    <span class="habit-name">${escapeHtml(habit.name)}</span>
-                </div>
-                <button class="habit-edit-btn" onclick="event.stopPropagation();openDetailsEdit(${habit.id})">✎</button>
-            </div>`;
-        }
-
         function toggleSection(sectionId) {
             collapsedSections[sectionId] = !collapsedSections[sectionId];
             renderHabits();
-        }
-
-        function renderHabitItem(habit) {
-            const status = getCompletionStatus(habit);
-            const overdue = getDaysOverdue(habit);
-            const timeOfDay = getTimeOfDayNow();
-            let meta = '';
-            if (habit.frequency.type === 'timesPerWeek' && status.text) meta = status.text;
-            if (habit.frequency.type === 'timesPerMonth' && status.text) meta = status.text;
-
-            // For twice daily, show half-circle
-            if (habit.frequency.type === 'twiceDaily') {
-                const currentPeriod = timeOfDay === 'night' ? 'night' : 'morning';
-                const canComplete = currentPeriod === 'morning' ? !status.morningDone : !status.nightDone;
-                // If it's night and morning was missed, show it as missed
-                const morningMissed = timeOfDay === 'night' && !status.morningDone;
-                const scoreBadge = renderScoreBadge(habit);
-
-                return `<div class="habit-item">
-                    <div class="half-circle ${status.morningDone && status.nightDone ? 'both-filled' : ''}" onclick="completeTwiceDaily(${habit.id})">
-                        <div class="half left ${status.morningDone ? 'filled' : (morningMissed ? 'missed' : '')}"></div>
-                        <div class="half right ${status.nightDone ? 'filled' : ''}"></div>
-                    </div>
-                    <div class="habit-info" onclick="openDetails(${habit.id})">
-                        <span class="habit-name">${escapeHtml(habit.name)}</span>
-                        ${scoreBadge}
-                    </div>
-                    <button class="habit-edit-btn" onclick="event.stopPropagation();openDetailsEdit(${habit.id})">✎</button>
-                </div>`;
-            }
-
-            const isChecked = status.completed;
-            const scoreBadge = renderScoreBadge(habit);
-            const overdueBadge = renderOverdueBadge(overdue);
-            const subtaskProgress = getSubtaskProgress(habit);
-
-            // Determine if subtasks should be shown inline (default: true if subtasks exist, unless explicitly hidden)
-            const showInline = habit.subtasks && habit.subtasks.length > 0 && habit.showSubtasksOnMain !== false;
-
-            let subtaskBadge = '';
-            if (subtaskProgress && !showInline) {
-                const cls = subtaskProgress.completed === subtaskProgress.total ? 'complete' : (subtaskProgress.completed > 0 ? 'partial' : '');
-                subtaskBadge = `<span class="subtask-indicator ${cls}">${subtaskProgress.completed}/${subtaskProgress.total}</span>`;
-            }
-
-            // Render inline subtasks (shown by default when subtasks exist)
-            let inlineSubtasks = '';
-            if (showInline) {
-                const subtaskItems = habit.subtasks.map(s => {
-                    const completed = isSubtaskCompleted(habit, s.id);
-                    return `<div class="inline-subtask">
-                        <div class="subtask-checkbox ${completed ? 'checked' : ''}" onclick="event.stopPropagation();toggleSubtask(${habit.id}, ${s.id})"></div>
-                        <span class="subtask-name ${completed ? 'completed' : ''}">${escapeHtml(s.name)}</span>
-                    </div>`;
-                }).join('');
-                inlineSubtasks = `<div class="inline-subtasks-container">${subtaskItems}</div>`;
-            }
-
-            return `<div class="habit-item ${isChecked ? 'completed' : ''}">
-                <div class="habit-checkbox ${isChecked ? 'checked' : ''}" onclick="completeHabit(${habit.id})"></div>
-                <div class="habit-info" onclick="openDetails(${habit.id})">
-                    <span class="habit-name">${escapeHtml(habit.name)}</span>
-                    ${subtaskBadge}
-                    ${meta ? `<span class="habit-meta">${meta}</span>` : ''}
-                    ${scoreBadge}
-                    ${overdueBadge}
-                </div>
-                <button class="habit-edit-btn" onclick="event.stopPropagation();openDetailsEdit(${habit.id})">✎</button>
-            </div>${inlineSubtasks}`;
         }
 
         function completeTwiceDaily(id) {
