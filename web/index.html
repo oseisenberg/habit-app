@@ -1378,9 +1378,9 @@
 
             // Sub-categorize Now section
             // Twice daily habits should appear in Morning section during morning, Bedtime section during night
-            const morningHabits = nowHabits.filter(h => h.timeOfDay === 'morning' || (h.frequency.type === 'twiceDaily' && timeOfDay === 'morning'));
-            const anytimeHabits = nowHabits.filter(h => (!h.timeOfDay || h.timeOfDay === 'anytime') && h.frequency.type !== 'twiceDaily');
-            const bedtimeHabits = nowHabits.filter(h => h.timeOfDay === 'night' || (h.frequency.type === 'twiceDaily' && timeOfDay === 'night'));
+            // Habits with no timeOfDay (null) are merged into the current time's section
+            const morningHabits = nowHabits.filter(h => h.timeOfDay === 'morning' || !h.timeOfDay || (h.frequency.type === 'twiceDaily' && timeOfDay === 'morning'));
+            const bedtimeHabits = nowHabits.filter(h => h.timeOfDay === 'night' || !h.timeOfDay || (h.frequency.type === 'twiceDaily' && timeOfDay === 'night'));
 
             let html = '';
 
@@ -1389,33 +1389,13 @@
                 let nowContent = '';
 
                 if (timeOfDay === 'morning') {
-                    // Morning: show Morning and Anytime sub-sections
-                    const showMorningSections = morningHabits.length > 0 && anytimeHabits.length > 0;
-                    if (showMorningSections) {
-                        nowContent += `<div class="sub-header"><span class="sub-header-icon">🌅</span>Morning</div>`;
-                        nowContent += `<div class="habits-grid">${morningHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
-                        nowContent += `<div class="sub-header"><span class="sub-header-icon">⚡</span>Anytime</div>`;
-                        nowContent += `<div class="habits-grid">${anytimeHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
-                    } else if (morningHabits.length) {
-                        nowContent += `<div class="sub-header"><span class="sub-header-icon">🌅</span>Morning</div>`;
-                        nowContent += `<div class="habits-grid">${morningHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
-                    } else {
-                        nowContent += `<div class="habits-grid">${nowHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
-                    }
+                    // Morning: show all morning + anytime habits together
+                    nowContent += `<div class="sub-header"><span class="sub-header-icon">🌅</span>Morning</div>`;
+                    nowContent += `<div class="habits-grid">${morningHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
                 } else if (timeOfDay === 'night') {
-                    // Night/Bedtime: show Anytime and Bedtime sub-sections
-                    const showNightSections = anytimeHabits.length > 0 && bedtimeHabits.length > 0;
-                    if (showNightSections) {
-                        nowContent += `<div class="sub-header"><span class="sub-header-icon">⚡</span>Anytime</div>`;
-                        nowContent += `<div class="habits-grid">${anytimeHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
-                        nowContent += `<div class="sub-header"><span class="sub-header-icon">🌙</span>Bedtime</div>`;
-                        nowContent += `<div class="habits-grid">${bedtimeHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
-                    } else if (bedtimeHabits.length) {
-                        nowContent += `<div class="sub-header"><span class="sub-header-icon">🌙</span>Bedtime</div>`;
-                        nowContent += `<div class="habits-grid">${bedtimeHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
-                    } else {
-                        nowContent += `<div class="habits-grid">${nowHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
-                    }
+                    // Night/Bedtime: show all bedtime + anytime habits together
+                    nowContent += `<div class="sub-header"><span class="sub-header-icon">🌙</span>Bedtime</div>`;
+                    nowContent += `<div class="habits-grid">${bedtimeHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
                 }
 
                 html += `<div class="habits-section">
