@@ -179,7 +179,8 @@
         .period-toggle { display: inline-flex; border: 1px solid #2a2a3e; border-radius: 6px; overflow: hidden; margin-left: auto; }
         .period-toggle-btn { padding: 6px 10px; font-size: 0.8rem; color: #666; cursor: pointer; border: none; background: #0a0a14; }
         .period-toggle-btn.active { background: #667eea; color: white; }
-        .frequency-input-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #0f0f1a; border: 1px solid #2a2a3e; border-radius: 8px; }
+        .frequency-row { display: flex; align-items: center; gap: 8px; }
+        .frequency-row #frequencyInputs { display: flex; align-items: center; gap: 6px; }
 
         .submit-btn {
             width: 100%; padding: 12px; background: #667eea; color: white; border: none;
@@ -444,15 +445,17 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Frequency</label>
-                <select class="form-input" id="frequencySelect" onchange="selectFrequency(this.value)">
-                    <option value="daily">Daily</option>
-                    <option value="twiceDaily">Twice daily</option>
-                    <option value="everyXDays">Every X days</option>
-                    <option value="timesPerPeriod">X times per week/month</option>
-                    <option value="pointsPerPeriod">Points target</option>
-                    <option value="reminder">Reminder (no penalty)</option>
-                </select>
-                <div id="frequencyInputs" style="margin-top:10px"></div>
+                <div class="frequency-row">
+                    <select class="form-input" id="frequencySelect" onchange="selectFrequency(this.value)" style="flex:1">
+                        <option value="daily">Daily</option>
+                        <option value="twiceDaily">Twice daily</option>
+                        <option value="everyXDays">Every</option>
+                        <option value="timesPerPeriod">Times per</option>
+                        <option value="pointsPerPeriod">Points per</option>
+                        <option value="reminder">Reminder</option>
+                    </select>
+                    <div id="frequencyInputs"></div>
+                </div>
             </div>
             <div class="form-group" id="optionalCheckboxGroup" style="display:none">
                 <div class="settings-row" style="border:none;padding:8px 0">
@@ -846,38 +849,24 @@
             selectedFrequency = f;
             const container = document.getElementById('frequencyInputs');
 
-            // Render contextual inputs based on frequency type
+            // Render inline inputs based on frequency type
             let inputsHtml = '';
             if (f === 'everyXDays') {
-                inputsHtml = `<div class="frequency-input-row">
-                    <span style="color:#888">Every</span>
-                    <input type="number" class="frequency-input" id="everyXDays" value="2" min="1">
-                    <span style="color:#888">days</span>
-                </div>`;
+                inputsHtml = `<input type="number" class="frequency-input" id="everyXDays" value="2" min="1"><span style="color:#888">days</span>`;
             } else if (f === 'timesPerPeriod') {
-                inputsHtml = `<div class="frequency-input-row">
-                    <input type="number" class="frequency-input" id="timesPerPeriod" value="3" min="1" max="31">
-                    <span style="color:#888">times per</span>
+                inputsHtml = `<input type="number" class="frequency-input" id="timesPerPeriod" value="3" min="1" max="31">
                     <div class="period-toggle">
-                        <button type="button" class="period-toggle-btn active" id="timesWeekBtn" onclick="setTimesPeriod('week')">week</button>
-                        <button type="button" class="period-toggle-btn" id="timesMonthBtn" onclick="setTimesPeriod('month')">month</button>
-                    </div>
-                </div>`;
+                        <button type="button" class="period-toggle-btn active" id="timesWeekBtn" onclick="setTimesPeriod('week')">wk</button>
+                        <button type="button" class="period-toggle-btn" id="timesMonthBtn" onclick="setTimesPeriod('month')">mo</button>
+                    </div>`;
             } else if (f === 'pointsPerPeriod') {
-                inputsHtml = `<div class="frequency-input-row">
-                    <input type="number" class="frequency-input" id="pointsPerPeriod" value="12" min="1">
-                    <span style="color:#888">points per</span>
+                inputsHtml = `<input type="number" class="frequency-input" id="pointsPerPeriod" value="12" min="1"><span style="color:#888">pts /</span>
                     <div class="period-toggle">
-                        <button type="button" class="period-toggle-btn active" id="pointsWeekBtn" onclick="setPointsPeriod('week')">week</button>
-                        <button type="button" class="period-toggle-btn" id="pointsMonthBtn" onclick="setPointsPeriod('month')">month</button>
-                    </div>
-                </div>`;
+                        <button type="button" class="period-toggle-btn active" id="pointsWeekBtn" onclick="setPointsPeriod('week')">wk</button>
+                        <button type="button" class="period-toggle-btn" id="pointsMonthBtn" onclick="setPointsPeriod('month')">mo</button>
+                    </div>`;
             } else if (f === 'reminder') {
-                inputsHtml = `<div class="frequency-input-row">
-                    <span style="color:#888">Remind every</span>
-                    <input type="number" class="frequency-input" id="reminderDays" value="1" min="1">
-                    <span style="color:#888">days</span>
-                </div>`;
+                inputsHtml = `<span style="color:#888">every</span><input type="number" class="frequency-input" id="reminderDays" value="1" min="1"><span style="color:#888">days</span>`;
             }
             container.innerHTML = inputsHtml;
 
