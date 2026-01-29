@@ -1418,6 +1418,12 @@
                     return;
                 }
 
+                // Morning habits missed at night → Done (nothing more to do today)
+                if (h.timeOfDay === 'morning' && timeOfDay === 'night' && !isCompletedToday(h)) {
+                    done.push(h);
+                    return;
+                }
+
                 // Regular habits: one section only
                 if (isCompletedToday(h)) {
                     done.push(h);
