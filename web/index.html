@@ -2165,22 +2165,22 @@
             const yesterdayStr = yesterday.toISOString().split('T')[0];
 
             const testHabits = [
-                { id: 1, name: 'Brush teeth', icon: '🦷', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [{ date: today, period: 'morning', timestamp: Date.now() }], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr, lastScoreUpdate: today, momentumScore: 0 },
-                { id: 2, name: 'Meditate', icon: '🧘', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr, lastScoreUpdate: today, momentumScore: 0 },
-                { id: 3, name: 'Exercise', icon: '🏃', timeOfDay: 'morning', frequency: { type: 'timesPerWeek', timesPerWeek: 4, everyXDays: 2 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], snoozedUntil: null, subtasks: [
+                { id: 1, name: 'Brush teeth', icon: '🦷', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, lastScoreUpdate: today, momentumScore: 0 },
+                { id: 2, name: 'Meditate', icon: '🧘', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, lastScoreUpdate: today, momentumScore: 0 },
+                { id: 3, name: 'Exercise', icon: '🏃', timeOfDay: 'morning', frequency: { type: 'timesPerWeek', timesPerWeek: 4, everyXDays: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [
                     { id: 301, name: 'Warmup', completedPeriods: {} },
                     { id: 302, name: 'Cardio', completedPeriods: {} },
                     { id: 303, name: 'Strength', completedPeriods: {} }
-                ], createdAt: yesterdayStr, lastScoreUpdate: today, momentumScore: 0 },
-                { id: 4, name: 'Read', icon: '📚', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr, lastScoreUpdate: today, momentumScore: 0 },
-                { id: 5, name: 'Journal', icon: '✍️', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr, lastScoreUpdate: today, momentumScore: 0 },
-                { id: 6, name: 'Water plants', icon: '🌱', timeOfDay: 'morning', frequency: { type: 'everyXDays', timesPerWeek: 3, everyXDays: 3 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr, lastScoreUpdate: today, momentumScore: 0 },
-                { id: 7, name: 'Take vitamins', icon: '💊', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [{ date: today, period: null, timestamp: Date.now() }], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr, lastScoreUpdate: today, momentumScore: 0 },
+                ], createdAt: today, lastScoreUpdate: today, momentumScore: 0 },
+                { id: 4, name: 'Read', icon: '📚', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, lastScoreUpdate: today, momentumScore: 0 },
+                { id: 5, name: 'Journal', icon: '✍️', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, lastScoreUpdate: today, momentumScore: 0 },
+                { id: 6, name: 'Water plants', icon: '🌱', timeOfDay: 'morning', frequency: { type: 'everyXDays', timesPerWeek: 3, everyXDays: 3 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, lastScoreUpdate: today, momentumScore: 0 },
+                { id: 7, name: 'Take vitamins', icon: '💊', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, lastScoreUpdate: today, momentumScore: 0 },
                 { id: 8, name: 'Skincare', icon: '✨', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [
                     { id: 801, name: 'Cleanse', completedPeriods: {} },
                     { id: 802, name: 'Moisturize', completedPeriods: {} }
-                ], createdAt: yesterdayStr, lastScoreUpdate: today, momentumScore: 0 },
-                { id: 9, name: 'Check mail', icon: '📬', timeOfDay: null, frequency: { type: 'reminder', reminderDays: 1 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr, lastScoreUpdate: today, momentumScore: 0 }
+                ], createdAt: today, lastScoreUpdate: today, momentumScore: 0 },
+                { id: 9, name: 'Check mail', icon: '📬', timeOfDay: null, frequency: { type: 'reminder', reminderDays: 1 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, lastScoreUpdate: today, momentumScore: 0 }
             ];
             saveHabits(testHabits);
             // Set time to morning so test data demo makes sense
