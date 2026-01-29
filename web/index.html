@@ -754,7 +754,12 @@
             const s = getSettings();
             const hour = debugHourOverride !== null ? debugHourOverride : d.getHours();
             if (hour < s.morningStart) d.setDate(d.getDate() - 1);
-            return d.toISOString().split('T')[0];
+            return toDateString(d);
+        }
+
+        // Format date as YYYY-MM-DD using LOCAL timezone (not UTC)
+        function toDateString(d) {
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         }
 
         function getTodayString() { return getEffectiveDate(); }
@@ -957,7 +962,7 @@
             if (habit) {
                 const snoozeUntil = new Date(getTodayString());
                 snoozeUntil.setDate(snoozeUntil.getDate() + days);
-                habit.snoozedUntil = snoozeUntil.toISOString().split('T')[0];
+                habit.snoozedUntil = toDateString(snoozeUntil);
                 saveHabits(habits);
                 closeSnoozePopup();
                 closeDetails();
@@ -986,14 +991,14 @@
         function getMonthStart(d) {
             const dt = new Date(d);
             dt.setDate(1);
-            return dt.toISOString().split('T')[0];
+            return toDateString(dt);
         }
 
         function getMonthEnd(d) {
             const dt = new Date(d);
             dt.setMonth(dt.getMonth() + 1);
             dt.setDate(0);
-            return dt.toISOString().split('T')[0];
+            return toDateString(dt);
         }
 
         function getCompletionStatus(habit) {
@@ -1022,7 +1027,7 @@
                 // Sliding window: last 7 days
                 const weekAgo = new Date(today);
                 weekAgo.setDate(weekAgo.getDate() - 6);
-                const ws = weekAgo.toISOString().split('T')[0];
+                const ws = toDateString(weekAgo);
                 const points = countPointsInRange(habit, ws, today);
                 const target = habit.frequency.pointsPerWeek || 12;
                 return { completed: points >= target, points, target, text: `${points}/${target} pts`, isPoints: true };
@@ -1031,7 +1036,7 @@
                 // Sliding window: last 30 days
                 const monthAgo = new Date(today);
                 monthAgo.setDate(monthAgo.getDate() - 29);
-                const ms = monthAgo.toISOString().split('T')[0];
+                const ms = toDateString(monthAgo);
                 const points = countPointsInRange(habit, ms, today);
                 const target = habit.frequency.pointsPerMonth || 30;
                 return { completed: points >= target, points, target, text: `${points}/${target} pts`, isPoints: true };
@@ -1062,7 +1067,7 @@
             return 0;
         }
 
-        function getWeekStart(d) { const dt = new Date(d); dt.setDate(dt.getDate() - dt.getDay()); return dt.toISOString().split('T')[0]; }
+        function getWeekStart(d) { const dt = new Date(d); dt.setDate(dt.getDate() - dt.getDay()); return toDateString(dt); }
         function countCompletionsInRange(habit, start, end) {
             // Use string comparison for YYYY-MM-DD dates to avoid timezone issues
             const dates = new Set();
@@ -1104,7 +1109,7 @@
             // Get completions and expected completions within window
             const windowStart = new Date(today);
             windowStart.setDate(windowStart.getDate() - windowDays);
-            const windowStartStr = windowStart.toISOString().split('T')[0];
+            const windowStartStr = toDateString(windowStart);
 
             let score = habit.momentumScore || 0;
 
@@ -1127,7 +1132,7 @@
             for (let i = 1; i <= daysSinceUpdate; i++) {
                 const checkDate = new Date(lastUpdate);
                 checkDate.setDate(checkDate.getDate() + i);
-                const checkDateStr = checkDate.toISOString().split('T')[0];
+                const checkDateStr = toDateString(checkDate);
 
                 // Check if habit was due on this date
                 const wasDue = wasHabitDueOnDate(habit, checkDateStr);
@@ -2164,7 +2169,7 @@
             const today = getTodayString();
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            const yesterdayStr = toDateString(yesterday);
 
             const testHabits = [
                 { id: 1, name: 'Brush teeth', icon: '🦷', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, lastScoreUpdate: today, momentumScore: 0 },
