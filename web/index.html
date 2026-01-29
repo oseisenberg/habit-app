@@ -35,6 +35,20 @@
         .habit-item:last-child { border-bottom: none; padding-bottom: 0; }
         .habit-item:first-of-type { padding-top: 0; }
         .habit-item.completed .habit-name { color: #555; text-decoration: line-through; }
+        .habit-item.completed .habit-icon { opacity: 0.5; }
+
+        .habit-icon {
+            width: 36px; height: 36px; border-radius: 50%; border: 2px solid #444;
+            background: #2a2a3e; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; flex-shrink: 0; transition: all 0.15s;
+            font-size: 18px; position: relative;
+        }
+        .habit-icon:active { transform: scale(0.9); }
+        .habit-icon.checked { border-color: #667eea; background: rgba(102, 126, 234, 0.2); }
+        .habit-icon .alert-dot {
+            position: absolute; top: -2px; right: -2px; width: 10px; height: 10px;
+            background: #dc2626; border-radius: 50%; border: 2px solid #1a1a2e;
+        }
 
         .habit-checkbox {
             width: 28px; height: 28px; border-radius: 50%; border: 2px solid #444;
@@ -48,10 +62,14 @@
         .habit-info { flex: 1; min-width: 0; cursor: pointer; display: flex; align-items: center; gap: 8px; }
         .habit-name { font-size: 0.95rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .habit-meta { font-size: 0.7rem; color: #666; flex-shrink: 0; }
-        .overdue-badge { background: #dc2626; color: #fff; padding: 2px 6px; border-radius: 8px; font-size: 0.65rem; font-weight: 600; }
-        .score-badge { padding: 2px 6px; border-radius: 8px; font-size: 0.65rem; font-weight: 600; }
-        .score-badge.amber { background: #f59e0b; color: #000; }
-        .score-badge.red { background: #dc2626; color: #fff; }
+
+        .emoji-picker { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; background: #0f0f1a; border-radius: 10px; margin-top: 6px; }
+        .emoji-option { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; }
+        .emoji-option:active { transform: scale(0.9); }
+        .emoji-option.selected { border-color: #667eea; background: rgba(102, 126, 234, 0.2); }
+        .emoji-option.taken { opacity: 0.3; pointer-events: none; }
+        .selected-emoji { width: 48px; height: 48px; border-radius: 50%; background: #2a2a3e; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; border: 2px solid #444; }
+        .selected-emoji.has-icon { border-color: #667eea; }
 
         .empty-state { text-align: center; padding: 40px 16px; color: #555; }
         .empty-state-icon { font-size: 2rem; margin-bottom: 8px; opacity: 0.5; }
@@ -254,8 +272,12 @@
                 <button class="modal-close" onclick="closeModal()">&times;</button>
             </div>
             <div class="form-group">
-                <label class="form-label">Name</label>
-                <input type="text" class="form-input" id="habitInput" placeholder="e.g., Brush teeth..." />
+                <label class="form-label">Icon & Name</label>
+                <div style="display:flex;gap:10px;align-items:center">
+                    <div class="selected-emoji" id="selectedEmoji" onclick="toggleEmojiPicker()">?</div>
+                    <input type="text" class="form-input" id="habitInput" placeholder="e.g., Brush teeth..." style="flex:1" />
+                </div>
+                <div class="emoji-picker" id="emojiPicker" style="display:none"></div>
             </div>
             <div class="form-group">
                 <label class="form-label">Time of Day <span style="font-weight:normal;text-transform:none">(optional)</span></label>
@@ -386,10 +408,12 @@
     <script>
         const DAY_NAMES = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
         const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const HABIT_EMOJIS = ['💪', '🧘', '📚', '💊', '🦷', '🚿', '🏃', '💤', '🥗', '💧', '✍️', '🎯', '🧹', '🌱', '☀️', '🌙', '🎨', '🎵', '💻', '📱', '🐕', '🧴', '💰', '🙏', '🧠', '❤️', '🍎', '☕', '🚭', '📝'];
 
         let selectedTime = null; // null means anytime
         let selectedFrequency = 'daily';
         let selectedHabitId = null;
+        let selectedIcon = null;
         let debugDayOffset = 0;
         let debugHourOverride = null;
 
@@ -471,11 +495,50 @@
 
         function handleOverlayClick(e, id, closeFn) { if (e.target === document.getElementById(id)) closeFn(); }
 
-        function openModal() { document.getElementById('modalOverlay').classList.add('active'); document.getElementById('habitInput').focus(); }
+        function getUsedIcons(excludeId = null) {
+            return loadHabits().filter(h => h.id !== excludeId && h.icon).map(h => h.icon);
+        }
+
+        function renderEmojiPicker(containerId, currentIcon = null, excludeId = null) {
+            const usedIcons = getUsedIcons(excludeId);
+            const container = document.getElementById(containerId);
+            container.innerHTML = HABIT_EMOJIS.map(emoji => {
+                const isTaken = usedIcons.includes(emoji);
+                const isSelected = emoji === currentIcon;
+                return `<div class="emoji-option ${isSelected ? 'selected' : ''} ${isTaken ? 'taken' : ''}" onclick="selectEmoji('${emoji}', '${containerId}')">${emoji}</div>`;
+            }).join('');
+        }
+
+        function toggleEmojiPicker() {
+            const picker = document.getElementById('emojiPicker');
+            if (picker.style.display === 'none') {
+                renderEmojiPicker('emojiPicker', selectedIcon);
+                picker.style.display = 'flex';
+            } else {
+                picker.style.display = 'none';
+            }
+        }
+
+        function selectEmoji(emoji, containerId) {
+            selectedIcon = emoji;
+            document.getElementById('selectedEmoji').textContent = emoji;
+            document.getElementById('selectedEmoji').classList.add('has-icon');
+            document.getElementById(containerId).style.display = 'none';
+        }
+
+        function openModal() {
+            renderEmojiPicker('emojiPicker', null);
+            document.getElementById('modalOverlay').classList.add('active');
+            document.getElementById('habitInput').focus();
+        }
         function closeModal() {
             document.getElementById('modalOverlay').classList.remove('active');
             document.getElementById('habitInput').value = '';
+            document.getElementById('emojiPicker').style.display = 'none';
+            document.getElementById('selectedEmoji').textContent = '?';
+            document.getElementById('selectedEmoji').classList.remove('has-icon');
             selectedTime = null;
+            selectedIcon = null;
             document.querySelectorAll('.time-option').forEach(el => el.classList.remove('selected'));
             selectFrequency('daily');
         }
@@ -525,10 +588,14 @@
         function addHabit() {
             const name = document.getElementById('habitInput').value.trim();
             if (!name) return;
+            if (!selectedIcon) {
+                alert('Please select an icon for your habit');
+                return;
+            }
             const habits = loadHabits();
             habits.push({
-                id: Date.now(), name,
-                timeOfDay: selectedTime, // null = anytime, 'morning', 'night', or 'both' for twice daily
+                id: Date.now(), name, icon: selectedIcon,
+                timeOfDay: selectedTime,
                 frequency: {
                     type: selectedFrequency,
                     timesPerWeek: parseInt(document.getElementById('timesPerWeek').value) || 3,
@@ -970,43 +1037,25 @@
             }
 
             // Show half-circle for twice daily - allow completing even from Later
-            if (habit.frequency.type === 'twiceDaily') {
-                return `<div class="habit-item">
-                    <div class="half-circle" onclick="completeTwiceDaily(${habit.id})">
-                        <div class="half left ${status.morningDone ? 'filled' : ''}"></div>
-                        <div class="half right ${status.nightDone ? 'filled' : ''}"></div>
-                    </div>
-                    <div class="habit-info" onclick="openDetails(${habit.id})">
-                        <span class="habit-name">${escapeHtml(habit.name)}</span>
-                        <span class="habit-meta">${reason}</span>
-                    </div>
-                </div>`;
-            }
+            const icon = habit.icon || '?';
+            const twiceIndicator = habit.frequency.type === 'twiceDaily'
+                ? `<span class="habit-meta">${status.morningDone ? '●' : '○'}${status.nightDone ? '●' : '○'}</span>`
+                : '';
 
-            // Allow completing from Later section (uncommon but allowed)
             return `<div class="habit-item">
-                <div class="habit-checkbox" onclick="completeHabit(${habit.id})"></div>
+                <div class="habit-icon" onclick="${habit.frequency.type === 'twiceDaily' ? `completeTwiceDaily(${habit.id})` : `completeHabit(${habit.id})`}">${icon}</div>
                 <div class="habit-info" onclick="openDetails(${habit.id})">
                     <span class="habit-name">${escapeHtml(habit.name)}</span>
+                    ${twiceIndicator}
                     <span class="habit-meta">${reason}</span>
                 </div>
             </div>`;
         }
 
         function renderCompletedItem(habit) {
-            if (habit.frequency.type === 'twiceDaily') {
-                return `<div class="habit-item completed">
-                    <div class="half-circle both-filled">
-                        <div class="half left filled"></div>
-                        <div class="half right filled"></div>
-                    </div>
-                    <div class="habit-info" onclick="openDetails(${habit.id})">
-                        <span class="habit-name">${escapeHtml(habit.name)}</span>
-                    </div>
-                </div>`;
-            }
+            const icon = habit.icon || '?';
             return `<div class="habit-item completed">
-                <div class="habit-checkbox checked"></div>
+                <div class="habit-icon checked">${icon}</div>
                 <div class="habit-info" onclick="openDetails(${habit.id})">
                     <span class="habit-name">${escapeHtml(habit.name)}</span>
                 </div>
@@ -1018,34 +1067,27 @@
             renderHabits();
         }
 
+        function hasAlert(habit) {
+            const scoreData = calculateMomentumScore(habit);
+            const overdue = getDaysOverdue(habit);
+            return (habit.lastScoreUpdate && scoreData.display < 0) || overdue > 0;
+        }
+
         function renderHabitItem(habit) {
             const status = getCompletionStatus(habit);
-            const overdue = getDaysOverdue(habit);
             const timeOfDay = getTimeOfDayNow();
+            const icon = habit.icon || '?';
+            const showAlert = hasAlert(habit);
             let meta = '';
             if (habit.frequency.type === 'timesPerWeek' && status.text) meta = status.text;
             if (habit.frequency.type === 'timesPerMonth' && status.text) meta = status.text;
 
-            // For twice daily, show half-circle
+            // Determine completion state
+            let isChecked = status.completed;
             if (habit.frequency.type === 'twiceDaily') {
-                const currentPeriod = timeOfDay === 'night' ? 'night' : 'morning';
-                const canComplete = currentPeriod === 'morning' ? !status.morningDone : !status.nightDone;
-                // If it's night and morning was missed, show it as missed
-                const morningMissed = timeOfDay === 'night' && !status.morningDone;
-
-                return `<div class="habit-item">
-                    <div class="half-circle ${status.morningDone && status.nightDone ? 'both-filled' : ''}" onclick="completeTwiceDaily(${habit.id})">
-                        <div class="half left ${status.morningDone ? 'filled' : (morningMissed ? 'missed' : '')}"></div>
-                        <div class="half right ${status.nightDone ? 'filled' : ''}"></div>
-                    </div>
-                    <div class="habit-info" onclick="openDetails(${habit.id})">
-                        <span class="habit-name">${escapeHtml(habit.name)}</span>
-                    </div>
-                </div>`;
+                isChecked = status.morningDone && status.nightDone;
             }
 
-            const isChecked = status.completed;
-            const scoreBadge = renderScoreBadge(habit);
             const subtaskProgress = getSubtaskProgress(habit);
             let subtaskBadge = '';
             if (subtaskProgress && !habit.showSubtasksOnMain) {
@@ -1065,21 +1107,24 @@
                 }).join('');
             }
 
-            // Convert overdue days to exclamation marks for consistency
-            let overdueBadge = '';
-            if (overdue > 0) {
-                const exclamationCount = Math.min(3, overdue);
-                overdueBadge = `<span class="overdue-badge">${'!'.repeat(exclamationCount)}</span>`;
+            // Twice daily indicator
+            let twiceIndicator = '';
+            if (habit.frequency.type === 'twiceDaily') {
+                const m = status.morningDone ? '●' : '○';
+                const n = status.nightDone ? '●' : '○';
+                twiceIndicator = `<span class="habit-meta">${m}${n}</span>`;
             }
 
             return `<div class="habit-item ${isChecked ? 'completed' : ''}">
-                <div class="habit-checkbox ${isChecked ? 'checked' : ''}" onclick="completeHabit(${habit.id})"></div>
+                <div class="habit-icon ${isChecked ? 'checked' : ''}" onclick="${habit.frequency.type === 'twiceDaily' ? `completeTwiceDaily(${habit.id})` : `completeHabit(${habit.id})`}">
+                    ${icon}
+                    ${showAlert && !isChecked ? '<div class="alert-dot"></div>' : ''}
+                </div>
                 <div class="habit-info" onclick="openDetails(${habit.id})">
                     <span class="habit-name">${escapeHtml(habit.name)}</span>
                     ${subtaskBadge}
+                    ${twiceIndicator}
                     ${meta ? `<span class="habit-meta">${meta}</span>` : ''}
-                    ${scoreBadge}
-                    ${overdueBadge}
                 </div>
             </div>${subtasksHtml}`;
         }
@@ -1183,6 +1228,7 @@
         let editTimeOfDay = null;
         let editFrequency = 'daily';
         let editShowSubtasks = false;
+        let editIcon = null;
 
         function openDetails(id) { selectedHabitId = id; editMode = false; renderDetails(); document.getElementById('detailsOverlay').classList.add('active'); }
         function closeDetails() { document.getElementById('detailsOverlay').classList.remove('active'); selectedHabitId = null; editMode = false; }
@@ -1195,7 +1241,35 @@
                 editTimeOfDay = habit.timeOfDay;
                 editFrequency = habit.frequency.type;
                 editShowSubtasks = habit.showSubtasksOnMain || false;
+                editIcon = habit.icon;
             }
+            renderDetails();
+        }
+
+        function toggleEditEmojiPicker() {
+            const picker = document.getElementById('editEmojiPicker');
+            if (picker.style.display === 'none') {
+                renderEditEmojiPicker();
+                picker.style.display = 'flex';
+            } else {
+                picker.style.display = 'none';
+            }
+        }
+
+        function renderEditEmojiPicker() {
+            const usedIcons = getUsedIcons(selectedHabitId);
+            const container = document.getElementById('editEmojiPicker');
+            container.innerHTML = HABIT_EMOJIS.map(emoji => {
+                const isTaken = usedIcons.includes(emoji);
+                const isSelected = emoji === editIcon;
+                return `<div class="emoji-option ${isSelected ? 'selected' : ''} ${isTaken ? 'taken' : ''}" onclick="selectEditIcon('${emoji}')">${emoji}</div>`;
+            }).join('');
+        }
+
+        function selectEditIcon(emoji) {
+            editIcon = emoji;
+            document.getElementById('editSelectedEmoji').textContent = emoji;
+            document.getElementById('editEmojiPicker').style.display = 'none';
             renderDetails();
         }
 
@@ -1224,6 +1298,7 @@
             if (!newName) return;
 
             habit.name = newName;
+            habit.icon = editIcon;
             habit.timeOfDay = editTimeOfDay;
             habit.frequency.type = editFrequency;
             habit.showSubtasksOnMain = editShowSubtasks;
@@ -1274,11 +1349,16 @@
                 // Edit mode
                 const currentTime = editTimeOfDay;
                 const currentFreq = editFrequency;
+                const currentIcon = editIcon || habit.icon || '?';
                 document.getElementById('detailsModal').innerHTML = `
                     <div class="modal-header"><h2 class="modal-title">Edit Habit</h2><button class="modal-close" onclick="closeDetails()">&times;</button></div>
                     <div class="form-group">
-                        <label class="form-label">Name</label>
-                        <input type="text" class="form-input" id="editHabitName" value="${escapeHtml(habit.name)}" />
+                        <label class="form-label">Icon & Name</label>
+                        <div style="display:flex;gap:10px;align-items:center">
+                            <div class="selected-emoji has-icon" id="editSelectedEmoji" onclick="toggleEditEmojiPicker()">${currentIcon}</div>
+                            <input type="text" class="form-input" id="editHabitName" value="${escapeHtml(habit.name)}" style="flex:1" />
+                        </div>
+                        <div class="emoji-picker" id="editEmojiPicker" style="display:none"></div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Time of Day <span style="font-weight:normal;text-transform:none">(optional)</span></label>
@@ -1369,8 +1449,15 @@
                         </div>
                     </div>`;
 
+                const habitIcon = habit.icon || '?';
                 document.getElementById('detailsModal').innerHTML = `
-                    <div class="modal-header"><h2 class="modal-title">${escapeHtml(habit.name)}</h2><button class="modal-close" onclick="closeDetails()">&times;</button></div>
+                    <div class="modal-header">
+                        <div style="display:flex;align-items:center;gap:12px">
+                            <div class="selected-emoji has-icon" style="pointer-events:none">${habitIcon}</div>
+                            <h2 class="modal-title">${escapeHtml(habit.name)}</h2>
+                        </div>
+                        <button class="modal-close" onclick="closeDetails()">&times;</button>
+                    </div>
                     <div class="detail-row"><span class="detail-label">Time</span><span class="detail-value">${timeLabel}</span></div>
                     <div class="detail-row"><span class="detail-label">Frequency</span><span class="detail-value">${freqLabel}</span></div>
                     <div class="detail-row"><span class="detail-label">Momentum</span><span class="detail-value ${scoreData.raw < 0 ? 'red' : ''}">${scoreData.raw}/100</span></div>
@@ -1406,14 +1493,14 @@
             const yesterdayStr = yesterday.toISOString().split('T')[0];
 
             const testHabits = [
-                { id: 1, name: 'Brush teeth', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [{ date: today, period: 'morning', timestamp: Date.now() }], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
-                { id: 2, name: 'Meditate', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
-                { id: 3, name: 'Exercise', timeOfDay: 'morning', frequency: { type: 'timesPerWeek', timesPerWeek: 4, everyXDays: 2 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
-                { id: 4, name: 'Read', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
-                { id: 5, name: 'Journal', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
-                { id: 6, name: 'Water plants', timeOfDay: 'morning', frequency: { type: 'everyXDays', timesPerWeek: 3, everyXDays: 3 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
-                { id: 7, name: 'Take vitamins', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [{ date: today, period: null, timestamp: Date.now() }], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
-                { id: 8, name: 'Skincare', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr }
+                { id: 1, name: 'Brush teeth', icon: '🦷', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [{ date: today, period: 'morning', timestamp: Date.now() }], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 2, name: 'Meditate', icon: '🧘', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 3, name: 'Exercise', icon: '💪', timeOfDay: 'morning', frequency: { type: 'timesPerWeek', timesPerWeek: 4, everyXDays: 2 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 4, name: 'Read', icon: '📚', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 5, name: 'Journal', icon: '✍️', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 6, name: 'Water plants', icon: '🌱', timeOfDay: 'morning', frequency: { type: 'everyXDays', timesPerWeek: 3, everyXDays: 3 }, completions: [{ date: yesterdayStr, period: null, timestamp: Date.now() - 86400000 }], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 7, name: 'Take vitamins', icon: '💊', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [{ date: today, period: null, timestamp: Date.now() }], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr },
+                { id: 8, name: 'Skincare', icon: '🧴', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: yesterdayStr }
             ];
             saveHabits(testHabits);
             renderHabits();
