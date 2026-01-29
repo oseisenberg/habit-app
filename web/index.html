@@ -1937,7 +1937,6 @@
                 if (count > 0) avgInterval = (totalDays / count).toFixed(1) + 'd';
             }
 
-            const today = getTodayString();
             const isSnoozed = habit.snoozedUntil && (habit.snoozedUntil === 'night' || habit.snoozedUntil > today);
             const canSnooze = !isSnoozed && !isCompletedToday(habit);
 
