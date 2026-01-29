@@ -1024,12 +1024,11 @@
                 return false;
             }
 
-            // Times per week/month: allow doing it even after target is met (e.g., extra exercise)
-            // Just check if already done today
+            // Times per week/month: if target met, goes to Optional section instead
             if (habit.frequency.type === 'timesPerWeek' || habit.frequency.type === 'timesPerMonth') {
                 const completedToday = habit.completions.some(c => c.date === today);
                 if (completedToday) return false;
-                // Don't check status.completed - allow going beyond target
+                if (status.completed) return false; // Target met = optional, not Now
             } else if (status.completed) {
                 return false;
             }
@@ -1048,6 +1047,19 @@
                 return habit.completions.some(c => c.date === today);
             }
             return status.completed;
+        }
+
+        function isOptional(habit) {
+            // Weekly/monthly habits that have met their target but not done today
+            // These can still be completed for extra credit
+            if (habit.frequency.type !== 'timesPerWeek' && habit.frequency.type !== 'timesPerMonth') {
+                return false;
+            }
+            const today = getTodayString();
+            const completedToday = habit.completions.some(c => c.date === today);
+            if (completedToday) return false; // Already done today, goes to Done
+            const status = getCompletionStatus(habit);
+            return status.completed; // Target met but not done today = optional
         }
 
         function isForLater(habit) {
@@ -1093,6 +1105,7 @@
             const timeOfDay = getTimeOfDayNow();
             const sortedHabits = sortHabits(habits);
             const nowHabits = sortedHabits.filter(h => canDoNow(h));
+            const optionalHabits = sortedHabits.filter(h => isOptional(h));
             const laterHabits = sortedHabits.filter(h => isForLater(h));
             const completedHabits = sortedHabits.filter(h => isCompletedToday(h));
 
@@ -1129,6 +1142,25 @@
                         <span class="section-count">${nowHabits.length}</span>
                     </div>
                     ${nowContent}
+                </div>`;
+            }
+
+            // Optional section (weekly/monthly habits that have met target but can do more)
+            if (optionalHabits.length) {
+                if (collapsedSections['optional'] === undefined) collapsedSections['optional'] = false;
+                const collapsed = collapsedSections['optional'];
+                const contentClass = collapsed ? 'section-content collapsed' : 'section-content';
+                const headerClass = collapsed ? 'section-header collapsible collapsed' : 'section-header collapsible';
+                html += `<div class="habits-section inactive-section">
+                    <div class="${headerClass}" onclick="toggleSection('optional')">
+                        <span class="section-icon">⭐</span>
+                        <span class="section-title">Optional</span>
+                        <span class="collapse-icon">▼</span>
+                        <span class="section-count">${optionalHabits.length}</span>
+                    </div>
+                    <div class="${contentClass}">
+                        <div class="habits-grid">${optionalHabits.map(h => renderHabitIcon(h)).join('')}</div>
+                    </div>
                 </div>`;
             }
 
