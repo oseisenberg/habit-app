@@ -1412,24 +1412,20 @@
             const { now: nowHabits, optional: optionalHabits, later: laterHabits, done: completedHabits,
                     morning: morningSpecific, bedtime: bedtimeSpecific, anytime: anytimeHabits, timeOfDay } = categorizeHabits(habits);
 
+            // Helper: render a sub-section with header and habits grid
+            const subSection = (habits, icon, title) => habits.length
+                ? `<div class="sub-header"><span class="sub-header-icon">${icon}</span>${title}</div>
+                   <div class="habits-grid">${habits.map(h => renderHabitIcon(h)).join('')}</div>`
+                : '';
+
             let html = '';
 
             // Now section with sub-sections based on time of day
             if (nowHabits.length) {
                 let nowContent = '';
-
-                // Time-specific habits first, then Anytime section after
-                if (timeOfDay === 'morning' && morningSpecific.length) {
-                    nowContent += `<div class="sub-header"><span class="sub-header-icon">🌅</span>Morning</div>`;
-                    nowContent += `<div class="habits-grid">${morningSpecific.map(h => renderHabitIcon(h)).join('')}</div>`;
-                } else if (timeOfDay === 'night' && bedtimeSpecific.length) {
-                    nowContent += `<div class="sub-header"><span class="sub-header-icon">🌙</span>Bedtime</div>`;
-                    nowContent += `<div class="habits-grid">${bedtimeSpecific.map(h => renderHabitIcon(h)).join('')}</div>`;
-                }
-                if (anytimeHabits.length) {
-                    nowContent += `<div class="sub-header"><span class="sub-header-icon">⚡</span>Anytime</div>`;
-                    nowContent += `<div class="habits-grid">${anytimeHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
-                }
+                if (timeOfDay === 'morning') nowContent += subSection(morningSpecific, '🌅', 'Morning');
+                else if (timeOfDay === 'night') nowContent += subSection(bedtimeSpecific, '🌙', 'Bedtime');
+                nowContent += subSection(anytimeHabits, '⚡', 'Anytime');
 
                 html += `<div class="habits-section">
                     <div class="section-header">
