@@ -1407,24 +1407,16 @@
             if (nowHabits.length) {
                 let nowContent = '';
 
-                if (timeOfDay === 'morning') {
-                    // Morning: show morning-specific with header, then anytime without header
-                    if (morningSpecific.length) {
-                        nowContent += `<div class="sub-header"><span class="sub-header-icon">🌅</span>Morning</div>`;
-                        nowContent += `<div class="habits-grid">${morningSpecific.map(h => renderHabitIcon(h)).join('')}</div>`;
-                    }
-                    if (anytimeHabits.length) {
-                        nowContent += `<div class="habits-grid">${anytimeHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
-                    }
-                } else if (timeOfDay === 'night') {
-                    // Night/Bedtime: show bedtime-specific with header, then anytime without header
-                    if (bedtimeSpecific.length) {
-                        nowContent += `<div class="sub-header"><span class="sub-header-icon">🌙</span>Bedtime</div>`;
-                        nowContent += `<div class="habits-grid">${bedtimeSpecific.map(h => renderHabitIcon(h)).join('')}</div>`;
-                    }
-                    if (anytimeHabits.length) {
-                        nowContent += `<div class="habits-grid">${anytimeHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
-                    }
+                // Anytime habits first (no header), then time-specific with header
+                if (anytimeHabits.length) {
+                    nowContent += `<div class="habits-grid">${anytimeHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
+                }
+                if (timeOfDay === 'morning' && morningSpecific.length) {
+                    nowContent += `<div class="sub-header"><span class="sub-header-icon">🌅</span>Morning</div>`;
+                    nowContent += `<div class="habits-grid">${morningSpecific.map(h => renderHabitIcon(h)).join('')}</div>`;
+                } else if (timeOfDay === 'night' && bedtimeSpecific.length) {
+                    nowContent += `<div class="sub-header"><span class="sub-header-icon">🌙</span>Bedtime</div>`;
+                    nowContent += `<div class="habits-grid">${bedtimeSpecific.map(h => renderHabitIcon(h)).join('')}</div>`;
                 }
 
                 html += `<div class="habits-section">
