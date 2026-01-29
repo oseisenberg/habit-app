@@ -252,7 +252,9 @@
         .inactive-section .section-header { border-bottom-color: #222; }
         .inactive-section .habit-item { border-bottom-color: #222; }
 
-        .sub-header { font-size: 0.7rem; color: #666; padding: 8px 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px; }
+        .sub-header { font-size: 0.7rem; color: #888; padding: 10px 8px 4px 8px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
+        .sub-header-icon { font-size: 0.8rem; }
+        .sub-header:first-child { padding-top: 4px; }
 
         .subtask-indicator { font-size: 0.6rem; color: #888; background: #2a2a3e; padding: 2px 5px; border-radius: 6px; }
         .subtask-indicator.partial { color: #f59e0b; }
@@ -1098,31 +1100,33 @@
 
             let html = '';
 
-            // Morning section (only show in morning, or if there are morning habits)
-            if (morningHabits.length && (timeOfDay === 'morning' || timeOfDay === 'anytime')) {
-                html += `<div class="habits-section">
-                    <div class="section-header">
-                        <span class="section-icon">🌅</span>
-                        <span class="section-title">Morning</span>
-                        <span class="section-count">${morningHabits.length}</span>
-                    </div>
-                    <div class="habits-grid">${morningHabits.map(h => renderHabitIcon(h)).join('')}</div>
-                </div>`;
-            }
+            // Now section with Morning and Anytime sub-sections
+            if (nowHabits.length) {
+                let nowContent = '';
+                const showSubSections = morningHabits.length > 0 && anytimeHabits.length > 0 && (timeOfDay === 'morning' || timeOfDay === 'anytime');
 
-            // Anytime section (or all now habits if not morning)
-            const anytimeToShow = (timeOfDay === 'morning' || timeOfDay === 'anytime') ? anytimeHabits :
-                [...morningHabits, ...anytimeHabits];
-            if (anytimeToShow.length) {
-                const title = (timeOfDay === 'morning' || timeOfDay === 'anytime') && morningHabits.length ? 'Anytime' : 'Now';
-                const icon = (timeOfDay === 'morning' || timeOfDay === 'anytime') && morningHabits.length ? '⚡' : '⚡';
+                if (showSubSections) {
+                    // Show both sub-sections
+                    nowContent += `<div class="sub-header"><span class="sub-header-icon">🌅</span>Morning</div>`;
+                    nowContent += `<div class="habits-grid">${morningHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
+                    nowContent += `<div class="sub-header"><span class="sub-header-icon">⚡</span>Anytime</div>`;
+                    nowContent += `<div class="habits-grid">${anytimeHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
+                } else if (morningHabits.length && (timeOfDay === 'morning' || timeOfDay === 'anytime')) {
+                    // Only morning habits
+                    nowContent += `<div class="sub-header"><span class="sub-header-icon">🌅</span>Morning</div>`;
+                    nowContent += `<div class="habits-grid">${morningHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
+                } else {
+                    // All habits without sub-sections (night time or no morning habits)
+                    nowContent += `<div class="habits-grid">${nowHabits.map(h => renderHabitIcon(h)).join('')}</div>`;
+                }
+
                 html += `<div class="habits-section">
                     <div class="section-header">
-                        <span class="section-icon">${icon}</span>
-                        <span class="section-title">${title}</span>
-                        <span class="section-count">${anytimeToShow.length}</span>
+                        <span class="section-icon">⚡</span>
+                        <span class="section-title">Now</span>
+                        <span class="section-count">${nowHabits.length}</span>
                     </div>
-                    <div class="habits-grid">${anytimeToShow.map(h => renderHabitIcon(h)).join('')}</div>
+                    ${nowContent}
                 </div>`;
             }
 
