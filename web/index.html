@@ -1408,13 +1408,12 @@
                         } else {
                             now.push(h); // Can do night now
                         }
+                    } else if (!status.morningDone && status.nightDone) {
+                        // Morning missed, night done → nothing more to do today
+                        done.push(h);
                     } else {
-                        // Morning not done
-                        if (timeOfDay === 'morning') {
-                            now.push(h); // Can do morning now
-                        } else {
-                            now.push(h); // Show in now for night (morning shows as missed)
-                        }
+                        // Neither done yet
+                        now.push(h);
                     }
                     return;
                 }
@@ -1460,9 +1459,13 @@
             // Now section with sub-sections based on time of day
             if (nowHabits.length) {
                 let nowContent = '';
-                if (timeOfDay === 'morning') nowContent += subSection(morningSpecific, '🌅', 'Morning');
-                else if (timeOfDay === 'night') nowContent += subSection(bedtimeSpecific, '🌙', 'Bedtime');
-                nowContent += subSection(anytimeHabits, '⚡', 'Anytime');
+                if (timeOfDay === 'morning') {
+                    nowContent += subSection(morningSpecific, '🌅', 'Morning');
+                    nowContent += subSection(anytimeHabits, '⚡', 'Anytime');
+                } else if (timeOfDay === 'night') {
+                    nowContent += subSection(anytimeHabits, '⚡', 'Anytime');
+                    nowContent += subSection(bedtimeSpecific, '🌙', 'Bedtime');
+                }
 
                 html += `<div class="habits-section">
                     <div class="section-header">
