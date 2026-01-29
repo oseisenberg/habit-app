@@ -1374,6 +1374,34 @@
             return habits;
         }
 
+        // Categorize habits into sections (Now, Optional, Later, Done) with sub-categories
+        function categorizeHabits(habits) {
+            const timeOfDay = getTimeOfDayNow();
+            const sorted = sortHabits(habits);
+            const now = [], optional = [], later = [], done = [];
+            const nowIds = new Set(), doneIds = new Set();
+
+            // First pass: categorize into Now and Done (can overlap)
+            sorted.forEach(h => {
+                if (canDoNow(h)) { now.push(h); nowIds.add(h.id); }
+                if (hasCompletionToday(h)) { done.push(h); doneIds.add(h.id); }
+            });
+
+            // Second pass: Optional and Later (mutually exclusive with Now/Done)
+            sorted.forEach(h => {
+                if (nowIds.has(h.id) || doneIds.has(h.id)) return;
+                if (isOptional(h)) optional.push(h);
+                else if (isForLater(h)) later.push(h);
+            });
+
+            // Sub-categorize Now section by time
+            const morning = now.filter(h => h.timeOfDay === 'morning' || (h.frequency.type === 'twiceDaily' && timeOfDay === 'morning'));
+            const bedtime = now.filter(h => h.timeOfDay === 'night' || (h.frequency.type === 'twiceDaily' && timeOfDay === 'night'));
+            const anytime = now.filter(h => !h.timeOfDay && h.frequency.type !== 'twiceDaily');
+
+            return { now, optional, later, done, morning, bedtime, anytime, timeOfDay };
+        }
+
         function renderHabits() {
             const habits = loadHabits(), container = document.getElementById('habitsContainer');
             if (!habits.length) {
@@ -1381,25 +1409,8 @@
                 return;
             }
 
-            const timeOfDay = getTimeOfDayNow();
-            const sortedHabits = sortHabits(habits);
-            // Section logic: Now and Done can overlap for partial completions (e.g., twice daily)
-            // Done shows anything completed today, Later shows what's waiting
-            const nowHabits = sortedHabits.filter(h => canDoNow(h));
-            const nowIds = new Set(nowHabits.map(h => h.id));
-            // Done includes ANY completion today (including partial twice daily)
-            const completedHabits = sortedHabits.filter(h => hasCompletionToday(h));
-            const completedIds = new Set(completedHabits.map(h => h.id));
-            // Optional and Later exclude habits in Now, but Done can overlap
-            const optionalHabits = sortedHabits.filter(h => !nowIds.has(h.id) && !completedIds.has(h.id) && isOptional(h));
-            const optionalIds = new Set(optionalHabits.map(h => h.id));
-            const laterHabits = sortedHabits.filter(h => !nowIds.has(h.id) && !completedIds.has(h.id) && !optionalIds.has(h.id) && isForLater(h));
-
-            // Sub-categorize Now section
-            // Time-specific habits get a header, anytime habits (null timeOfDay) render without header
-            const morningSpecific = nowHabits.filter(h => h.timeOfDay === 'morning' || (h.frequency.type === 'twiceDaily' && timeOfDay === 'morning'));
-            const bedtimeSpecific = nowHabits.filter(h => h.timeOfDay === 'night' || (h.frequency.type === 'twiceDaily' && timeOfDay === 'night'));
-            const anytimeHabits = nowHabits.filter(h => !h.timeOfDay && h.frequency.type !== 'twiceDaily');
+            const { now: nowHabits, optional: optionalHabits, later: laterHabits, done: completedHabits,
+                    morning: morningSpecific, bedtime: bedtimeSpecific, anytime: anytimeHabits, timeOfDay } = categorizeHabits(habits);
 
             let html = '';
 
@@ -1443,65 +1454,35 @@
                 </div>`;
             }
 
-            // Optional section (weekly/monthly habits that have met target but can do more)
-            if (optionalHabits.length) {
-                if (collapsedSections['optional'] === undefined) collapsedSections['optional'] = false;
-                const collapsed = collapsedSections['optional'];
-                const contentClass = collapsed ? 'section-content collapsed' : 'section-content';
-                const headerClass = collapsed ? 'section-header collapsible collapsed' : 'section-header collapsible';
-                html += `<div class="habits-section">
-                    <div class="${headerClass}" onclick="toggleSection('optional')">
-                        <span class="section-icon">⭐</span>
-                        <span class="section-title">Optional</span>
-                        <span class="collapse-icon">▼</span>
-                        <span class="section-count">${optionalHabits.length}</span>
-                    </div>
-                    <div class="${contentClass}">
-                        <div class="habits-grid">${optionalHabits.map(h => renderHabitIcon(h)).join('')}</div>
-                    </div>
-                </div>`;
-            }
-
-            // Later section
-            if (laterHabits.length) {
-                if (collapsedSections['later'] === undefined) collapsedSections['later'] = true;
-                const collapsed = collapsedSections['later'];
-                const contentClass = collapsed ? 'section-content collapsed' : 'section-content';
-                const headerClass = collapsed ? 'section-header collapsible collapsed' : 'section-header collapsible';
-                html += `<div class="habits-section inactive-section">
-                    <div class="${headerClass}" onclick="toggleSection('later')">
-                        <span class="section-icon">🕐</span>
-                        <span class="section-title">Later</span>
-                        <span class="collapse-icon">▼</span>
-                        <span class="section-count">${laterHabits.length}</span>
-                    </div>
-                    <div class="${contentClass}">
-                        <div class="habits-grid">${laterHabits.map(h => renderHabitIcon(h, true)).join('')}</div>
-                    </div>
-                </div>`;
-            }
-
-            // Done section
-            if (completedHabits.length) {
-                if (collapsedSections['completed'] === undefined) collapsedSections['completed'] = true;
-                const collapsed = collapsedSections['completed'];
-                const contentClass = collapsed ? 'section-content collapsed' : 'section-content';
-                const headerClass = collapsed ? 'section-header collapsible collapsed' : 'section-header collapsible';
-                html += `<div class="habits-section inactive-section">
-                    <div class="${headerClass}" onclick="toggleSection('completed')">
-                        <span class="section-icon">✓</span>
-                        <span class="section-title">Done</span>
-                        <span class="collapse-icon">▼</span>
-                        <span class="section-count">${completedHabits.length}</span>
-                    </div>
-                    <div class="${contentClass}">
-                        <div class="habits-grid">${completedHabits.map(h => renderHabitIcon(h, false, true)).join('')}</div>
-                    </div>
-                </div>`;
-            }
+            // Collapsible sections using helper
+            html += renderSection(optionalHabits, 'optional', '⭐', 'Optional', false);
+            html += renderSection(laterHabits, 'later', '🕐', 'Later', true, { inactive: true, isLater: true });
+            html += renderSection(completedHabits, 'completed', '✓', 'Done', true, { inactive: true, isCompleted: true });
 
             if (!html) html = '<div class="habits-section"><div class="empty-state"><div class="empty-state-icon">✓</div><div>All done!</div></div></div>';
             container.innerHTML = html;
+        }
+
+        // Helper: render a collapsible section (Optional, Later, Done)
+        function renderSection(habits, sectionId, icon, title, defaultCollapsed, renderOpts = {}) {
+            if (!habits.length) return '';
+            if (collapsedSections[sectionId] === undefined) collapsedSections[sectionId] = defaultCollapsed;
+            const collapsed = collapsedSections[sectionId];
+            const contentClass = collapsed ? 'section-content collapsed' : 'section-content';
+            const headerClass = collapsed ? 'section-header collapsible collapsed' : 'section-header collapsible';
+            const sectionClass = renderOpts.inactive ? 'habits-section inactive-section' : 'habits-section';
+            const habitsHtml = habits.map(h => renderHabitIcon(h, renderOpts.isLater, renderOpts.isCompleted)).join('');
+            return `<div class="${sectionClass}">
+                <div class="${headerClass}" onclick="toggleSection('${sectionId}')">
+                    <span class="section-icon">${icon}</span>
+                    <span class="section-title">${title}</span>
+                    <span class="collapse-icon">▼</span>
+                    <span class="section-count">${habits.length}</span>
+                </div>
+                <div class="${contentClass}">
+                    <div class="habits-grid">${habitsHtml}</div>
+                </div>
+            </div>`;
         }
 
         function renderHabitIcon(habit, isLater = false, isCompleted = false) {
