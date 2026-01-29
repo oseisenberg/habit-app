@@ -555,6 +555,11 @@
         <div class="emoji-popup" id="emojiPopup"></div>
     </div>
 
+    <!-- Snooze Popup -->
+    <div class="points-popup-overlay" id="snoozePopupOverlay" onclick="handleOverlayClick(event, 'snoozePopupOverlay', closeSnoozePopup)">
+        <div class="points-popup" id="snoozePopup"></div>
+    </div>
+
     <!-- Debug -->
     <button class="debug-toggle" id="debugToggle" onclick="toggleDebug()">🐛</button>
     <div class="debug-panel" id="debugPanel">
@@ -871,12 +876,39 @@
             }
         }
 
-        function snoozeHabit(id) {
+        let snoozePopupHabitId = null;
+
+        function openSnoozePopup(id) {
+            snoozePopupHabitId = id;
+            document.getElementById('snoozePopup').innerHTML = `
+                <div class="points-popup-header">
+                    <span class="points-popup-title">Snooze for how long?</span>
+                </div>
+                <div class="points-popup-buttons">
+                    <button class="points-btn" onclick="snoozeHabit(1)">1 day</button>
+                    <button class="points-btn" onclick="snoozeHabit(2)">2 days</button>
+                    <button class="points-btn" onclick="snoozeHabit(3)">3 days</button>
+                </div>
+                <div class="points-popup-buttons" style="margin-top:8px">
+                    <button class="points-btn" onclick="snoozeHabit(7)">1 week</button>
+                </div>`;
+            document.getElementById('snoozePopupOverlay').classList.add('active');
+        }
+
+        function closeSnoozePopup() {
+            document.getElementById('snoozePopupOverlay').classList.remove('active');
+            snoozePopupHabitId = null;
+        }
+
+        function snoozeHabit(days) {
             const habits = loadHabits();
-            const habit = habits.find(h => h.id === id);
+            const habit = habits.find(h => h.id === snoozePopupHabitId);
             if (habit) {
-                habit.snoozedUntil = 'night';
+                const snoozeUntil = new Date(getTodayString());
+                snoozeUntil.setDate(snoozeUntil.getDate() + days);
+                habit.snoozedUntil = snoozeUntil.toISOString().split('T')[0];
                 saveHabits(habits);
+                closeSnoozePopup();
                 closeDetails();
                 renderHabits();
             }
@@ -935,14 +967,20 @@
                 return { completed: since === 0, due: since >= target, daysOverdue: Math.max(0, since - target) };
             }
             if (habit.frequency.type === 'pointsPerWeek') {
-                const ws = getWeekStart(today);
+                // Sliding window: last 7 days
+                const weekAgo = new Date(today);
+                weekAgo.setDate(weekAgo.getDate() - 6);
+                const ws = weekAgo.toISOString().split('T')[0];
                 const points = countPointsInRange(habit, ws, today);
                 const target = habit.frequency.pointsPerWeek || 12;
                 return { completed: points >= target, points, target, text: `${points}/${target} pts`, isPoints: true };
             }
             if (habit.frequency.type === 'pointsPerMonth') {
-                const ms = getMonthStart(today), me = getMonthEnd(today);
-                const points = countPointsInRange(habit, ms, me);
+                // Sliding window: last 30 days
+                const monthAgo = new Date(today);
+                monthAgo.setDate(monthAgo.getDate() - 29);
+                const ms = monthAgo.toISOString().split('T')[0];
+                const points = countPointsInRange(habit, ms, today);
                 const target = habit.frequency.pointsPerMonth || 30;
                 return { completed: points >= target, points, target, text: `${points}/${target} pts`, isPoints: true };
             }
@@ -1179,7 +1217,11 @@
             const today = getTodayString();
             const timeOfDay = getTimeOfDayNow();
             if (habit.skippedDates?.includes(today)) return false;
-            if (habit.snoozedUntil === 'night' && timeOfDay !== 'night') return false;
+            // Check if snoozed (either old 'night' format or new date format)
+            if (habit.snoozedUntil) {
+                if (habit.snoozedUntil === 'night' && timeOfDay !== 'night') return false;
+                if (habit.snoozedUntil !== 'night' && habit.snoozedUntil > today) return false;
+            }
 
             const status = getCompletionStatus(habit);
 
@@ -1248,8 +1290,11 @@
 
             // Night habits during non-night = later
             if (habit.timeOfDay === 'night' && timeOfDay !== 'night') return true;
-            // Snoozed until night
-            if (habit.snoozedUntil === 'night' && timeOfDay !== 'night') return true;
+            // Snoozed habits go to Later
+            if (habit.snoozedUntil) {
+                if (habit.snoozedUntil === 'night' && timeOfDay !== 'night') return true;
+                if (habit.snoozedUntil !== 'night' && habit.snoozedUntil > today) return true;
+            }
             return false;
         }
 
@@ -1885,8 +1930,9 @@
                 if (count > 0) avgInterval = (totalDays / count).toFixed(1) + 'd';
             }
 
-            const isSnoozed = habit.snoozedUntil === 'night';
-            const canSnooze = !isSnoozed && timeOfDay !== 'night' && !isCompletedToday(habit);
+            const today = getTodayString();
+            const isSnoozed = habit.snoozedUntil && (habit.snoozedUntil === 'night' || habit.snoozedUntil > today);
+            const canSnooze = !isSnoozed && !isCompletedToday(habit);
 
             if (editMode) {
                 // Edit mode
@@ -2035,7 +2081,7 @@
                     <div class="action-buttons">
                         <div style="display:flex;gap:6px">
                             <button class="submit-btn" style="flex:1" onclick="toggleEditMode()">Edit</button>
-                            ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="snoozeHabit(${habit.id})">Snooze</button>` : ''}
+                            ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id})">Snooze</button>` : ''}
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
                             <button class="submit-btn secondary" style="flex:1" onclick="skipHabit(${habit.id})">Skip</button>
                         </div>
@@ -2092,7 +2138,7 @@
         }
 
         document.getElementById('habitInput').addEventListener('keypress', e => { if (e.key === 'Enter') addHabit(); });
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetails(); closeSettings(); closeSubtaskPopup(); closePointsPopup(); closeEmojiPopup(); } });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetails(); closeSettings(); closeSubtaskPopup(); closePointsPopup(); closeEmojiPopup(); closeSnoozePopup(); } });
 
         // Update scores on page load to persist momentum for missed days
         updateAllHabitScores();
