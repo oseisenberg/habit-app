@@ -165,19 +165,19 @@
         .time-toggle-btn.active { background: #667eea; color: white; }
         .time-toggle-btn.disabled { opacity: 0.4; pointer-events: none; }
 
-        .frequency-options { display: flex; flex-direction: column; gap: 4px; }
+        .frequency-options { display: flex; flex-direction: column; gap: 6px; }
         .frequency-option {
-            display: flex; align-items: center; padding: 8px 10px; border: 1px solid #2a2a3e;
+            display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid #2a2a3e;
             border-radius: 8px; background: #0f0f1a; cursor: pointer; transition: all 0.15s;
         }
         .frequency-option.selected { border-color: #667eea; background: rgba(102, 126, 234, 0.1); }
         .frequency-radio { display: none; }
-        .frequency-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #444; margin-right: 8px; flex-shrink: 0; }
+        .frequency-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #444; flex-shrink: 0; }
         .frequency-option.selected .frequency-dot { border-color: #667eea; background: #667eea; }
-        .frequency-label { flex: 1; color: #ccc; font-size: 0.85rem; }
-        .frequency-input { width: 44px; padding: 5px; border: 1px solid #2a2a3e; border-radius: 6px; text-align: center; font-size: 0.8rem; background: #1a1a2e; color: #fff; }
-        .period-toggle { display: inline-flex; background: #0a0a14; border-radius: 6px; margin-left: 4px; overflow: hidden; }
-        .period-toggle-btn { padding: 4px 8px; font-size: 0.7rem; color: #666; cursor: pointer; border: none; background: transparent; }
+        .frequency-label { color: #ccc; font-size: 0.85rem; }
+        .frequency-input { width: 48px; padding: 6px; border: 1px solid #2a2a3e; border-radius: 6px; text-align: center; font-size: 0.85rem; background: #1a1a2e; color: #fff; }
+        .period-toggle { display: inline-flex; border: 1px solid #2a2a3e; border-radius: 6px; overflow: hidden; margin-left: auto; }
+        .period-toggle-btn { padding: 6px 10px; font-size: 0.8rem; color: #666; cursor: pointer; border: none; background: #0a0a14; }
         .period-toggle-btn.active { background: #667eea; color: white; }
 
         .submit-btn {
@@ -282,20 +282,20 @@
             .modal { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
         }
 
-        .debug-toggle { position: fixed; top: 8px; left: 8px; background: rgba(255,255,255,0.1); color: #666; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.65rem; cursor: pointer; z-index: 500; opacity: 0.4; }
+        .debug-toggle { position: fixed; top: 8px; left: 8px; background: rgba(255,255,255,0.1); color: #666; border: none; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; z-index: 500; opacity: 0.4; }
         .debug-toggle:hover { opacity: 1; }
         .debug-toggle.active { background: #dc2626; color: white; opacity: 1; }
-        .debug-panel { position: fixed; top: 36px; left: 8px; max-width: 280px; background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 10px; padding: 12px; z-index: 500; display: none; font-size: 0.75rem; }
+        .debug-panel { position: fixed; top: 42px; left: 8px; max-width: 320px; background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 10px; padding: 14px; z-index: 500; display: none; font-size: 0.85rem; }
         .debug-panel.active { display: block; }
-        .debug-row { display: flex; justify-content: space-between; padding: 4px 0; }
-        .debug-label { color: #666; }
+        .debug-row { display: flex; justify-content: space-between; padding: 6px 0; }
+        .debug-label { color: #888; }
         .debug-value { color: #4ade80; font-family: monospace; }
-        .debug-controls { display: flex; gap: 4px; margin-top: 8px; }
-        .debug-btn { flex: 1; padding: 6px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.7rem; }
+        .debug-controls { display: flex; gap: 6px; margin-top: 10px; }
+        .debug-btn { flex: 1; padding: 8px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
         .debug-btn-nav { background: #2a2a3e; color: white; }
         .debug-btn-reset { background: #dc2626; color: white; }
         .debug-btn-time { background: #2563eb; color: white; }
-        .debug-offset { background: #dc2626; color: white; padding: 1px 5px; border-radius: 6px; font-size: 0.6rem; margin-left: 4px; }
+        .debug-offset { background: #dc2626; color: white; padding: 2px 6px; border-radius: 6px; font-size: 0.7rem; margin-left: 6px; }
 
         /* Emoji picker */
         .emoji-picker { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; max-height: 160px; overflow-y: auto; padding: 4px; background: #0a0a14; border-radius: 8px; }
@@ -452,8 +452,8 @@
                         <span class="frequency-dot"></span>
                         <span class="frequency-label">Every</span>
                         <input type="number" class="frequency-input" id="reminderDays" value="1" min="1" onclick="event.stopPropagation()">
-                        <span style="color:#666;margin-left:4px">days</span>
-                        <span style="color:#666;font-size:0.7rem;margin-left:auto">no penalty</span>
+                        <span style="color:#666">days</span>
+                        <span style="color:#666;font-size:0.75rem;margin-left:auto">no penalty</span>
                     </label>
                     <label class="frequency-option" onclick="selectFrequency('twiceDaily')">
                         <input type="radio" name="frequency" class="frequency-radio" value="twiceDaily">
@@ -465,7 +465,7 @@
                         <span class="frequency-dot"></span>
                         <span class="frequency-label">Every</span>
                         <input type="number" class="frequency-input" id="everyXDays" value="2" min="1" onclick="event.stopPropagation()">
-                        <span style="color:#666;margin-left:4px">days</span>
+                        <span style="color:#666">days</span>
                     </label>
                     <label class="frequency-option" onclick="selectFrequency('timesPerPeriod')">
                         <input type="radio" name="frequency" class="frequency-radio" value="timesPerPeriod">
@@ -480,7 +480,7 @@
                     <label class="frequency-option" onclick="selectFrequency('pointsPerPeriod')">
                         <input type="radio" name="frequency" class="frequency-radio" value="pointsPerPeriod">
                         <span class="frequency-dot"></span>
-                        <input type="number" class="frequency-input" id="pointsPerPeriod" value="12" min="1" style="width:40px" onclick="event.stopPropagation()">
+                        <input type="number" class="frequency-input" id="pointsPerPeriod" value="12" min="1" onclick="event.stopPropagation()">
                         <span class="frequency-label">pts /</span>
                         <div class="period-toggle" onclick="event.stopPropagation()">
                             <button type="button" class="period-toggle-btn active" id="pointsWeekBtn" onclick="setPointsPeriod('week')">week</button>
@@ -2057,8 +2057,8 @@
                                 <span class="frequency-dot"></span>
                                 <span class="frequency-label">Every</span>
                                 <input type="number" class="frequency-input" id="editReminderDays" value="${habit.frequency.reminderDays || 1}" min="1" onclick="event.stopPropagation()">
-                                <span style="color:#666;margin-left:4px">days</span>
-                                <span style="color:#666;font-size:0.7rem;margin-left:auto">no penalty</span>
+                                <span style="color:#666">days</span>
+                                <span style="color:#666;font-size:0.75rem;margin-left:auto">no penalty</span>
                             </div>
                             <div class="frequency-option ${currentFreq === 'twiceDaily' ? 'selected' : ''}" onclick="selectEditFrequency('twiceDaily')">
                                 <span class="frequency-dot"></span>
@@ -2068,7 +2068,7 @@
                                 <span class="frequency-dot"></span>
                                 <span class="frequency-label">Every</span>
                                 <input type="number" class="frequency-input" id="editEveryXDays" value="${habit.frequency.everyXDays || 2}" min="1" onclick="event.stopPropagation()">
-                                <span style="color:#666;margin-left:4px">days</span>
+                                <span style="color:#666">days</span>
                             </div>
                             <div class="frequency-option ${currentFreq === 'timesPerWeek' || currentFreq === 'timesPerMonth' ? 'selected' : ''}" onclick="selectEditFrequency('timesPerPeriod')">
                                 <span class="frequency-dot"></span>
@@ -2081,7 +2081,7 @@
                             </div>
                             <div class="frequency-option ${currentFreq === 'pointsPerWeek' || currentFreq === 'pointsPerMonth' ? 'selected' : ''}" onclick="selectEditFrequency('pointsPerPeriod')">
                                 <span class="frequency-dot"></span>
-                                <input type="number" class="frequency-input" id="editPointsPerPeriod" value="${habit.frequency.pointsPerWeek || habit.frequency.pointsPerMonth || 12}" min="1" style="width:40px" onclick="event.stopPropagation()">
+                                <input type="number" class="frequency-input" id="editPointsPerPeriod" value="${habit.frequency.pointsPerWeek || habit.frequency.pointsPerMonth || 12}" min="1" onclick="event.stopPropagation()">
                                 <span class="frequency-label">pts /</span>
                                 <div class="period-toggle" onclick="event.stopPropagation()">
                                     <button type="button" class="period-toggle-btn ${editPointsPeriod === 'week' ? 'active' : ''}" onclick="setEditPointsPeriod('week')">week</button>
