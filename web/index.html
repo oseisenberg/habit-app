@@ -495,6 +495,14 @@
                     <div class="toggle-switch active" id="allowOptionalToggle" onclick="toggleAllowOptional()"></div>
                 </div>
             </div>
+            <div class="form-group" id="subtasksGroup">
+                <label class="form-label">Subtasks <span style="font-weight:normal;text-transform:none">(optional)</span></label>
+                <div id="newHabitSubtasksList"></div>
+                <div class="add-subtask">
+                    <input type="text" id="newHabitSubtaskInput" placeholder="Add subtask..." onkeypress="if(event.key==='Enter'){event.preventDefault();addNewHabitSubtask();}">
+                    <button type="button" onclick="addNewHabitSubtask()">+</button>
+                </div>
+            </div>
             <button class="submit-btn" onclick="addHabit()">Add Habit</button>
         </div>
     </div>
@@ -609,6 +617,7 @@
         let editModeHabitId = null; // Track which habit is being edited for emoji exclusion
         let timesPeriod = 'week'; // 'week' or 'month' for timesPerPeriod
         let pointsPeriod = 'week'; // 'week' or 'month' for pointsPerPeriod
+        let newHabitSubtasks = []; // Subtasks for new habit creation
 
         function setTimesPeriod(period) {
             timesPeriod = period;
@@ -831,6 +840,10 @@
             // Reset optional toggle
             allowOptional = true;
             document.getElementById('allowOptionalToggle').classList.add('active');
+            // Reset subtasks
+            newHabitSubtasks = [];
+            document.getElementById('newHabitSubtasksList').innerHTML = '';
+            document.getElementById('newHabitSubtaskInput').value = '';
         }
 
         function openSettings() {
@@ -876,11 +889,42 @@
             // Show optional checkbox only for frequency types that support it
             const supportsOptional = f === 'timesPerPeriod' || f === 'pointsPerPeriod';
             document.getElementById('optionalCheckboxGroup').style.display = supportsOptional ? 'block' : 'none';
+            // Hide subtasks for points-based habits
+            const isPointsBased = f === 'pointsPerPeriod';
+            document.getElementById('subtasksGroup').style.display = isPointsBased ? 'none' : 'block';
         }
 
         function toggleAllowOptional() {
             allowOptional = !allowOptional;
             document.getElementById('allowOptionalToggle').classList.toggle('active', allowOptional);
+        }
+
+        function addNewHabitSubtask() {
+            const input = document.getElementById('newHabitSubtaskInput');
+            const name = input.value.trim();
+            if (!name) return;
+            newHabitSubtasks.push({ id: Date.now(), name, completedPeriods: {} });
+            input.value = '';
+            renderNewHabitSubtasks();
+        }
+
+        function removeNewHabitSubtask(id) {
+            newHabitSubtasks = newHabitSubtasks.filter(s => s.id !== id);
+            renderNewHabitSubtasks();
+        }
+
+        function renderNewHabitSubtasks() {
+            const container = document.getElementById('newHabitSubtasksList');
+            if (!newHabitSubtasks.length) {
+                container.innerHTML = '';
+                return;
+            }
+            container.innerHTML = newHabitSubtasks.map(s => `
+                <div class="subtask-item">
+                    <span class="subtask-name">${escapeHtml(s.name)}</span>
+                    <span class="subtask-delete" onclick="removeNewHabitSubtask(${s.id})">✕</span>
+                </div>
+            `).join('');
         }
 
         function addHabit() {
@@ -911,7 +955,7 @@
                     reminderDays: reminderDaysVal
                 },
                 allowOptional: allowOptional, // Whether habit can appear in Optional section after target met
-                completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: getTodayString()
+                completions: [], skippedDates: [], snoozedUntil: null, subtasks: [...newHabitSubtasks], createdAt: getTodayString()
             });
             saveHabits(habits);
             closeModal();
