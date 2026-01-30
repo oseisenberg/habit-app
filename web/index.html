@@ -1088,30 +1088,26 @@
         function getDefaultHabits() {
             const today = getTodayString();
             return [
-                { id: 1, name: 'Drink water', icon: '🍺', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
-                { id: 2, name: 'Shower', icon: '🚿', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
-                { id: 3, name: 'Exercise', icon: '🏋️‍♂️', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
-                { id: 4, name: 'Zoryve', icon: '💋', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
+                { id: 2, name: 'Shower', icon: '🚿', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: true, isReminder: false },
+                { id: 3, name: 'Exercise', icon: '🏋️‍♂️', timeOfDay: null, frequency: { type: 'timesPerWeek', timesPerWeek: 3 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false },
+                { id: 4, name: 'Zoryve', icon: '💋', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false },
                 { id: 5, name: 'Night', icon: '🌙', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
-                { id: 6, name: 'Lunch', icon: '🥗', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
                 { id: 7, name: 'Morning', icon: '👶', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
-                { id: 8, name: 'Shave', icon: '🪒', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
-                { id: 9, name: 'Change clothes', icon: '👕', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
+                { id: 8, name: 'Shave', icon: '🪒', timeOfDay: null, frequency: { type: 'everyXDays', everyXDays: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false },
+                { id: 9, name: 'Change clothes', icon: '👕', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false },
                 { id: 10, name: 'Vitamins: Biotin', icon: '🎃', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
-                { id: 11, name: 'Set alarms', icon: '⏰', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
+                { id: 11, name: 'Set alarms', icon: '⏰', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: true },
                 { id: 12, name: 'Floss', icon: '🗃️', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
-                { id: 13, name: 'Lip balm', icon: '👄', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
-                { id: 14, name: 'Ketoconazole shampoo', icon: '🧴', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
-                { id: 15, name: 'Hair helmet', icon: '🎅', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
+                { id: 13, name: 'Lip balm', icon: '👄', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false },
+                { id: 14, name: 'Ketoconazole shampoo', icon: '🧴', timeOfDay: null, frequency: { type: 'everyXDays', everyXDays: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false },
+                { id: 15, name: 'Hair helmet', icon: '🎅', timeOfDay: null, frequency: { type: 'everyXDays', everyXDays: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false },
                 { id: 16, name: 'Optional', icon: '👶', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
-                { id: 17, name: 'Meal prep', icon: '🍲', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
-                { id: 18, name: 'Hands', icon: '👋', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
-                { id: 19, name: 'It', icon: '🔲', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
+                { id: 17, name: 'Meal prep', icon: '🍲', timeOfDay: null, frequency: { type: 'pointsPerWeek', pointsPerWeek: 5 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: true, allowOptional: true, isReminder: false },
+                { id: 18, name: 'Hands', icon: '👋', timeOfDay: null, frequency: { type: 'everyXDays', everyXDays: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false },
                 { id: 20, name: 'Weekly routine', icon: '⬆️', timeOfDay: null, frequency: { type: 'timesPerWeek', timesPerWeek: 1 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
                 { id: 21, name: 'Periodic Hygiene', icon: '💎', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
-                { id: 22, name: 'Posture corrector', icon: '🔙', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
-                { id: 23, name: 'Lipoflavanoid', icon: '💋', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
-                { id: 24, name: 'Dandruff', icon: '❄️', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today }
+                { id: 22, name: 'Posture corrector', icon: '🔙', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: true },
+                { id: 24, name: 'Dandruff', icon: '❄️', timeOfDay: null, frequency: { type: 'everyXDays', everyXDays: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false }
             ];
         }
 
