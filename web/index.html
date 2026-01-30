@@ -192,6 +192,7 @@
         .period-toggle-btn.active { background: #667eea; color: white; }
         .frequency-row { display: flex; align-items: center; gap: 10px; }
         .frequency-row #frequencyInputs { display: flex; align-items: center; gap: 8px; }
+        .frequency-row.dimmed { opacity: 0.5; }
         .task-options { display: flex; flex-wrap: wrap; gap: 8px; }
         .option-pill { display: inline-flex; align-items: center; gap: 5px; padding: 8px 14px; background: #0f0f1a; border: 1px solid #2a2a3e; border-radius: 18px; cursor: pointer; font-size: 0.9rem; color: #888; transition: all 0.15s; }
         .option-pill:hover:not(.disabled) { border-color: #444; }
@@ -666,7 +667,8 @@
             const habitName = habit ? escapeHtml(habit.name) : '';
             // Points only disabled when Reminder is active (frequency auto-switches when Points enabled)
             const pointsDisabled = state.isReminderMode;
-            const optionalDisabled = state.frequency !== FREQ.TIMES_PER_PERIOD || state.isReminderMode;
+            // Allow Extra disabled only for twice daily and reminders
+            const optionalDisabled = state.frequency === FREQ.TWICE_DAILY || state.isReminderMode;
             const isTwiceDaily = state.frequency === FREQ.TWICE_DAILY;
 
             // Build frequency inputs (use lowercase IDs for create, camelCase with 'edit' prefix for edit)
@@ -801,7 +803,7 @@
                         </select>
                         <div id="${isEdit ? 'editFrequencyInputs' : 'frequencyInputs'}">${freqInputsHtml}</div>
                     </div>
-                    <div class="frequency-row" id="${isEdit ? 'editReminderRow' : 'reminderRow'}" style="${state.isReminderMode ? 'display:flex' : 'display:none'}">
+                    <div class="frequency-row dimmed" id="${isEdit ? 'editReminderRow' : 'reminderRow'}" style="${state.isReminderMode ? 'display:flex' : 'display:none'}">
                         <span style="color:#888">Every</span>
                         <input type="number" class="frequency-input" id="${isEdit ? 'editReminderDays' : 'reminderDays'}" value="${reminderDays}" min="1">
                         <span style="color:#888">days</span>
@@ -865,7 +867,7 @@
         }
 
         function toggleFormAllowOptional() {
-            const optionalDisabled = formState.frequency !== FREQ.TIMES_PER_PERIOD || formState.isReminderMode;
+            const optionalDisabled = formState.frequency === FREQ.TWICE_DAILY || formState.isReminderMode;
             if (optionalDisabled) return;
             formState.allowOptional = !formState.allowOptional;
             rerenderForm();
@@ -1003,11 +1005,12 @@
         function updateDebugDisplay() {
             const s = getSettings();
             const realHour = new Date().getHours();
-            const realPeriod = (realHour >= s.morningStart && realHour < s.nightStart) ? 'morning' : 'night';
+            const realPeriod = (realHour >= s.morningStart && realHour < s.nightStart) ? 'morning' : 'bedtime';
             document.getElementById('debugRealDate').textContent = new Date().toLocaleDateString();
             document.getElementById('debugRealPeriod').textContent = realPeriod;
             document.getElementById('debugSimDate').textContent = getSimulatedDate().toLocaleDateString();
-            document.getElementById('debugSimPeriod').textContent = getTimeOfDayNow();
+            const simPeriod = getTimeOfDayNow() === 'night' ? 'bedtime' : 'morning';
+            document.getElementById('debugSimPeriod').textContent = simPeriod;
         }
 
         function getSimulatedDate() {
@@ -1623,19 +1626,31 @@
         }
 
         function isOptional(habit) {
-            // Weekly/monthly/points habits that have met their target but not done today
-            // These can still be completed for extra credit
+            // Habits that can have extra completions after meeting their target
             // Only if allowOptional is true (default is true for backward compatibility)
             if (habit.allowOptional === false) return false;
-            const validTypes = ['timesPerWeek', 'timesPerMonth', 'pointsPerWeek', 'pointsPerMonth'];
-            if (!validTypes.includes(habit.frequency.type)) {
-                return false;
-            }
+
+            const freqType = habit.frequency.type;
             const today = getTodayString();
             const completedToday = habit.completions.some(c => c.date === today);
-            if (completedToday) return false; // Already done today, goes to Done
-            const status = getCompletionStatus(habit);
-            return status.completed; // Target met but not done today = optional
+
+            // Twice daily and reminders don't support Allow Extra
+            if (freqType === FREQ.TWICE_DAILY || freqType === FREQ.REMINDER) return false;
+
+            // Daily/everyXDays: goes to Optional after completed today (can do extra)
+            if (freqType === FREQ.DAILY || freqType === FREQ.EVERY_X_DAYS) {
+                return completedToday;
+            }
+
+            // Weekly/monthly/points: goes to Optional when target met but not done today
+            if (freqType === FREQ.TIMES_PER_WEEK || freqType === FREQ.TIMES_PER_MONTH ||
+                freqType === FREQ.POINTS_PER_WEEK || freqType === FREQ.POINTS_PER_MONTH) {
+                if (completedToday) return false; // Already done today, goes to Done
+                const status = getCompletionStatus(habit);
+                return status.completed; // Target met but not done today = optional
+            }
+
+            return false;
         }
 
         function isForLater(habit) {
@@ -1719,12 +1734,13 @@
                 }
 
                 // Regular habits: one section only
-                if (isCompletedToday(h)) {
+                // Check isOptional first for daily/everyXDays with Allow Extra (they go to Optional after completion)
+                if (isOptional(h)) {
+                    optional.push(h);
+                } else if (isCompletedToday(h)) {
                     done.push(h);
                 } else if (canDoNow(h)) {
                     now.push(h);
-                } else if (isOptional(h)) {
-                    optional.push(h);
                 } else if (isForLater(h)) {
                     later.push(h);
                 }
@@ -1761,9 +1777,9 @@
                 let nowContent = '';
                 if (timeOfDay === 'morning') {
                     nowContent += subSection(morningSpecific, '🌅', 'Morning');
-                    nowContent += subSection(anytimeHabits, '⚡', 'Anytime');
+                    nowContent += subSection(anytimeHabits, '☀️', 'Anytime');
                 } else if (timeOfDay === 'night') {
-                    nowContent += subSection(anytimeHabits, '⚡', 'Anytime');
+                    nowContent += subSection(anytimeHabits, '☀️', 'Anytime');
                     nowContent += subSection(bedtimeSpecific, '🌙', 'Bedtime');
                 }
 
