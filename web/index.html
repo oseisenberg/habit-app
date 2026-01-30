@@ -608,6 +608,10 @@
             hideSubtasksOnMain: false            // hide subtasks on main screen (edit only)
         };
 
+        // ========================================
+        // FORM STATE MANAGEMENT
+        // ========================================
+
         // Reset form state to defaults
         function resetFormState() {
             formState.time = null;
@@ -950,6 +954,10 @@
             return s ? JSON.parse(s) : { morningStart: 5, nightStart: 18, sortMethod: 'default' };
         }
 
+        // ========================================
+        // DEBUG FUNCTIONS
+        // ========================================
+
         function toggleDebug() {
             document.getElementById('debugToggle').classList.toggle('active');
             const debugPanel = document.getElementById('debugPanel');
@@ -969,7 +977,7 @@
 
             if (direction > 0) {
                 // Forward: morning → night (same day), night → morning (next day)
-                if (currentPeriod === 'morning') {
+                if (currentPeriod === PERIOD.MORNING) {
                     debugHourOverride = s.nightStart + 1;
                 } else {
                     debugDayOffset += 1;
@@ -977,7 +985,7 @@
                 }
             } else {
                 // Backward: morning → night (prev day), night → morning (same day)
-                if (currentPeriod === 'morning') {
+                if (currentPeriod === PERIOD.MORNING) {
                     debugDayOffset -= 1;
                     debugHourOverride = s.nightStart + 1;
                 } else {
@@ -1017,6 +1025,10 @@
             const simPeriod = getTimeOfDayNow() === 'night' ? 'bedtime' : 'morning';
             document.getElementById('debugSimPeriod').textContent = simPeriod;
         }
+
+        // ========================================
+        // DATE & TIME UTILITIES
+        // ========================================
 
         function getSimulatedDate() {
             const d = new Date();
@@ -1070,8 +1082,31 @@
             if (subtaskPopupHabitId) renderSubtaskPopup();
         }
 
+        // ========================================
+        // DATA ACCESS HELPERS
+        // ========================================
+
         function loadHabits() { const h = localStorage.getItem('habits_v3'); return h ? JSON.parse(h) : []; }
         function saveHabits(h) { localStorage.setItem('habits_v3', JSON.stringify(h)); }
+
+        // Get a single habit by ID (returns habit object or undefined)
+        function getHabitById(id) {
+            return loadHabits().find(h => h.id === id);
+        }
+
+        // Check if habit has a completion entry for a specific date
+        function hasCompletionOnDate(habit, dateStr) {
+            return habit.completions.some(c => c.date === dateStr);
+        }
+
+        // Get all completion entries for a specific date
+        function getCompletionsForDate(habit, dateStr) {
+            return habit.completions.filter(c => c.date === dateStr);
+        }
+
+        // ========================================
+        // UI HELPERS
+        // ========================================
 
         function handleOverlayClick(e, id, closeFn) { if (e.target === document.getElementById(id)) closeFn(); }
 
@@ -1176,6 +1211,10 @@
             return formState.frequency;
         }
 
+        // ========================================
+        // HABIT CRUD OPERATIONS
+        // ========================================
+
         function addHabit() {
             const name = document.getElementById('habitInput').value.trim();
             if (!name) return;
@@ -1278,7 +1317,9 @@
             }
         }
 
-        function getCompletionsForDate(habit, date) { return habit.completions.filter(c => c.date === date); }
+        // ========================================
+        // COMPLETION STATUS & CALCULATIONS
+        // ========================================
 
         function isCompletedForPeriod(habit, date, period) {
             const comps = getCompletionsForDate(habit, date);
@@ -1392,7 +1433,10 @@
         }
         function daysBetween(d1, d2) { return Math.floor((new Date(d2) - new Date(d1)) / 86400000); }
 
-        // Momentum score system
+        // ========================================
+        // MOMENTUM SCORING
+        // ========================================
+
         function calculateMomentumScore(habit) {
             const today = getTodayString();
             const freq = habit.frequency;
@@ -1578,6 +1622,10 @@
             renderHabits();
         }
 
+        // ========================================
+        // HABIT STATE FUNCTIONS
+        // ========================================
+
         let collapsedSections = {};
 
         function canDoNow(habit) {
@@ -1609,7 +1657,7 @@
                 return false;
             }
             if (!isDueToday(habit)) return false;
-            if (habit.timeOfDay === 'night' && timeOfDay !== 'night') return false;
+            if (habit.timeOfDay === PERIOD.NIGHT && timeOfDay !== PERIOD.NIGHT) return false;
             return true;
         }
 
@@ -1625,12 +1673,6 @@
                 const progress = getSubtaskProgress(habit);
                 return progress.completed === progress.total;
             }
-            return habit.completions.some(c => c.date === today);
-        }
-
-        function hasCompletionToday(habit) {
-            // Any completion today (including partial twice daily) - for Done section display
-            const today = getTodayString();
             return habit.completions.some(c => c.date === today);
         }
 
@@ -1670,10 +1712,10 @@
             const status = getCompletionStatus(habit);
 
             // Twice daily: special handling - only fully done if BOTH periods complete
-            if (habit.frequency.type === 'twiceDaily') {
+            if (habit.frequency.type === FREQ.TWICE_DAILY) {
                 if (status.morningDone && status.nightDone) return false; // Fully done
                 // Morning done, waiting for bedtime (during morning period)
-                if (status.morningDone && !status.nightDone && timeOfDay === 'morning') return true;
+                if (status.morningDone && !status.nightDone && timeOfDay === PERIOD.MORNING) return true;
                 return false;
             }
 
@@ -1681,14 +1723,18 @@
             if (status.completed) return false;
 
             // Night habits during non-night = later
-            if (habit.timeOfDay === 'night' && timeOfDay !== 'night') return true;
+            if (habit.timeOfDay === PERIOD.NIGHT && timeOfDay !== PERIOD.NIGHT) return true;
             // Snoozed habits go to Later
             if (habit.snoozedUntil) {
-                if (habit.snoozedUntil === 'night' && timeOfDay !== 'night') return true;
-                if (habit.snoozedUntil !== 'night' && habit.snoozedUntil > today) return true;
+                if (habit.snoozedUntil === PERIOD.NIGHT && timeOfDay !== PERIOD.NIGHT) return true;
+                if (habit.snoozedUntil !== PERIOD.NIGHT && habit.snoozedUntil > today) return true;
             }
             return false;
         }
+
+        // ========================================
+        // CATEGORIZATION & RENDERING
+        // ========================================
 
         function sortHabits(habits) {
             const settings = getSettings();
@@ -1714,12 +1760,12 @@
                 const status = getCompletionStatus(h);
 
                 // Twice daily: special handling
-                if (h.frequency.type === 'twiceDaily') {
+                if (h.frequency.type === FREQ.TWICE_DAILY) {
                     if (status.morningDone && status.nightDone) {
                         done.push(h); // Both done → Done
                     } else if (status.morningDone && !status.nightDone) {
                         // Morning done, night pending
-                        if (timeOfDay === 'morning') {
+                        if (timeOfDay === PERIOD.MORNING) {
                             later.push(h); // Wait for night
                         } else {
                             now.push(h); // Can do night now
@@ -1737,7 +1783,7 @@
                 // Morning habits missed at night → Done (nothing more to do today)
                 // For habits with subtasks, also check if there's a completion entry (user may have clicked Complete All)
                 const hasCompletionEntry = h.completions.some(c => c.date === getTodayString());
-                if (h.timeOfDay === 'morning' && timeOfDay === 'night' && !isCompletedToday(h) && !hasCompletionEntry) {
+                if (h.timeOfDay === PERIOD.MORNING && timeOfDay === PERIOD.NIGHT && !isCompletedToday(h) && !hasCompletionEntry) {
                     done.push(h);
                     return;
                 }
@@ -1756,9 +1802,9 @@
             });
 
             // Sub-categorize Now section by time
-            const morning = now.filter(h => h.timeOfDay === 'morning' || (h.frequency.type === 'twiceDaily' && timeOfDay === 'morning'));
-            const bedtime = now.filter(h => h.timeOfDay === 'night' || (h.frequency.type === 'twiceDaily' && timeOfDay === 'night'));
-            const anytime = now.filter(h => !h.timeOfDay && h.frequency.type !== 'twiceDaily');
+            const morning = now.filter(h => h.timeOfDay === PERIOD.MORNING || (h.frequency.type === FREQ.TWICE_DAILY && timeOfDay === PERIOD.MORNING));
+            const bedtime = now.filter(h => h.timeOfDay === PERIOD.NIGHT || (h.frequency.type === FREQ.TWICE_DAILY && timeOfDay === PERIOD.NIGHT));
+            const anytime = now.filter(h => !h.timeOfDay && h.frequency.type !== FREQ.TWICE_DAILY);
 
             return { now, optional, later, done, morning, bedtime, anytime, timeOfDay };
         }
@@ -1784,10 +1830,10 @@
             // Now section with sub-sections based on time of day
             if (nowHabits.length) {
                 let nowContent = '';
-                if (timeOfDay === 'morning') {
+                if (timeOfDay === PERIOD.MORNING) {
                     nowContent += subSection(morningSpecific, '🌅', 'Morning');
                     nowContent += subSection(anytimeHabits, '☀️', 'Anytime');
-                } else if (timeOfDay === 'night') {
+                } else if (timeOfDay === PERIOD.NIGHT) {
                     nowContent += subSection(anytimeHabits, '☀️', 'Anytime');
                     nowContent += subSection(bedtimeSpecific, '🌙', 'Bedtime');
                 }
@@ -1861,7 +1907,7 @@
             let ringClass = '';
 
             // Click handlers: left click = complete (or details if completed), right click = details
-            const isPointsBased = habit.frequency.type === 'pointsPerWeek' || habit.frequency.type === 'pointsPerMonth';
+            const isPointsBased = habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH;
             const leftClick = isCompleted ? `openDetails(${habit.id})` : (isPointsBased ? `openPointsPopup(${habit.id})` : `completeHabit(${habit.id})`);
             const rightClick = `event.preventDefault();openDetails(${habit.id})`;
 
@@ -1869,10 +1915,10 @@
             const neglectDots = neglectLevel > 0 ?
                 `<div class="neglect-dots">${'<div class="neglect-dot"></div>'.repeat(neglectLevel)}</div>` : '';
 
-            if (habit.frequency.type === 'twiceDaily') {
+            if (habit.frequency.type === FREQ.TWICE_DAILY) {
                 // Split ring for twice daily - with divider line
                 const timeOfDay = getTimeOfDayNow();
-                const morningMissed = timeOfDay === 'night' && !status.morningDone;
+                const morningMissed = timeOfDay === PERIOD.NIGHT && !status.morningDone;
                 const bothDone = status.morningDone && status.nightDone;
                 return `<div class="habit-icon-wrapper">
                     <div class="habit-icon" onclick="${bothDone ? `openDetails(${habit.id})` : `completeTwiceDaily(${habit.id})`}" oncontextmenu="${rightClick}">
@@ -1965,7 +2011,7 @@
             const habits = loadHabits(), habit = habits.find(h => h.id === id), today = getTodayString();
             if (!habit) return;
             const timeOfDay = getTimeOfDayNow();
-            const period = timeOfDay === 'night' ? 'night' : 'morning';
+            const period = timeOfDay === PERIOD.NIGHT ? PERIOD.NIGHT : PERIOD.MORNING;
 
             const existing = habit.completions.find(c => c.date === today && c.period === period);
             if (existing) {
@@ -1977,14 +2023,17 @@
             renderHabits();
         }
 
-        // Subtask functions
+        // ========================================
+        // SUBTASK FUNCTIONS
+        // ========================================
+
         function getSubtaskPeriodKey(habit) {
             const today = getTodayString();
             const freq = habit.frequency.type;
-            if (freq === 'daily' || freq === 'twiceDaily') return today;
-            if (freq === 'timesPerWeek') return getWeekStart(today);
-            if (freq === 'timesPerMonth') return getMonthStart(today);
-            if (freq === 'everyXDays') return today; // Reset daily for everyXDays
+            if (freq === FREQ.DAILY || freq === FREQ.TWICE_DAILY) return today;
+            if (freq === FREQ.TIMES_PER_WEEK) return getWeekStart(today);
+            if (freq === FREQ.TIMES_PER_MONTH) return getMonthStart(today);
+            if (freq === FREQ.EVERY_X_DAYS) return today; // Reset daily for everyXDays
             return today;
         }
 
@@ -2176,9 +2225,9 @@
 
             const icon = habit.icon || '📌';
             const freq = habit.frequency;
-            const isWeekly = freq.type === 'pointsPerWeek';
+            const isWeekly = freq.type === FREQ.POINTS_PER_WEEK;
             const target = isWeekly ? (freq.pointsPerWeek || 12) : (freq.pointsPerMonth || 30);
-            const period = isWeekly ? 'week' : 'month';
+            const period = isWeekly ? PERIOD.WEEK : PERIOD.MONTH;
 
             document.getElementById('pointsPopup').innerHTML = `
                 <div class="points-popup-header">
@@ -2201,20 +2250,24 @@
             const today = getTodayString();
             habit.completions.push({ date: today, timestamp: Date.now(), points });
 
-            // Update momentum score
-            updateHabitScore(habit, points);
+            // Boost momentum based on points
+            boostMomentumScore(habit, points);
 
             saveHabits(habits);
             closePointsPopup();
             renderHabits();
         }
 
-        function updateHabitScore(habit, points = 1) {
+        function boostMomentumScore(habit, points = 1) {
             // Boost momentum based on points (more points = more boost)
             const boost = 10 + (points - 1) * 5; // 1pt=10, 2pt=15, 3pt=20
             habit.momentumScore = (habit.momentumScore || 0) + boost;
             habit.lastScoreUpdate = getTodayString();
         }
+
+        // ========================================
+        // DETAILS MODAL
+        // ========================================
 
         let editMode = false;
 
@@ -2393,7 +2446,7 @@
                     </div>
                     <div class="detail-row"><span class="detail-label">Time</span><span class="detail-value">${timeLabel}</span></div>
                     <div class="detail-row"><span class="detail-label">Frequency</span><span class="detail-value">${freqLabel}</span></div>
-                    ${(habit.frequency.type === 'pointsPerWeek' || habit.frequency.type === 'pointsPerMonth') ? `<div class="detail-row"><span class="detail-label">Progress</span><span class="detail-value">${getCompletionStatus(habit).text}</span></div>` : ''}
+                    ${(habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH) ? `<div class="detail-row"><span class="detail-label">Progress</span><span class="detail-value">${getCompletionStatus(habit).text}</span></div>` : ''}
                     <div class="stats-grid">
                         <div class="stat-box"><div class="stat-number">${total}</div><div class="stat-label">Total</div></div>
                         <div class="stat-box"><div class="stat-number">${rate}%</div><div class="stat-label">Rate</div></div>
@@ -2414,6 +2467,10 @@
                     </div>`;
             }
         }
+
+        // ========================================
+        // UTILITIES & TEST DATA
+        // ========================================
 
         function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 
