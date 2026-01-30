@@ -2503,9 +2503,9 @@
                     </div>
                     ${recoveryText}
                     <div class="action-buttons">
-                        ${completeButton ? `<div style="display:flex;gap:6px">${completeButton}</div>` : ''}
                         <div style="display:flex;gap:6px">
-                            <button class="submit-btn" style="flex:1" onclick="toggleEditMode()">Edit</button>
+                            ${completeButton || ''}
+                            <button class="submit-btn${completeButton ? ' secondary' : ''}" style="flex:1" onclick="toggleEditMode()">Edit</button>
                             ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id})">Snooze</button>` : ''}
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
                         </div>
