@@ -82,7 +82,6 @@
         .habit-ring.split .half-fill.left { left: 0; border-radius: 32px 0 0 32px; }
         .habit-ring.split .half-fill.right { right: 0; border-radius: 0 32px 32px 0; }
         .habit-ring.split .half-fill.filled { background: #4ade80; }
-        .habit-ring.split .half-fill.missed { background: #dc262666; }
         .habit-ring.split .divider {
             position: absolute; width: 2px; height: 100%; left: 50%; transform: translateX(-50%);
             background: linear-gradient(to bottom, transparent 4px, #555 4px, #555 calc(100% - 4px), transparent calc(100% - 4px));
@@ -1976,13 +1975,11 @@
 
             if (habit.frequency.type === FREQ.TWICE_DAILY) {
                 // Split ring for twice daily - with divider line
-                const timeOfDay = getTimeOfDayNow();
-                const morningMissed = timeOfDay === PERIOD.NIGHT && !status.morningDone;
                 const bothDone = status.morningDone && status.nightDone;
                 return `<div class="habit-icon-wrapper">
                     <div class="habit-icon" onclick="${bothDone ? `openDetails(${habit.id})` : `completeTwiceDaily(${habit.id})`}" oncontextmenu="${rightClick}">
                         <div class="habit-ring split ${bothDone ? 'completed' : ''}">
-                            <div class="half-fill left ${status.morningDone ? 'filled' : (morningMissed ? 'missed' : '')}"></div>
+                            <div class="half-fill left ${status.morningDone ? 'filled' : ''}"></div>
                             <div class="half-fill right ${status.nightDone ? 'filled' : ''}"></div>
                             <div class="divider"></div>
                             <span class="habit-emoji">${icon}</span>
