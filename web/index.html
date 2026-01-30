@@ -777,12 +777,17 @@
                     <div style="display:flex;gap:10px;margin-bottom:6px">
                         <label class="form-label" style="margin:0;width:52px;flex-shrink:0">Icon</label>
                         <label class="form-label" style="margin:0;flex:1">Name</label>
+                        ${state.frequency !== FREQ.TWICE_DAILY ? '<label class="form-label" style="margin:0;width:86px;flex-shrink:0">Time</label>' : ''}
                     </div>
                     <div style="display:flex;gap:10px;align-items:stretch;height:48px">
                         <div class="emoji-select-btn" onclick="openEmojiPopup('${isEdit ? 'edit' : 'new'}'${isEdit ? `, ${habit.id}` : ''})" style="flex-shrink:0;width:52px;justify-content:center;box-sizing:border-box;font-size:1.3rem">
                             <span class="emoji-select-icon" id="${isEdit ? 'editSelectedEmojiDisplay' : 'selectedEmojiDisplay'}" style="width:auto;height:auto">${currentIcon}</span>
                         </div>
                         <input type="text" class="form-input" id="${isEdit ? 'editHabitName' : 'habitInput'}" value="${habitName}" placeholder="e.g., Brush teeth..." style="flex:1;margin:0;box-sizing:border-box" onkeypress="if(event.key==='Enter')${isEdit ? 'saveHabitEdit' : 'addHabit'}()" />
+                        ${state.frequency !== FREQ.TWICE_DAILY ? `<div class="time-toggle" id="${isEdit ? 'editTimeToggle' : 'timeToggle'}" style="height:100%">
+                            <button type="button" class="time-toggle-btn ${state.time === PERIOD.MORNING ? 'active' : ''}" data-time="morning" onclick="toggleFormTime('${PERIOD.MORNING}')">🌅</button>
+                            <button type="button" class="time-toggle-btn ${state.time === PERIOD.NIGHT ? 'active' : ''}" data-time="night" onclick="toggleFormTime('${PERIOD.NIGHT}')">🌙</button>
+                        </div>` : ''}
                     </div>
                 </div>
                 <div class="form-group">
@@ -816,10 +821,6 @@
                             <option value="${FREQ.TIMES_PER_PERIOD}" ${state.frequency === FREQ.TIMES_PER_PERIOD ? 'selected' : ''}>X per period</option>
                         </select>
                         <div id="${isEdit ? 'editFrequencyInputs' : 'frequencyInputs'}">${freqInputsHtml}</div>
-                        ${state.frequency !== FREQ.TWICE_DAILY ? `<div class="time-toggle" id="${isEdit ? 'editTimeToggle' : 'timeToggle'}">
-                            <button type="button" class="time-toggle-btn ${state.time === PERIOD.MORNING ? 'active' : ''}" data-time="morning" onclick="toggleFormTime('${PERIOD.MORNING}')">🌅</button>
-                            <button type="button" class="time-toggle-btn ${state.time === PERIOD.NIGHT ? 'active' : ''}" data-time="night" onclick="toggleFormTime('${PERIOD.NIGHT}')">🌙</button>
-                        </div>` : ''}
                     </div>
                 </div>
                 ${subtasksHtml}
