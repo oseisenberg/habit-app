@@ -47,7 +47,7 @@
         .habit-ring.completed { background: #4ade80; }
         .habit-ring.completed::before { background: #4ade80; }
         .habit-ring.partial { background: conic-gradient(#4ade80 var(--progress), #2a2a3e var(--progress)); }
-        .habit-ring.overdue, .habit-ring.missed { background: rgba(220, 38, 38, 0.15); } /* Muted red for neglected/missed tasks */
+        .habit-ring.missed { background: rgba(220, 38, 38, 0.15); } /* Muted red for missed tasks (not completed today) */
 
         /* Neglect indicators - 1 to 3 red dots along the circle arc */
         .neglect-dots { position: absolute; inset: 0; pointer-events: none; }
@@ -1919,9 +1919,8 @@
                     progress = '100%';
                 } else if (subtaskPct > 0) {
                     ringClass = 'partial';
-                } else if (neglectLevel > 0) {
-                    ringClass = 'overdue';
                 }
+                // Red dots show momentum, no red background here
             } else if (status.completed) {
                 ringClass = 'completed';
                 progress = '100%';
@@ -1935,11 +1934,11 @@
                     progress = '100%';
                 } else {
                     progress = '0%';
-                    if (neglectLevel > 0) ringClass = 'overdue';
+                    // Red dots show momentum, no red background here
                 }
             } else {
                 progress = '0%';
-                if (neglectLevel > 0) ringClass = 'overdue';
+                // Red dots show momentum, no red background here
             }
 
             // Reminder badge for reminder-type habits (subtle dot indicator)
