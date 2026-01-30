@@ -682,9 +682,10 @@
             const state = getFormState(habit);
             const currentIcon = state.icon || (habit?.icon) || '📌';
             const habitName = habit ? escapeHtml(habit.name) : '';
-            // Points disabled for twice daily
+            // Points disabled for twice daily and every X days
             const isTwiceDaily = state.frequency === FREQ.TWICE_DAILY;
-            const pointsDisabled = isTwiceDaily;
+            const isEveryXDays = state.frequency === FREQ.EVERY_X_DAYS;
+            const pointsDisabled = isTwiceDaily || isEveryXDays;
             // Allow Extra disabled for twice daily
             const optionalDisabled = isTwiceDaily;
 
@@ -692,15 +693,8 @@
             const idPrefix = isEdit ? 'edit' : '';
             let freqInputsHtml = '';
             if (state.frequency === FREQ.EVERY_X_DAYS) {
-                if (state.isPointsMode) {
-                    const ptsVal = habit?.frequency?.pointsTarget || DEFAULTS.POINTS_TARGET;
-                    const daysVal = habit?.frequency?.everyXDays || DEFAULTS.EVERY_X_DAYS;
-                    freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'P' : 'p'}ointsTarget" value="${ptsVal}" min="1"><span style="color:#888">pts /</span>
-                        <input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'E' : 'e'}veryXDays" value="${daysVal}" min="1"><span style="color:#888">days</span>`;
-                } else {
-                    const daysVal = habit?.frequency?.everyXDays || DEFAULTS.EVERY_X_DAYS;
-                    freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'E' : 'e'}veryXDays" value="${daysVal}" min="1"><span style="color:#888">days</span>`;
-                }
+                const daysVal = habit?.frequency?.everyXDays || DEFAULTS.EVERY_X_DAYS;
+                freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'E' : 'e'}veryXDays" value="${daysVal}" min="1"><span style="color:#888">days</span>`;
             } else if (state.frequency === FREQ.TIMES_PER_PERIOD) {
                 if (state.isPointsMode) {
                     const ptsVal = habit?.frequency?.pointsPerDay || habit?.frequency?.pointsPerWeek || habit?.frequency?.pointsPerMonth || DEFAULTS.POINTS_PER_PERIOD;
@@ -869,7 +863,7 @@
         function toggleFormPointsMode() {
             formState.isPointsMode = !formState.isPointsMode;
             // When enabling points, auto-switch from incompatible frequencies
-            if (formState.isPointsMode && (formState.frequency === FREQ.DAILY || formState.frequency === FREQ.TWICE_DAILY)) {
+            if (formState.isPointsMode && (formState.frequency === FREQ.DAILY || formState.frequency === FREQ.TWICE_DAILY || formState.frequency === FREQ.EVERY_X_DAYS)) {
                 formState.frequency = FREQ.TIMES_PER_PERIOD;
             }
             rerenderForm();
