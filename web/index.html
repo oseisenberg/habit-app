@@ -1850,8 +1850,10 @@
             }
 
             if (isCompleted) {
-                // In Finished section - check if actually completed or just missed
-                if (status.completed) {
+                // In Finished section - show green if completed today
+                const today = getTodayString();
+                const completedToday = habit.completions.some(c => c.date === today);
+                if (completedToday || status.completed) {
                     ringClass = 'completed';
                     progress = '100%';
                 } else {
