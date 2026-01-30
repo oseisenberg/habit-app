@@ -548,6 +548,7 @@
             TIMES_PER_PERIOD: 'timesPerPeriod',
             TIMES_PER_WEEK: 'timesPerWeek',
             TIMES_PER_MONTH: 'timesPerMonth',
+            POINTS_PER_DAY: 'pointsPerDay',
             POINTS_PER_WEEK: 'pointsPerWeek',
             POINTS_PER_MONTH: 'pointsPerMonth',
             REMINDER: 'reminder'
@@ -555,6 +556,7 @@
 
         // Time periods
         const PERIOD = {
+            DAY: 'day',
             WEEK: 'week',
             MONTH: 'month',
             MORNING: 'morning',
@@ -645,12 +647,12 @@
             // Determine mode based on frequency type
             const freqType = habit.frequency.type;
             formState.isReminderMode = freqType === FREQ.REMINDER;
-            formState.isPointsMode = freqType === FREQ.POINTS_PER_WEEK || freqType === FREQ.POINTS_PER_MONTH;
+            formState.isPointsMode = freqType === FREQ.POINTS_PER_DAY || freqType === FREQ.POINTS_PER_WEEK || freqType === FREQ.POINTS_PER_MONTH;
 
             // Map frequency type to dropdown value
             if (freqType === FREQ.REMINDER) {
                 formState.frequency = FREQ.DAILY;
-            } else if (freqType === FREQ.POINTS_PER_WEEK || freqType === FREQ.POINTS_PER_MONTH ||
+            } else if (freqType === FREQ.POINTS_PER_DAY || freqType === FREQ.POINTS_PER_WEEK || freqType === FREQ.POINTS_PER_MONTH ||
                        freqType === FREQ.TIMES_PER_WEEK || freqType === FREQ.TIMES_PER_MONTH) {
                 formState.frequency = FREQ.TIMES_PER_PERIOD;
             } else {
@@ -658,7 +660,7 @@
             }
 
             formState.timesPeriod = (freqType === FREQ.TIMES_PER_MONTH) ? PERIOD.MONTH : PERIOD.WEEK;
-            formState.pointsPeriod = (freqType === FREQ.POINTS_PER_MONTH) ? PERIOD.MONTH : PERIOD.WEEK;
+            formState.pointsPeriod = (freqType === FREQ.POINTS_PER_DAY) ? PERIOD.DAY : ((freqType === FREQ.POINTS_PER_MONTH) ? PERIOD.MONTH : PERIOD.WEEK);
         }
 
         // Get current form state (for compatibility with renderHabitForm)
@@ -697,9 +699,10 @@
                 }
             } else if (state.frequency === FREQ.TIMES_PER_PERIOD) {
                 if (state.isPointsMode) {
-                    const ptsVal = habit?.frequency?.pointsPerWeek || habit?.frequency?.pointsPerMonth || DEFAULTS.POINTS_PER_PERIOD;
+                    const ptsVal = habit?.frequency?.pointsPerDay || habit?.frequency?.pointsPerWeek || habit?.frequency?.pointsPerMonth || DEFAULTS.POINTS_PER_PERIOD;
                     freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'P' : 'p'}ointsPerPeriod" value="${ptsVal}" min="1"><span style="color:#888">pts /</span>
                         <div class="period-toggle">
+                            <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.DAY}')">day</button>
                             <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.WEEK}')">wk</button>
                             <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.MONTH ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.MONTH}')">mo</button>
                         </div>`;
@@ -1208,7 +1211,9 @@
             }
             if (formState.isPointsMode) {
                 if (formState.frequency === FREQ.TIMES_PER_PERIOD) {
-                    return formState.pointsPeriod === PERIOD.WEEK ? FREQ.POINTS_PER_WEEK : FREQ.POINTS_PER_MONTH;
+                    if (formState.pointsPeriod === PERIOD.DAY) return FREQ.POINTS_PER_DAY;
+                    if (formState.pointsPeriod === PERIOD.MONTH) return FREQ.POINTS_PER_MONTH;
+                    return FREQ.POINTS_PER_WEEK;
                 }
                 return formState.frequency; // everyXDays with points
             }
@@ -1242,6 +1247,7 @@
                     timesPerWeek: timesVal,
                     everyXDays: everyXDaysVal,
                     timesPerMonth: timesVal,
+                    pointsPerDay: pointsVal,
                     pointsPerWeek: pointsVal,
                     pointsPerMonth: pointsVal,
                     pointsTarget: pointsTargetVal,
@@ -1392,6 +1398,11 @@
                 const target = habit.frequency.pointsPerMonth || DEFAULTS.POINTS_PER_PERIOD;
                 return { completed: points >= target, points, target, text: `${points}/${target} pts`, isPoints: true };
             }
+            if (freqType === FREQ.POINTS_PER_DAY) {
+                const points = countPointsInRange(habit, today, today);
+                const target = habit.frequency.pointsPerDay || DEFAULTS.POINTS_PER_PERIOD;
+                return { completed: points >= target, points, target, text: `${points}/${target}`, isPoints: true, isDaily: true };
+            }
             return { completed: getCompletionsForDate(habit, today).length > 0 };
         }
 
@@ -1403,7 +1414,7 @@
 
             if (freqType === FREQ.TWICE_DAILY) return true;
             if (freqType === FREQ.TIMES_PER_WEEK || freqType === FREQ.TIMES_PER_MONTH) return !status.completed;
-            if (freqType === FREQ.POINTS_PER_WEEK || freqType === FREQ.POINTS_PER_MONTH) return !status.completed;
+            if (freqType === FREQ.POINTS_PER_DAY || freqType === FREQ.POINTS_PER_WEEK || freqType === FREQ.POINTS_PER_MONTH) return !status.completed;
             if (freqType === FREQ.EVERY_X_DAYS || freqType === FREQ.REMINDER) return status.due || status.completed;
             return true;
         }
@@ -1452,7 +1463,7 @@
 
             // Determine the cycle length for this habit type
             let cycleDays = 1;
-            if (freqType === FREQ.DAILY || freqType === FREQ.TWICE_DAILY) cycleDays = 1;
+            if (freqType === FREQ.DAILY || freqType === FREQ.TWICE_DAILY || freqType === FREQ.POINTS_PER_DAY) cycleDays = 1;
             else if (freqType === FREQ.REMINDER) cycleDays = freq.reminderDays || DEFAULTS.REMINDER_DAYS;
             else if (freqType === FREQ.TIMES_PER_WEEK) cycleDays = 7 / (freq.timesPerWeek || DEFAULTS.TIMES_PER_PERIOD);
             else if (freqType === FREQ.TIMES_PER_MONTH) cycleDays = 30 / (freq.timesPerMonth || DEFAULTS.TIMES_PER_PERIOD);
@@ -1489,7 +1500,14 @@
                 const checkDateStr = toDateString(checkDate);
 
                 const wasDue = wasHabitDueOnDate(habit, checkDateStr);
-                const wasCompleted = completionDates.has(checkDateStr);
+                let wasCompleted = completionDates.has(checkDateStr);
+
+                // For points per day, check if target was met (not just any completion)
+                if (freqType === FREQ.POINTS_PER_DAY && wasCompleted) {
+                    const dayPoints = countPointsInRange(habit, checkDateStr, checkDateStr);
+                    const target = freq.pointsPerDay || DEFAULTS.POINTS_PER_PERIOD;
+                    wasCompleted = dayPoints >= target;
+                }
 
                 if (wasDue) {
                     if (wasCompleted) {
@@ -1511,7 +1529,7 @@
         function wasHabitDueOnDate(habit, dateStr) {
             const freq = habit.frequency;
             const freqType = freq.type;
-            if (freqType === FREQ.DAILY || freqType === FREQ.TWICE_DAILY) return true;
+            if (freqType === FREQ.DAILY || freqType === FREQ.TWICE_DAILY || freqType === FREQ.POINTS_PER_DAY) return true;
             if (freqType === FREQ.TIMES_PER_WEEK || freqType === FREQ.TIMES_PER_MONTH) return true;
             if (freqType === FREQ.EVERY_X_DAYS || freqType === FREQ.REMINDER) {
                 const interval = freqType === FREQ.REMINDER
@@ -1696,6 +1714,11 @@
                 const status = getCompletionStatus(habit);
                 return status.morningDone && status.nightDone;
             }
+            // For points per day, only completed when daily target is met
+            if (habit.frequency.type === FREQ.POINTS_PER_DAY) {
+                const status = getCompletionStatus(habit);
+                return status.completed;
+            }
             // For habits with subtasks, completed means all subtasks done
             if (habit.subtasks && habit.subtasks.length > 0) {
                 const progress = getSubtaskProgress(habit);
@@ -1719,6 +1742,12 @@
             // Daily/everyXDays: goes to Optional after completed today (can do extra)
             if (freqType === FREQ.DAILY || freqType === FREQ.EVERY_X_DAYS) {
                 return completedToday;
+            }
+
+            // Points per day: goes to Optional when daily target met (can add more)
+            if (freqType === FREQ.POINTS_PER_DAY) {
+                const status = getCompletionStatus(habit);
+                return status.completed;
             }
 
             // Weekly/monthly/points: goes to Optional when target met but not done today
@@ -1935,7 +1964,7 @@
             let ringClass = '';
 
             // Click handlers: left click = complete (or details if completed), right click = details
-            const isPointsBased = habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH;
+            const isPointsBased = habit.frequency.type === FREQ.POINTS_PER_DAY || habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH;
             const leftClick = isCompleted ? `openDetails(${habit.id})` : (isPointsBased ? `openPointsPopup(${habit.id})` : `completeHabit(${habit.id})`);
             const rightClick = `event.preventDefault();openDetails(${habit.id})`;
 
@@ -1998,6 +2027,13 @@
             } else if (status.completed) {
                 ringClass = 'completed';
                 progress = '100%';
+            } else if (habit.frequency.type === FREQ.POINTS_PER_DAY) {
+                // Points per day - show progress based on points accumulated today
+                const pct = Math.min(100, Math.round((status.points / status.target) * 100));
+                progress = `${pct}%`;
+                if (pct > 0) {
+                    ringClass = 'partial';
+                }
             } else if (habit.frequency.type === FREQ.TIMES_PER_WEEK || habit.frequency.type === FREQ.TIMES_PER_MONTH ||
                        habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH) {
                 // For weekly/monthly/points habits without subtasks
@@ -2391,9 +2427,10 @@
                 const input = document.getElementById('editReminderDays');
                 habit.frequency.reminderDays = parseInt(input?.value) || DEFAULTS.REMINDER_DAYS;
             }
-            if (finalFreqType === FREQ.POINTS_PER_WEEK || finalFreqType === FREQ.POINTS_PER_MONTH) {
+            if (finalFreqType === FREQ.POINTS_PER_DAY || finalFreqType === FREQ.POINTS_PER_WEEK || finalFreqType === FREQ.POINTS_PER_MONTH) {
                 const input = document.getElementById('editPointsPerPeriod');
                 const val = parseInt(input?.value) || DEFAULTS.POINTS_PER_PERIOD;
+                habit.frequency.pointsPerDay = val;
                 habit.frequency.pointsPerWeek = val;
                 habit.frequency.pointsPerMonth = val;
             }
@@ -2442,7 +2479,7 @@
                 const isSnoozed = habit.snoozedUntil && (habit.snoozedUntil === 'night' || habit.snoozedUntil > today);
                 const canSnooze = !isSnoozed && !isCompletedToday(habit);
 
-                const freqLabel = { daily: 'Daily', reminder: `Every ${habit.frequency.reminderDays || 1} days (gentle)`, twiceDaily: 'Twice daily', timesPerWeek: `${habit.frequency.timesPerWeek || 3}x/week`, timesPerMonth: `${habit.frequency.timesPerMonth || 4}x/month`, everyXDays: `Every ${habit.frequency.everyXDays || 2} days`, pointsPerWeek: `${habit.frequency.pointsPerWeek || 12} pts/week`, pointsPerMonth: `${habit.frequency.pointsPerMonth || 30} pts/month` }[habit.frequency.type];
+                const freqLabel = { daily: 'Daily', reminder: `Every ${habit.frequency.reminderDays || 1} days (gentle)`, twiceDaily: 'Twice daily', timesPerWeek: `${habit.frequency.timesPerWeek || 3}x/week`, timesPerMonth: `${habit.frequency.timesPerMonth || 4}x/month`, everyXDays: `Every ${habit.frequency.everyXDays || 2} days`, pointsPerDay: `${habit.frequency.pointsPerDay || 4} pts/day`, pointsPerWeek: `${habit.frequency.pointsPerWeek || 12} pts/week`, pointsPerMonth: `${habit.frequency.pointsPerMonth || 30} pts/month` }[habit.frequency.type];
                 const timeLabel = habit.timeOfDay ? { morning: 'Morning', night: 'Bedtime' }[habit.timeOfDay] : 'Anytime';
 
                 // Momentum score
@@ -2495,7 +2532,7 @@
                     </div>
                     <div class="detail-row"><span class="detail-label">Time</span><span class="detail-value">${timeLabel}</span></div>
                     <div class="detail-row"><span class="detail-label">Frequency</span><span class="detail-value">${freqLabel}</span></div>
-                    ${(habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH) ? `<div class="detail-row"><span class="detail-label">Progress</span><span class="detail-value">${getCompletionStatus(habit).text}</span></div>` : ''}
+                    ${(habit.frequency.type === FREQ.POINTS_PER_DAY || habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH) ? `<div class="detail-row"><span class="detail-label">Progress</span><span class="detail-value">${getCompletionStatus(habit).text}</span></div>` : ''}
                     <div class="stats-grid">
                         <div class="stat-box"><div class="stat-number">${total}</div><div class="stat-label">Total</div></div>
                         <div class="stat-box"><div class="stat-number">${rate}%</div><div class="stat-label">Rate</div></div>
