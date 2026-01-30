@@ -453,21 +453,21 @@
             <div class="form-group">
                 <label class="form-label">Options</label>
                 <div class="task-options">
-                    <label class="option-pill" id="reminderPill" onclick="toggleReminderMode()">
+                    <label class="option-pill" id="subtasksPill" onclick="toggleSubtasksSection()">
                         <span class="option-pill-check">✓</span>
-                        <span>Reminder</span>
+                        <span>Subtasks</span>
                     </label>
                     <label class="option-pill" id="pointsPill" onclick="togglePointsMode()">
                         <span class="option-pill-check">✓</span>
                         <span>Points</span>
                     </label>
-                    <label class="option-pill" id="subtasksPill" onclick="toggleSubtasksSection()">
-                        <span class="option-pill-check">✓</span>
-                        <span>Subtasks</span>
-                    </label>
                     <label class="option-pill" id="optionalPill" onclick="toggleAllowOptional()">
                         <span class="option-pill-check">✓</span>
                         <span>Allow extra</span>
+                    </label>
+                    <label class="option-pill" id="reminderPill" onclick="toggleReminderMode()">
+                        <span class="option-pill-check">✓</span>
+                        <span>Reminder</span>
                     </label>
                 </div>
             </div>
@@ -488,7 +488,8 @@
                     <span style="color:#888">days</span>
                 </div>
             </div>
-            <div id="subtasksInputArea" style="display:none">
+            <div class="form-group" id="subtasksInputArea" style="display:none">
+                <label class="form-label">Subtasks</label>
                 <div id="newHabitSubtasksList"></div>
                 <div class="add-subtask">
                     <input type="text" id="newHabitSubtaskInput" placeholder="Add subtask..." onkeypress="if(event.key==='Enter'){event.preventDefault();addNewHabitSubtask();}">
@@ -1730,7 +1731,17 @@
                 </div>`;
             }
 
-            if (isCompleted || status.completed) {
+            if (isCompleted) {
+                // In Finished section - check if actually completed or just missed
+                if (status.completed) {
+                    ringClass = 'completed';
+                    progress = '100%';
+                } else {
+                    // Missed (in Finished but not actually completed)
+                    ringClass = 'overdue';
+                    progress = '0%';
+                }
+            } else if (status.completed) {
                 ringClass = 'completed';
                 progress = '100%';
             } else if (habit.frequency.type === 'timesPerWeek' || habit.frequency.type === 'timesPerMonth' ||
