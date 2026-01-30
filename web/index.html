@@ -1566,7 +1566,11 @@
                 habit.completions = habit.completions.filter(c => c !== existing);
             } else {
                 habit.completions.push({ date: today, period, timestamp: Date.now() });
-                if (!habit.lastScoreUpdate) {
+                // Reset momentum to neutral for reminders when completed
+                if (freqType === FREQ.REMINDER) {
+                    habit.momentumScore = 0;
+                    habit.lastScoreUpdate = today;
+                } else if (!habit.lastScoreUpdate) {
                     habit.lastScoreUpdate = habit.createdAt || today;
                     habit.momentumScore = 0;
                 }
