@@ -47,8 +47,7 @@
         .habit-ring.completed { background: #4ade80; }
         .habit-ring.completed::before { background: #4ade80; }
         .habit-ring.partial { background: conic-gradient(#4ade80 var(--progress), #2a2a3e var(--progress)); }
-        .habit-ring.overdue { background: conic-gradient(#dc2626 var(--progress), #2a2a3e var(--progress)); }
-        .habit-ring.missed { background: rgba(220, 38, 38, 0.3); } /* Red background for unfinished in Finished section */
+        .habit-ring.overdue, .habit-ring.missed { background: rgba(220, 38, 38, 0.15); } /* Muted red for neglected/missed tasks */
 
         /* Neglect indicators - 1 to 3 red dots along the circle arc */
         .neglect-dots { position: absolute; inset: 0; pointer-events: none; }
