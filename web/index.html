@@ -447,8 +447,7 @@
                 <span class="settings-label">Sort habits by</span>
                 <select class="settings-select" id="sortMethod">
                     <option value="default">Default</option>
-                    <option value="overdue">Most overdue</option>
-                    <option value="score">Needs attention</option>
+                    <option value="attention">Needs attention</option>
                     <option value="alphabetical">A-Z</option>
                 </select>
             </div>
@@ -1661,11 +1660,10 @@
             const method = settings.sortMethod || 'default';
             if (method === 'default') return habits;
             if (method === 'alphabetical') return [...habits].sort((a, b) => a.name.localeCompare(b.name));
-            if (method === 'overdue' || method === 'score') {
-                // Pre-compute scores once to avoid expensive recalculations during sort comparisons
+            // 'attention' (and legacy 'overdue'/'score') - sort by momentum score
+            if (method === 'attention' || method === 'overdue' || method === 'score') {
                 const scoresMap = new Map();
                 habits.forEach(h => scoresMap.set(h.id, calculateMomentumScore(h).raw));
-                // Sort by momentum score (most negative first = most overdue/needs attention)
                 return [...habits].sort((a, b) => scoresMap.get(a.id) - scoresMap.get(b.id));
             }
             return habits;
