@@ -1117,16 +1117,13 @@
 
         function loadHabits() {
             const h = localStorage.getItem('habits_v3');
-            if (h) {
-                const parsed = JSON.parse(h);
-                if (parsed.length > 0) return parsed;
-            }
-            // Load default habits on first start (or if empty)
-            const defaults = getDefaultHabits();
-            saveHabits(defaults);
-            return defaults;
+            if (h) return JSON.parse(h);
+            return [];
         }
         function saveHabits(h) { localStorage.setItem('habits_v3', JSON.stringify(h)); }
+
+        // Always initialize with default habits on app load
+        saveHabits(getDefaultHabits());
 
         // Get a single habit by ID (returns habit object or undefined)
         function getHabitById(id) {
