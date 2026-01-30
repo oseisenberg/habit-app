@@ -546,6 +546,7 @@
             TWICE_DAILY: 'twiceDaily',
             EVERY_X_DAYS: 'everyXDays',
             TIMES_PER_PERIOD: 'timesPerPeriod',
+            TIMES_PER_DAY: 'timesPerDay',
             TIMES_PER_WEEK: 'timesPerWeek',
             TIMES_PER_MONTH: 'timesPerMonth',
             POINTS_PER_DAY: 'pointsPerDay',
@@ -649,16 +650,12 @@
             formState.isReminderMode = habit.isReminder || freqType === FREQ.REMINDER;
             formState.isPointsMode = freqType === FREQ.POINTS_PER_DAY || freqType === FREQ.POINTS_PER_WEEK || freqType === FREQ.POINTS_PER_MONTH;
 
-            // Handle TWICE_DAILY: convert to Daily + both times
-            if (freqType === FREQ.TWICE_DAILY) {
-                formState.frequency = FREQ.DAILY;
-                formState.time = 'both';
-            } else if (freqType === FREQ.REMINDER) {
+            if (freqType === FREQ.REMINDER) {
                 // Old reminder habits: map to Every X days
                 formState.frequency = FREQ.EVERY_X_DAYS;
                 formState.time = habit.timeOfDay;
             } else if (freqType === FREQ.POINTS_PER_DAY || freqType === FREQ.POINTS_PER_WEEK || freqType === FREQ.POINTS_PER_MONTH ||
-                       freqType === FREQ.TIMES_PER_WEEK || freqType === FREQ.TIMES_PER_MONTH) {
+                       freqType === FREQ.TIMES_PER_DAY || freqType === FREQ.TIMES_PER_WEEK || freqType === FREQ.TIMES_PER_MONTH) {
                 formState.frequency = FREQ.TIMES_PER_PERIOD;
                 formState.time = habit.timeOfDay;
             } else {
@@ -666,7 +663,7 @@
                 formState.time = habit.timeOfDay;
             }
 
-            formState.timesPeriod = (freqType === FREQ.TIMES_PER_MONTH) ? PERIOD.MONTH : PERIOD.WEEK;
+            formState.timesPeriod = (freqType === FREQ.TIMES_PER_DAY) ? PERIOD.DAY : ((freqType === FREQ.TIMES_PER_MONTH) ? PERIOD.MONTH : PERIOD.WEEK);
             formState.pointsPeriod = (freqType === FREQ.POINTS_PER_DAY) ? PERIOD.DAY : ((freqType === FREQ.POINTS_PER_MONTH) ? PERIOD.MONTH : PERIOD.WEEK);
         }
 
@@ -685,8 +682,8 @@
             const state = getFormState(habit);
             const currentIcon = state.icon || (habit?.icon) || '📌';
             const habitName = habit ? escapeHtml(habit.name) : '';
-            // Points disabled for Daily + both times (twice daily behavior)
-            const isTwiceDaily = state.frequency === FREQ.DAILY && state.time === 'both';
+            // Points disabled for twice daily
+            const isTwiceDaily = state.frequency === FREQ.TWICE_DAILY;
             const pointsDisabled = isTwiceDaily;
             // Allow Extra disabled for twice daily
             const optionalDisabled = isTwiceDaily;
@@ -714,9 +711,10 @@
                             <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.MONTH ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.MONTH}')">mo</button>
                         </div>`;
                 } else {
-                    const timesVal = habit?.frequency?.timesPerWeek || habit?.frequency?.timesPerMonth || DEFAULTS.TIMES_PER_PERIOD;
+                    const timesVal = habit?.frequency?.timesPerDay || habit?.frequency?.timesPerWeek || habit?.frequency?.timesPerMonth || DEFAULTS.TIMES_PER_PERIOD;
                     freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'T' : 't'}imesPerPeriod" value="${timesVal}" min="1" max="31">
                         <div class="period-toggle">
+                            <button type="button" class="period-toggle-btn ${state.timesPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('times', '${PERIOD.DAY}')">day</button>
                             <button type="button" class="period-toggle-btn ${state.timesPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('times', '${PERIOD.WEEK}')">wk</button>
                             <button type="button" class="period-toggle-btn ${state.timesPeriod === PERIOD.MONTH ? 'active' : ''}" onclick="setFormPeriod('times', '${PERIOD.MONTH}')">mo</button>
                         </div>`;
@@ -813,14 +811,15 @@
                     <div class="frequency-row" id="${isEdit ? 'editFrequencyRow' : 'frequencyRow'}">
                         <select class="form-input" id="${isEdit ? 'editFrequencySelect' : 'frequencySelect'}" onchange="selectFormFrequency(this.value)" style="flex:1">
                             <option value="${FREQ.DAILY}" ${state.frequency === FREQ.DAILY ? 'selected' : ''} ${state.isPointsMode ? 'disabled' : ''}>Daily${state.isPointsMode ? ' (not with Points)' : ''}</option>
+                            <option value="${FREQ.TWICE_DAILY}" ${state.frequency === FREQ.TWICE_DAILY ? 'selected' : ''} ${state.isPointsMode ? 'disabled' : ''}>Morning & Bedtime${state.isPointsMode ? ' (not with Points)' : ''}</option>
                             <option value="${FREQ.EVERY_X_DAYS}" ${state.frequency === FREQ.EVERY_X_DAYS ? 'selected' : ''}>Every X days</option>
                             <option value="${FREQ.TIMES_PER_PERIOD}" ${state.frequency === FREQ.TIMES_PER_PERIOD ? 'selected' : ''}>X per period</option>
                         </select>
                         <div id="${isEdit ? 'editFrequencyInputs' : 'frequencyInputs'}">${freqInputsHtml}</div>
-                        <div class="time-toggle" id="${isEdit ? 'editTimeToggle' : 'timeToggle'}">
-                            <button type="button" class="time-toggle-btn ${state.time === PERIOD.MORNING || state.time === 'both' ? 'active' : ''}" data-time="morning" onclick="toggleFormTime('${PERIOD.MORNING}')">🌅</button>
-                            <button type="button" class="time-toggle-btn ${state.time === PERIOD.NIGHT || state.time === 'both' ? 'active' : ''}" data-time="night" onclick="toggleFormTime('${PERIOD.NIGHT}')">🌙</button>
-                        </div>
+                        ${state.frequency !== FREQ.TWICE_DAILY ? `<div class="time-toggle" id="${isEdit ? 'editTimeToggle' : 'timeToggle'}">
+                            <button type="button" class="time-toggle-btn ${state.time === PERIOD.MORNING ? 'active' : ''}" data-time="morning" onclick="toggleFormTime('${PERIOD.MORNING}')">🌅</button>
+                            <button type="button" class="time-toggle-btn ${state.time === PERIOD.NIGHT ? 'active' : ''}" data-time="night" onclick="toggleFormTime('${PERIOD.NIGHT}')">🌙</button>
+                        </div>` : ''}
                     </div>
                 </div>
                 ${subtasksHtml}
@@ -857,20 +856,7 @@
 
         // Unified toggle functions
         function toggleFormTime(t) {
-            const current = formState.time;
-            const isDaily = formState.frequency === FREQ.DAILY;
-
-            if (t === PERIOD.MORNING) {
-                if (current === null) formState.time = PERIOD.MORNING;
-                else if (current === PERIOD.MORNING) formState.time = null;
-                else if (current === PERIOD.NIGHT) formState.time = isDaily ? 'both' : PERIOD.MORNING;
-                else if (current === 'both') formState.time = PERIOD.NIGHT;
-            } else if (t === PERIOD.NIGHT) {
-                if (current === null) formState.time = PERIOD.NIGHT;
-                else if (current === PERIOD.NIGHT) formState.time = null;
-                else if (current === PERIOD.MORNING) formState.time = isDaily ? 'both' : PERIOD.NIGHT;
-                else if (current === 'both') formState.time = PERIOD.MORNING;
-            }
+            formState.time = formState.time === t ? null : t;
             rerenderForm();
         }
 
@@ -881,17 +867,15 @@
 
         function toggleFormPointsMode() {
             formState.isPointsMode = !formState.isPointsMode;
-            // When enabling points, auto-switch from Daily (incompatible)
-            if (formState.isPointsMode && formState.frequency === FREQ.DAILY) {
-                formState.frequency = FREQ.TIMES_PER_PERIOD; // Default to X per week/month
-                if (formState.time === 'both') formState.time = null; // Reset both times
+            // When enabling points, auto-switch from incompatible frequencies
+            if (formState.isPointsMode && (formState.frequency === FREQ.DAILY || formState.frequency === FREQ.TWICE_DAILY)) {
+                formState.frequency = FREQ.TIMES_PER_PERIOD;
             }
             rerenderForm();
         }
 
         function toggleFormAllowOptional() {
-            const isTwiceDaily = formState.frequency === FREQ.DAILY && formState.time === 'both';
-            if (isTwiceDaily) return;
+            if (formState.frequency === FREQ.TWICE_DAILY) return;
             formState.allowOptional = !formState.allowOptional;
             rerenderForm();
         }
@@ -912,12 +896,12 @@
 
         function selectFormFrequency(f) {
             formState.frequency = f;
-            // Reset 'both' time when switching away from Daily (non-daily doesn't support both)
-            if (f !== FREQ.DAILY && formState.time === 'both') {
+            // Reset time for Twice Daily (it's implicit)
+            if (f === FREQ.TWICE_DAILY) {
                 formState.time = null;
             }
-            // Auto-disable points for daily (when both times = twice daily behavior)
-            if (f === FREQ.DAILY && formState.time === 'both' && formState.isPointsMode) {
+            // Auto-disable points for daily/twiceDaily
+            if ((f === FREQ.DAILY || f === FREQ.TWICE_DAILY) && formState.isPointsMode) {
                 formState.isPointsMode = false;
             }
             rerenderForm();
@@ -1215,10 +1199,6 @@
 
         // Determine the final frequency type based on form state
         function getFrequencyType() {
-            // Daily + both times = twice daily
-            if (formState.frequency === FREQ.DAILY && formState.time === 'both') {
-                return FREQ.TWICE_DAILY;
-            }
             // Reminder is now a modifier, not a frequency type
             if (formState.isPointsMode) {
                 if (formState.frequency === FREQ.TIMES_PER_PERIOD) {
@@ -1230,7 +1210,9 @@
             }
             // Normal completion mode
             if (formState.frequency === FREQ.TIMES_PER_PERIOD) {
-                return formState.timesPeriod === PERIOD.WEEK ? FREQ.TIMES_PER_WEEK : FREQ.TIMES_PER_MONTH;
+                if (formState.timesPeriod === PERIOD.DAY) return FREQ.TIMES_PER_DAY;
+                if (formState.timesPeriod === PERIOD.MONTH) return FREQ.TIMES_PER_MONTH;
+                return FREQ.TIMES_PER_WEEK;
             }
             return formState.frequency;
         }
@@ -1252,12 +1234,13 @@
             habits.push({
                 id: Date.now(), name,
                 icon: formState.icon,
-                timeOfDay: formState.time === 'both' ? null : formState.time,
+                timeOfDay: formState.time,
                 frequency: {
                     type: freqType,
+                    timesPerDay: timesVal,
                     timesPerWeek: timesVal,
-                    everyXDays: everyXDaysVal,
                     timesPerMonth: timesVal,
+                    everyXDays: everyXDaysVal,
                     pointsPerDay: pointsVal,
                     pointsPerWeek: pointsVal,
                     pointsPerMonth: pointsVal,
@@ -1374,6 +1357,11 @@
                 const n = isCompletedForPeriod(habit, today, PERIOD.NIGHT);
                 return { completed: m && n, morningDone: m, nightDone: n };
             }
+            if (freqType === FREQ.TIMES_PER_DAY) {
+                const count = countCompletionsInRange(habit, today, today);
+                const target = habit.frequency.timesPerDay || DEFAULTS.TIMES_PER_PERIOD;
+                return { completed: count >= target, count, target, text: `${count}/${target}`, isDaily: true };
+            }
             if (freqType === FREQ.TIMES_PER_WEEK) {
                 const ws = getWeekStart(today), count = countCompletionsInRange(habit, ws, today);
                 const target = habit.frequency.timesPerWeek || DEFAULTS.TIMES_PER_PERIOD;
@@ -1425,7 +1413,7 @@
             const freqType = habit.frequency.type;
 
             if (freqType === FREQ.TWICE_DAILY) return true;
-            if (freqType === FREQ.TIMES_PER_WEEK || freqType === FREQ.TIMES_PER_MONTH) return !status.completed;
+            if (freqType === FREQ.TIMES_PER_DAY || freqType === FREQ.TIMES_PER_WEEK || freqType === FREQ.TIMES_PER_MONTH) return !status.completed;
             if (freqType === FREQ.POINTS_PER_DAY || freqType === FREQ.POINTS_PER_WEEK || freqType === FREQ.POINTS_PER_MONTH) return !status.completed;
             if (freqType === FREQ.EVERY_X_DAYS || freqType === FREQ.REMINDER) return status.due || status.completed;
             return true;
@@ -1475,7 +1463,7 @@
 
             // Determine the cycle length for this habit type
             let cycleDays = 1;
-            if (freqType === FREQ.DAILY || freqType === FREQ.TWICE_DAILY || freqType === FREQ.POINTS_PER_DAY) cycleDays = 1;
+            if (freqType === FREQ.DAILY || freqType === FREQ.TWICE_DAILY || freqType === FREQ.POINTS_PER_DAY || freqType === FREQ.TIMES_PER_DAY) cycleDays = 1;
             else if (freqType === FREQ.REMINDER) cycleDays = freq.reminderDays || DEFAULTS.REMINDER_DAYS;
             else if (freqType === FREQ.TIMES_PER_WEEK) cycleDays = 7 / (freq.timesPerWeek || DEFAULTS.TIMES_PER_PERIOD);
             else if (freqType === FREQ.TIMES_PER_MONTH) cycleDays = 30 / (freq.timesPerMonth || DEFAULTS.TIMES_PER_PERIOD);
@@ -1542,7 +1530,7 @@
         function wasHabitDueOnDate(habit, dateStr) {
             const freq = habit.frequency;
             const freqType = freq.type;
-            if (freqType === FREQ.DAILY || freqType === FREQ.TWICE_DAILY || freqType === FREQ.POINTS_PER_DAY) return true;
+            if (freqType === FREQ.DAILY || freqType === FREQ.TWICE_DAILY || freqType === FREQ.POINTS_PER_DAY || freqType === FREQ.TIMES_PER_DAY) return true;
             if (freqType === FREQ.TIMES_PER_WEEK || freqType === FREQ.TIMES_PER_MONTH) return true;
             if (freqType === FREQ.EVERY_X_DAYS || freqType === FREQ.REMINDER) {
                 const interval = freqType === FREQ.REMINDER
@@ -1727,8 +1715,8 @@
                 const status = getCompletionStatus(habit);
                 return status.morningDone && status.nightDone;
             }
-            // For points per day, only completed when daily target is met
-            if (habit.frequency.type === FREQ.POINTS_PER_DAY) {
+            // For points/times per day, only completed when daily target is met
+            if (habit.frequency.type === FREQ.POINTS_PER_DAY || habit.frequency.type === FREQ.TIMES_PER_DAY) {
                 const status = getCompletionStatus(habit);
                 return status.completed;
             }
@@ -1757,8 +1745,8 @@
                 return completedToday;
             }
 
-            // Points per day: goes to Optional when daily target met (can add more)
-            if (freqType === FREQ.POINTS_PER_DAY) {
+            // Points/times per day: goes to Optional when daily target met (can add more)
+            if (freqType === FREQ.POINTS_PER_DAY || freqType === FREQ.TIMES_PER_DAY) {
                 const status = getCompletionStatus(habit);
                 return status.completed;
             }
@@ -2414,7 +2402,7 @@
 
             habit.name = newName;
             habit.icon = formState.icon || habit.icon || HABIT_EMOJIS[0];
-            habit.timeOfDay = formState.time === 'both' ? null : formState.time;
+            habit.timeOfDay = formState.time;
 
             // Use shared frequency type determination
             const finalFreqType = getFrequencyType();
@@ -2422,9 +2410,10 @@
             habit.usePoints = formState.isPointsMode;
 
             // Save frequency-specific values
-            if (finalFreqType === FREQ.TIMES_PER_WEEK || finalFreqType === FREQ.TIMES_PER_MONTH) {
+            if (finalFreqType === FREQ.TIMES_PER_DAY || finalFreqType === FREQ.TIMES_PER_WEEK || finalFreqType === FREQ.TIMES_PER_MONTH) {
                 const input = document.getElementById('editTimesPerPeriod');
                 const val = parseInt(input?.value) || DEFAULTS.TIMES_PER_PERIOD;
+                habit.frequency.timesPerDay = val;
                 habit.frequency.timesPerWeek = val;
                 habit.frequency.timesPerMonth = val;
             }
