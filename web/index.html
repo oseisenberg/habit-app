@@ -1873,17 +1873,20 @@
                     ringClass = 'overdue';
                     progress = '0%';
                 }
-            } else if (allSubtasksDone || status.completed) {
-                ringClass = 'completed';
-                progress = '100%';
             } else if (hasSubtasks) {
-                // Partial subtask progress - show green partial fill
+                // Subtasks take priority - show progress based on subtask completion
                 progress = `${subtaskPct}%`;
-                if (subtaskPct > 0) {
+                if (allSubtasksDone) {
+                    ringClass = 'completed';
+                    progress = '100%';
+                } else if (subtaskPct > 0) {
                     ringClass = 'partial';
                 } else if (neglectLevel > 0) {
                     ringClass = 'overdue';
                 }
+            } else if (status.completed) {
+                ringClass = 'completed';
+                progress = '100%';
             } else if (habit.frequency.type === FREQ.TIMES_PER_WEEK || habit.frequency.type === FREQ.TIMES_PER_MONTH ||
                        habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH) {
                 // For weekly/monthly/points habits without subtasks
