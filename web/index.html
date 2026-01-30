@@ -515,8 +515,45 @@
     </div>
 
     <script>
+        // ========================================
+        // CONSTANTS
+        // ========================================
+
         const DAY_NAMES = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
         const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        // Frequency types
+        const FREQ = {
+            DAILY: 'daily',
+            TWICE_DAILY: 'twiceDaily',
+            EVERY_X_DAYS: 'everyXDays',
+            TIMES_PER_PERIOD: 'timesPerPeriod',
+            TIMES_PER_WEEK: 'timesPerWeek',
+            TIMES_PER_MONTH: 'timesPerMonth',
+            POINTS_PER_WEEK: 'pointsPerWeek',
+            POINTS_PER_MONTH: 'pointsPerMonth',
+            REMINDER: 'reminder'
+        };
+
+        // Time periods
+        const PERIOD = {
+            WEEK: 'week',
+            MONTH: 'month',
+            MORNING: 'morning',
+            NIGHT: 'night'
+        };
+
+        // Default values
+        const DEFAULTS = {
+            TIMES_PER_PERIOD: 3,
+            POINTS_PER_PERIOD: 12,
+            EVERY_X_DAYS: 2,
+            REMINDER_DAYS: 3,
+            POINTS_TARGET: 5,
+            MORNING_START: 5,
+            NIGHT_START: 18
+        };
+
         const EMOJI_CATEGORIES = {
             'Health & Fitness': ['💪', '🏃', '🚴', '🏊', '🧘', '🤸', '⚽', '🏀', '🎾', '🏋️', '🏈', '⛳', '🥊', '🏄', '🧗', '🚶'],
             'Self-care': ['🦷', '💊', '💉', '🧴', '🛁', '💅', '💇', '😴', '🛌', '☀️', '🧖', '💆', '🩺', '🩹', '👁️', '🧘‍♀️'],
@@ -531,54 +568,84 @@
         // Flat array for compatibility
         const HABIT_EMOJIS = Object.values(EMOJI_CATEGORIES).flat();
 
-        let selectedTime = null; // null means anytime
-        let selectedFrequency = 'daily';
-        let allowOptional = true; // Allow extra completions after target met
-        let selectedEmoji = null;
+        // ========================================
+        // APPLICATION STATE
+        // ========================================
+
+        // Global app state
         let selectedHabitId = null;
         let debugDayOffset = 0;
         let debugHourOverride = null;
         let emojiPopupMode = null; // 'new' or habit id for edit
         let editModeHabitId = null; // Track which habit is being edited for emoji exclusion
-        let timesPeriod = 'week'; // 'week' or 'month' for timesPerPeriod
-        let pointsPeriod = 'week'; // 'week' or 'month' for pointsPerPeriod
         let newHabitSubtasks = []; // Subtasks for new habit creation
-        let showSubtasksInput = false; // Toggle for subtasks input area
-        let isReminderMode = false; // Task type: reminder vs regular habit
-        let isPointsMode = false; // Measurement mode: points vs completions
 
         // Unified form state - used by both Create and Edit modes
         let formMode = 'create'; // 'create' or 'edit'
         let formHabitId = null; // Habit ID when editing
 
-        // Get current form state based on mode
-        function getFormState(habit = null) {
-            if (formMode === 'edit') {
-                // In edit mode, show subtasks if habit has them or user enabled it
-                const hasSubtasks = habit?.subtasks?.length > 0;
-                return {
-                    time: editTimeOfDay,
-                    frequency: editFrequency,
-                    isReminderMode: editIsReminderMode,
-                    isPointsMode: editIsPointsMode,
-                    allowOptional: editAllowOptional,
-                    showSubtasks: hasSubtasks || showSubtasksInput,
-                    icon: editIcon,
-                    timesPeriod: editTimesPeriod,
-                    pointsPeriod: editPointsPeriod
-                };
+        // Form state object - single source of truth for form data
+        const formState = {
+            time: null,                          // null = anytime, 'morning', 'night'
+            frequency: FREQ.DAILY,               // dropdown value
+            isReminderMode: false,               // task type: reminder vs regular
+            isPointsMode: false,                 // measurement: points vs completions
+            allowOptional: true,                 // allow extra completions
+            showSubtasks: false,                 // show subtasks input area
+            icon: null,                          // selected emoji
+            timesPeriod: PERIOD.WEEK,            // 'week' or 'month' for times
+            pointsPeriod: PERIOD.WEEK,           // 'week' or 'month' for points
+            hideSubtasksOnMain: false            // hide subtasks on main screen (edit only)
+        };
+
+        // Reset form state to defaults
+        function resetFormState() {
+            formState.time = null;
+            formState.frequency = FREQ.DAILY;
+            formState.isReminderMode = false;
+            formState.isPointsMode = false;
+            formState.allowOptional = true;
+            formState.showSubtasks = false;
+            formState.icon = null;
+            formState.timesPeriod = PERIOD.WEEK;
+            formState.pointsPeriod = PERIOD.WEEK;
+            formState.hideSubtasksOnMain = false;
+        }
+
+        // Initialize form state from habit (for edit mode)
+        function initFormStateFromHabit(habit) {
+            formState.time = habit.timeOfDay;
+            formState.icon = habit.icon || HABIT_EMOJIS[0];
+            formState.allowOptional = habit.allowOptional !== false;
+            formState.hideSubtasksOnMain = habit.showSubtasksOnMain === false;
+            formState.showSubtasks = false; // Will show if habit has subtasks
+
+            // Determine mode based on frequency type
+            const freqType = habit.frequency.type;
+            formState.isReminderMode = freqType === FREQ.REMINDER;
+            formState.isPointsMode = freqType === FREQ.POINTS_PER_WEEK || freqType === FREQ.POINTS_PER_MONTH;
+
+            // Map frequency type to dropdown value
+            if (freqType === FREQ.REMINDER) {
+                formState.frequency = FREQ.DAILY;
+            } else if (freqType === FREQ.POINTS_PER_WEEK || freqType === FREQ.POINTS_PER_MONTH ||
+                       freqType === FREQ.TIMES_PER_WEEK || freqType === FREQ.TIMES_PER_MONTH) {
+                formState.frequency = FREQ.TIMES_PER_PERIOD;
+            } else {
+                formState.frequency = freqType;
             }
-            return {
-                time: selectedTime,
-                frequency: selectedFrequency,
-                isReminderMode: isReminderMode,
-                isPointsMode: isPointsMode,
-                allowOptional: allowOptional,
-                showSubtasks: showSubtasksInput,
-                icon: selectedEmoji,
-                timesPeriod: timesPeriod,
-                pointsPeriod: pointsPeriod
-            };
+
+            formState.timesPeriod = (freqType === FREQ.TIMES_PER_MONTH) ? PERIOD.MONTH : PERIOD.WEEK;
+            formState.pointsPeriod = (freqType === FREQ.POINTS_PER_MONTH) ? PERIOD.MONTH : PERIOD.WEEK;
+        }
+
+        // Get current form state (for compatibility with renderHabitForm)
+        function getFormState(habit = null) {
+            // For edit mode with existing subtasks, override showSubtasks
+            if (formMode === 'edit' && habit?.subtasks?.length > 0) {
+                return { ...formState, showSubtasks: true };
+            }
+            return formState;
         }
 
         // Render the habit form (shared between Create and Edit modes)
@@ -587,37 +654,37 @@
             const state = getFormState(habit);
             const currentIcon = state.icon || (habit?.icon) || '📌';
             const habitName = habit ? escapeHtml(habit.name) : '';
-            const pointsDisabled = state.frequency === 'daily' || state.frequency === 'twiceDaily' || state.isReminderMode;
-            const optionalDisabled = state.frequency !== 'timesPerPeriod' || state.isReminderMode;
-            const isTwiceDaily = state.frequency === 'twiceDaily';
+            const pointsDisabled = state.frequency === FREQ.DAILY || state.frequency === FREQ.TWICE_DAILY || state.isReminderMode;
+            const optionalDisabled = state.frequency !== FREQ.TIMES_PER_PERIOD || state.isReminderMode;
+            const isTwiceDaily = state.frequency === FREQ.TWICE_DAILY;
 
             // Build frequency inputs (use lowercase IDs for create, camelCase with 'edit' prefix for edit)
             const idPrefix = isEdit ? 'edit' : '';
             let freqInputsHtml = '';
-            if (state.frequency === 'everyXDays') {
+            if (state.frequency === FREQ.EVERY_X_DAYS) {
                 if (state.isPointsMode) {
-                    const ptsVal = habit?.frequency?.pointsTarget || 5;
-                    const daysVal = habit?.frequency?.everyXDays || 2;
+                    const ptsVal = habit?.frequency?.pointsTarget || DEFAULTS.POINTS_TARGET;
+                    const daysVal = habit?.frequency?.everyXDays || DEFAULTS.EVERY_X_DAYS;
                     freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'P' : 'p'}ointsTarget" value="${ptsVal}" min="1"><span style="color:#888">pts /</span>
                         <input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'E' : 'e'}veryXDays" value="${daysVal}" min="1"><span style="color:#888">days</span>`;
                 } else {
-                    const daysVal = habit?.frequency?.everyXDays || 2;
+                    const daysVal = habit?.frequency?.everyXDays || DEFAULTS.EVERY_X_DAYS;
                     freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'E' : 'e'}veryXDays" value="${daysVal}" min="1"><span style="color:#888">days</span>`;
                 }
-            } else if (state.frequency === 'timesPerPeriod') {
+            } else if (state.frequency === FREQ.TIMES_PER_PERIOD) {
                 if (state.isPointsMode) {
-                    const ptsVal = habit?.frequency?.pointsPerWeek || habit?.frequency?.pointsPerMonth || 12;
+                    const ptsVal = habit?.frequency?.pointsPerWeek || habit?.frequency?.pointsPerMonth || DEFAULTS.POINTS_PER_PERIOD;
                     freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'P' : 'p'}ointsPerPeriod" value="${ptsVal}" min="1"><span style="color:#888">pts /</span>
                         <div class="period-toggle">
-                            <button type="button" class="period-toggle-btn ${state.pointsPeriod === 'week' ? 'active' : ''}" onclick="${isEdit ? 'setEditPointsPeriod' : 'setPointsPeriod'}('week')">wk</button>
-                            <button type="button" class="period-toggle-btn ${state.pointsPeriod === 'month' ? 'active' : ''}" onclick="${isEdit ? 'setEditPointsPeriod' : 'setPointsPeriod'}('month')">mo</button>
+                            <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.WEEK}')">wk</button>
+                            <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.MONTH ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.MONTH}')">mo</button>
                         </div>`;
                 } else {
-                    const timesVal = habit?.frequency?.timesPerWeek || habit?.frequency?.timesPerMonth || 3;
+                    const timesVal = habit?.frequency?.timesPerWeek || habit?.frequency?.timesPerMonth || DEFAULTS.TIMES_PER_PERIOD;
                     freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'T' : 't'}imesPerPeriod" value="${timesVal}" min="1" max="31">
                         <div class="period-toggle">
-                            <button type="button" class="period-toggle-btn ${state.timesPeriod === 'week' ? 'active' : ''}" onclick="${isEdit ? 'setEditTimesPeriod' : 'setTimesPeriod'}('week')">wk</button>
-                            <button type="button" class="period-toggle-btn ${state.timesPeriod === 'month' ? 'active' : ''}" onclick="${isEdit ? 'setEditTimesPeriod' : 'setTimesPeriod'}('month')">mo</button>
+                            <button type="button" class="period-toggle-btn ${state.timesPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('times', '${PERIOD.WEEK}')">wk</button>
+                            <button type="button" class="period-toggle-btn ${state.timesPeriod === PERIOD.MONTH ? 'active' : ''}" onclick="setFormPeriod('times', '${PERIOD.MONTH}')">mo</button>
                         </div>`;
                 }
             }
@@ -662,14 +729,12 @@
                     <div class="form-group">
                         <div class="settings-row" style="border:none;padding:8px 0">
                             <span class="settings-label">Hide subtasks on main screen</span>
-                            <div class="toggle-switch ${editHideSubtasks ? 'active' : ''}" id="hideSubtasksToggle" onclick="toggleHideSubtasks()"></div>
+                            <div class="toggle-switch ${formState.hideSubtasksOnMain ? 'active' : ''}" id="hideSubtasksToggle" onclick="toggleFormHideSubtasks()"></div>
                         </div>
                     </div>`;
             }
 
-            const reminderDays = habit?.frequency?.reminderDays || 3;
-            const fnPrefix = isEdit ? 'Edit' : '';
-            const toggleFn = isEdit ? 'toggle' + fnPrefix : 'toggle';
+            const reminderDays = habit?.frequency?.reminderDays || DEFAULTS.REMINDER_DAYS;
 
             return `
                 <div class="modal-header">
@@ -688,27 +753,27 @@
                         </div>
                         <input type="text" class="form-input" id="${isEdit ? 'editHabitName' : 'habitInput'}" value="${habitName}" placeholder="e.g., Brush teeth..." style="flex:1;margin:0;box-sizing:border-box" onkeypress="if(event.key==='Enter')${isEdit ? 'saveHabitEdit' : 'addHabit'}()" />
                         <div class="time-toggle" id="${isEdit ? 'editTimeToggle' : 'timeToggle'}" style="height:100%">
-                            <button type="button" class="time-toggle-btn ${state.time === 'morning' ? 'active' : ''} ${isTwiceDaily ? 'disabled' : ''}" data-time="morning" onclick="${toggleFn}${isEdit ? 'Edit' : ''}Time('morning')">🌅</button>
-                            <button type="button" class="time-toggle-btn ${state.time === 'night' ? 'active' : ''} ${isTwiceDaily ? 'disabled' : ''}" data-time="night" onclick="${toggleFn}${isEdit ? 'Edit' : ''}Time('night')">🌙</button>
+                            <button type="button" class="time-toggle-btn ${state.time === PERIOD.MORNING ? 'active' : ''} ${isTwiceDaily ? 'disabled' : ''}" data-time="morning" onclick="toggleFormTime('${PERIOD.MORNING}')">🌅</button>
+                            <button type="button" class="time-toggle-btn ${state.time === PERIOD.NIGHT ? 'active' : ''} ${isTwiceDaily ? 'disabled' : ''}" data-time="night" onclick="toggleFormTime('${PERIOD.NIGHT}')">🌙</button>
                         </div>
                     </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Options</label>
                     <div class="task-options">
-                        <label class="option-pill ${state.showSubtasks ? 'active' : ''}" id="${isEdit ? 'editSubtasksPill' : 'subtasksPill'}" onclick="${isEdit ? 'toggleEditSubtasksSection' : 'toggleSubtasksSection'}()">
+                        <label class="option-pill ${state.showSubtasks ? 'active' : ''}" id="${isEdit ? 'editSubtasksPill' : 'subtasksPill'}" onclick="toggleFormSubtasks()">
                             <span class="option-pill-check">✓</span>
                             <span>Subtasks</span>
                         </label>
-                        <label class="option-pill ${state.isPointsMode ? 'active' : ''} ${pointsDisabled ? 'disabled' : ''}" id="${isEdit ? 'editPointsPill' : 'pointsPill'}" onclick="${isEdit ? 'toggleEditPointsMode' : 'togglePointsMode'}()">
+                        <label class="option-pill ${state.isPointsMode ? 'active' : ''} ${pointsDisabled ? 'disabled' : ''}" id="${isEdit ? 'editPointsPill' : 'pointsPill'}" onclick="toggleFormPointsMode()">
                             <span class="option-pill-check">✓</span>
                             <span>Points</span>
                         </label>
-                        <label class="option-pill ${state.allowOptional ? 'active' : ''} ${optionalDisabled ? 'disabled' : ''}" id="${isEdit ? 'editOptionalPill' : 'optionalPill'}" onclick="${isEdit ? 'toggleEditAllowOptional' : 'toggleAllowOptional'}()">
+                        <label class="option-pill ${state.allowOptional ? 'active' : ''} ${optionalDisabled ? 'disabled' : ''}" id="${isEdit ? 'editOptionalPill' : 'optionalPill'}" onclick="toggleFormAllowOptional()">
                             <span class="option-pill-check">✓</span>
                             <span>Allow extra</span>
                         </label>
-                        <label class="option-pill ${state.isReminderMode ? 'active' : ''}" id="${isEdit ? 'editReminderPill' : 'reminderPill'}" onclick="${isEdit ? 'toggleEditReminderMode' : 'toggleReminderMode'}()">
+                        <label class="option-pill ${state.isReminderMode ? 'active' : ''}" id="${isEdit ? 'editReminderPill' : 'reminderPill'}" onclick="toggleFormReminderMode()">
                             <span class="option-pill-check">✓</span>
                             <span>Reminder</span>
                         </label>
@@ -717,11 +782,11 @@
                 <div class="form-group" id="${isEdit ? 'editFrequencyGroup' : 'frequencyGroup'}">
                     <label class="form-label">Frequency</label>
                     <div class="frequency-row" id="${isEdit ? 'editFrequencyRow' : 'frequencyRow'}" style="${state.isReminderMode ? 'display:none' : 'display:flex'}">
-                        <select class="form-input" id="${isEdit ? 'editFrequencySelect' : 'frequencySelect'}" onchange="${isEdit ? 'selectEditFrequency' : 'selectFrequency'}(this.value)" style="flex:1">
-                            <option value="daily" ${state.frequency === 'daily' ? 'selected' : ''}>Daily</option>
-                            <option value="twiceDaily" ${state.frequency === 'twiceDaily' ? 'selected' : ''}>Twice daily</option>
-                            <option value="everyXDays" ${state.frequency === 'everyXDays' ? 'selected' : ''}>Every X days</option>
-                            <option value="timesPerPeriod" ${state.frequency === 'timesPerPeriod' ? 'selected' : ''}>X per week/month</option>
+                        <select class="form-input" id="${isEdit ? 'editFrequencySelect' : 'frequencySelect'}" onchange="selectFormFrequency(this.value)" style="flex:1">
+                            <option value="${FREQ.DAILY}" ${state.frequency === FREQ.DAILY ? 'selected' : ''}>Daily</option>
+                            <option value="${FREQ.TWICE_DAILY}" ${state.frequency === FREQ.TWICE_DAILY ? 'selected' : ''}>Twice daily</option>
+                            <option value="${FREQ.EVERY_X_DAYS}" ${state.frequency === FREQ.EVERY_X_DAYS ? 'selected' : ''}>Every X days</option>
+                            <option value="${FREQ.TIMES_PER_PERIOD}" ${state.frequency === FREQ.TIMES_PER_PERIOD ? 'selected' : ''}>X per week/month</option>
                         </select>
                         <div id="${isEdit ? 'editFrequencyInputs' : 'frequencyInputs'}">${freqInputsHtml}</div>
                     </div>
@@ -739,14 +804,83 @@
                 </div>`;
         }
 
-        function setTimesPeriod(period) {
-            timesPeriod = period;
-            rerenderCreateForm();
+        // ========================================
+        // UNIFIED FORM FUNCTIONS
+        // ========================================
+
+        // Re-render form based on current mode
+        function rerenderForm() {
+            if (formMode === 'create') {
+                document.getElementById('createModal').innerHTML = renderHabitForm();
+            } else {
+                const habit = loadHabits().find(h => h.id === formHabitId);
+                document.getElementById('detailsModal').innerHTML = renderHabitForm(habit);
+            }
         }
 
-        function setPointsPeriod(period) {
-            pointsPeriod = period;
-            rerenderCreateForm();
+        // Unified period setter
+        function setFormPeriod(type, period) {
+            if (type === 'times') {
+                formState.timesPeriod = period;
+            } else {
+                formState.pointsPeriod = period;
+            }
+            rerenderForm();
+        }
+
+        // Unified toggle functions
+        function toggleFormTime(t) {
+            formState.time = formState.time === t ? null : t;
+            rerenderForm();
+        }
+
+        function toggleFormReminderMode() {
+            formState.isReminderMode = !formState.isReminderMode;
+            if (formState.isReminderMode) {
+                formState.isPointsMode = false;
+            }
+            rerenderForm();
+        }
+
+        function toggleFormPointsMode() {
+            const pointsDisabled = formState.frequency === FREQ.DAILY || formState.frequency === FREQ.TWICE_DAILY || formState.isReminderMode;
+            if (pointsDisabled) return;
+            formState.isPointsMode = !formState.isPointsMode;
+            rerenderForm();
+        }
+
+        function toggleFormAllowOptional() {
+            const optionalDisabled = formState.frequency !== FREQ.TIMES_PER_PERIOD || formState.isReminderMode;
+            if (optionalDisabled) return;
+            formState.allowOptional = !formState.allowOptional;
+            rerenderForm();
+        }
+
+        function toggleFormSubtasks() {
+            formState.showSubtasks = !formState.showSubtasks;
+            rerenderForm();
+            if (formState.showSubtasks) {
+                const inputId = formMode === 'edit' ? 'editSubtaskInput' : 'newHabitSubtaskInput';
+                setTimeout(() => document.getElementById(inputId)?.focus(), 0);
+            }
+        }
+
+        function toggleFormHideSubtasks() {
+            formState.hideSubtasksOnMain = !formState.hideSubtasksOnMain;
+            rerenderForm();
+        }
+
+        function selectFormFrequency(f) {
+            formState.frequency = f;
+            // Reset time for Twice Daily
+            if (f === FREQ.TWICE_DAILY) {
+                formState.time = null;
+            }
+            // Auto-disable points for daily/twiceDaily
+            if ((f === FREQ.DAILY || f === FREQ.TWICE_DAILY) && formState.isPointsMode) {
+                formState.isPointsMode = false;
+            }
+            rerenderForm();
         }
 
         function getUsedIcons(excludeId = null) {
@@ -777,7 +911,7 @@
                     <div class="emoji-category-grid">
                         ${emojis.map(e => {
                             const isUsed = usedIcons.has(e);
-                            const isSelected = e === selectedEmoji;
+                            const isSelected = e === formState.icon;
                             return `<div class="emoji-option ${isSelected ? 'selected' : ''} ${isUsed ? 'used' : ''}"
                                 onclick="${isUsed ? '' : `selectEmojiFromPopup('${e}')`}">${e}</div>`;
                         }).join('')}
@@ -788,19 +922,12 @@
         }
 
         function selectEmojiFromPopup(emoji) {
-            selectedEmoji = emoji;
-            if (emojiPopupMode === 'new') {
-                document.getElementById('selectedEmojiDisplay').textContent = emoji;
-            } else if (emojiPopupMode === 'edit') {
-                document.getElementById('editSelectedEmojiDisplay').textContent = emoji;
-                editIcon = emoji; // Update the editIcon variable for saving
-            }
+            formState.icon = emoji;
+            // Update display
+            const displayId = formMode === 'create' ? 'selectedEmojiDisplay' : 'editSelectedEmojiDisplay';
+            document.getElementById(displayId).textContent = emoji;
             closeEmojiPopup();
         }
-
-        // Legacy function for backwards compatibility
-        function renderEmojiPicker(containerId, selected = null, excludeId = null) {}
-        function selectEmoji(emoji, containerId) { selectedEmoji = emoji; }
 
         function getSettings() {
             const s = localStorage.getItem('habit_settings');
@@ -934,45 +1061,24 @@
             // Reset state for create mode
             formMode = 'create';
             formHabitId = null;
-            selectedTime = null;
-            selectedFrequency = 'daily';
-            isReminderMode = false;
-            isPointsMode = false;
-            allowOptional = true;
-            timesPeriod = 'week';
-            pointsPeriod = 'week';
+            resetFormState();
             newHabitSubtasks = [];
-            showSubtasksInput = false;
             // Select first unused emoji
             const usedIcons = getUsedIcons();
-            selectedEmoji = HABIT_EMOJIS.find(e => !usedIcons.has(e)) || HABIT_EMOJIS[0];
+            formState.icon = HABIT_EMOJIS.find(e => !usedIcons.has(e)) || HABIT_EMOJIS[0];
             // Render the form
             document.getElementById('createModal').innerHTML = renderHabitForm();
             document.getElementById('modalOverlay').classList.add('active');
             document.getElementById('habitInput').focus();
         }
+
         function closeModal() {
             document.getElementById('modalOverlay').classList.remove('active');
             // Reset state
             formMode = 'create';
             formHabitId = null;
-            selectedTime = null;
-            selectedEmoji = HABIT_EMOJIS[0];
-            isReminderMode = false;
-            isPointsMode = false;
-            selectedFrequency = 'daily';
-            timesPeriod = 'week';
-            pointsPeriod = 'week';
-            allowOptional = true;
+            resetFormState();
             newHabitSubtasks = [];
-            showSubtasksInput = false;
-        }
-
-        // Re-render create form (called by toggle functions)
-        function rerenderCreateForm() {
-            if (formMode === 'create') {
-                document.getElementById('createModal').innerHTML = renderHabitForm();
-            }
         }
 
         function openSettings() {
@@ -1012,66 +1118,19 @@
             URL.revokeObjectURL(url);
         }
 
-        function selectFrequency(f) {
-            selectedFrequency = f;
-            // Reset time for Twice Daily
-            if (f === 'twiceDaily') {
-                selectedTime = null;
-            }
-            // Auto-disable points for daily/twiceDaily
-            if ((f === 'daily' || f === 'twiceDaily') && isPointsMode) {
-                isPointsMode = false;
-            }
-            rerenderCreateForm();
-        }
-
-        function toggleReminderMode() {
-            isReminderMode = !isReminderMode;
-            if (isReminderMode) {
-                isPointsMode = false;
-            }
-            rerenderCreateForm();
-        }
-
-        function togglePointsMode() {
-            const pointsDisabled = selectedFrequency === 'daily' || selectedFrequency === 'twiceDaily' || isReminderMode;
-            if (pointsDisabled) return;
-            isPointsMode = !isPointsMode;
-            rerenderCreateForm();
-        }
-
-        function toggleAllowOptional() {
-            const optionalDisabled = selectedFrequency !== 'timesPerPeriod' || isReminderMode;
-            if (optionalDisabled) return;
-            allowOptional = !allowOptional;
-            rerenderCreateForm();
-        }
-
-        function toggleSubtasksSection() {
-            showSubtasksInput = !showSubtasksInput;
-            rerenderCreateForm();
-            if (showSubtasksInput) {
-                setTimeout(() => document.getElementById('newHabitSubtaskInput')?.focus(), 0);
-            }
-        }
-
-        function toggleTime(t) {
-            selectedTime = selectedTime === t ? null : t;
-            rerenderCreateForm();
-        }
-
+        // Subtask functions for new habit creation
         function addNewHabitSubtask() {
             const input = document.getElementById('newHabitSubtaskInput');
             const name = input.value.trim();
             if (!name) return;
             newHabitSubtasks.push({ id: Date.now(), name, completedPeriods: {} });
-            rerenderCreateForm();
+            rerenderForm();
             setTimeout(() => document.getElementById('newHabitSubtaskInput')?.focus(), 0);
         }
 
         function removeNewHabitSubtask(id) {
             newHabitSubtasks = newHabitSubtasks.filter(s => s.id !== id);
-            rerenderCreateForm();
+            rerenderForm();
         }
 
         function updateNewHabitSubtask(id, newName) {
@@ -1081,38 +1140,38 @@
             }
         }
 
+        // Determine the final frequency type based on form state
+        function getFrequencyType() {
+            if (formState.isReminderMode) {
+                return FREQ.REMINDER;
+            }
+            if (formState.isPointsMode) {
+                if (formState.frequency === FREQ.TIMES_PER_PERIOD) {
+                    return formState.pointsPeriod === PERIOD.WEEK ? FREQ.POINTS_PER_WEEK : FREQ.POINTS_PER_MONTH;
+                }
+                return formState.frequency; // everyXDays with points
+            }
+            // Normal completion mode
+            if (formState.frequency === FREQ.TIMES_PER_PERIOD) {
+                return formState.timesPeriod === PERIOD.WEEK ? FREQ.TIMES_PER_WEEK : FREQ.TIMES_PER_MONTH;
+            }
+            return formState.frequency;
+        }
+
         function addHabit() {
             const name = document.getElementById('habitInput').value.trim();
             if (!name) return;
             const habits = loadHabits();
-            // Handle reminder mode vs regular habit frequency
-            let freqType;
-            if (isReminderMode) {
-                freqType = 'reminder';
-            } else if (isPointsMode) {
-                // Points mode: frequency determines the period, points mode determines measurement
-                if (selectedFrequency === 'timesPerPeriod') {
-                    freqType = pointsPeriod === 'week' ? 'pointsPerWeek' : 'pointsPerMonth';
-                } else {
-                    freqType = selectedFrequency; // daily, everyXDays with points
-                }
-            } else {
-                // Normal completion mode
-                freqType = selectedFrequency;
-                if (selectedFrequency === 'timesPerPeriod') {
-                    freqType = timesPeriod === 'week' ? 'timesPerWeek' : 'timesPerMonth';
-                }
-            }
-            const timesVal = parseInt(document.getElementById('timesPerPeriod')?.value) || 3;
-            const pointsVal = parseInt(document.getElementById('pointsPerPeriod')?.value) || 12;
-            const pointsPerDayVal = parseInt(document.getElementById('pointsPerDay')?.value) || 5;
-            const pointsTargetVal = parseInt(document.getElementById('pointsTarget')?.value) || 5;
-            const reminderDaysVal = parseInt(document.getElementById('reminderDays')?.value) || 3;
-            const everyXDaysVal = parseInt(document.getElementById('everyXDays')?.value) || 2;
+            const freqType = getFrequencyType();
+            const timesVal = parseInt(document.getElementById('timesPerPeriod')?.value) || DEFAULTS.TIMES_PER_PERIOD;
+            const pointsVal = parseInt(document.getElementById('pointsPerPeriod')?.value) || DEFAULTS.POINTS_PER_PERIOD;
+            const pointsTargetVal = parseInt(document.getElementById('pointsTarget')?.value) || DEFAULTS.POINTS_TARGET;
+            const reminderDaysVal = parseInt(document.getElementById('reminderDays')?.value) || DEFAULTS.REMINDER_DAYS;
+            const everyXDaysVal = parseInt(document.getElementById('everyXDays')?.value) || DEFAULTS.EVERY_X_DAYS;
             habits.push({
                 id: Date.now(), name,
-                icon: selectedEmoji,
-                timeOfDay: selectedTime, // null = anytime, 'morning', 'night', or 'both' for twice daily
+                icon: formState.icon,
+                timeOfDay: formState.time,
                 frequency: {
                     type: freqType,
                     timesPerWeek: timesVal,
@@ -1120,12 +1179,11 @@
                     timesPerMonth: timesVal,
                     pointsPerWeek: pointsVal,
                     pointsPerMonth: pointsVal,
-                    pointsPerDay: pointsPerDayVal,
-                    pointsTarget: pointsTargetVal, // For everyXDays + points
+                    pointsTarget: pointsTargetVal,
                     reminderDays: reminderDaysVal
                 },
-                usePoints: isPointsMode, // Whether to measure by points vs completions
-                allowOptional: allowOptional, // Whether habit can appear in Optional section after target met
+                usePoints: formState.isPointsMode,
+                allowOptional: formState.allowOptional,
                 completions: [], skippedDates: [], snoozedUntil: null, subtasks: [...newHabitSubtasks], createdAt: getTodayString()
             });
             saveHabits(habits);
@@ -1206,7 +1264,7 @@
 
         function isCompletedForPeriod(habit, date, period) {
             const comps = getCompletionsForDate(habit, date);
-            return habit.frequency.type === 'twiceDaily' ? comps.some(c => c.period === period) : comps.length > 0;
+            return habit.frequency.type === FREQ.TWICE_DAILY ? comps.some(c => c.period === period) : comps.length > 0;
         }
 
         function getMonthStart(d) {
@@ -1224,42 +1282,47 @@
 
         function getCompletionStatus(habit) {
             const today = getTodayString();
-            if (habit.frequency.type === 'twiceDaily') {
-                const m = isCompletedForPeriod(habit, today, 'morning'), n = isCompletedForPeriod(habit, today, 'night');
+            const freqType = habit.frequency.type;
+
+            if (freqType === FREQ.TWICE_DAILY) {
+                const m = isCompletedForPeriod(habit, today, PERIOD.MORNING);
+                const n = isCompletedForPeriod(habit, today, PERIOD.NIGHT);
                 return { completed: m && n, morningDone: m, nightDone: n };
             }
-            if (habit.frequency.type === 'timesPerWeek') {
-                const ws = getWeekStart(today), count = countCompletionsInRange(habit, ws, today), target = habit.frequency.timesPerWeek || 3;
+            if (freqType === FREQ.TIMES_PER_WEEK) {
+                const ws = getWeekStart(today), count = countCompletionsInRange(habit, ws, today);
+                const target = habit.frequency.timesPerWeek || DEFAULTS.TIMES_PER_PERIOD;
                 return { completed: count >= target, count, target, text: `${count}/${target}` };
             }
-            if (habit.frequency.type === 'timesPerMonth') {
+            if (freqType === FREQ.TIMES_PER_MONTH) {
                 const ms = getMonthStart(today), me = getMonthEnd(today);
-                const count = countCompletionsInRange(habit, ms, me), target = habit.frequency.timesPerMonth || 4;
+                const count = countCompletionsInRange(habit, ms, me);
+                const target = habit.frequency.timesPerMonth || DEFAULTS.TIMES_PER_PERIOD;
                 return { completed: count >= target, count, target, text: `${count}/${target}` };
             }
-            if (habit.frequency.type === 'everyXDays' || habit.frequency.type === 'reminder') {
+            if (freqType === FREQ.EVERY_X_DAYS || freqType === FREQ.REMINDER) {
                 const last = getLastCompletionDate(habit);
-                const target = habit.frequency.type === 'reminder' ? (habit.frequency.reminderDays || 1) : (habit.frequency.everyXDays || 2);
+                const target = freqType === FREQ.REMINDER
+                    ? (habit.frequency.reminderDays || DEFAULTS.REMINDER_DAYS)
+                    : (habit.frequency.everyXDays || DEFAULTS.EVERY_X_DAYS);
                 if (!last) return { completed: false, due: true, daysOverdue: 0 };
                 const since = daysBetween(last, today);
                 return { completed: since === 0, due: since >= target, daysOverdue: Math.max(0, since - target) };
             }
-            if (habit.frequency.type === 'pointsPerWeek') {
-                // Sliding window: last 7 days
+            if (freqType === FREQ.POINTS_PER_WEEK) {
                 const weekAgo = new Date(today);
                 weekAgo.setDate(weekAgo.getDate() - 6);
                 const ws = toDateString(weekAgo);
                 const points = countPointsInRange(habit, ws, today);
-                const target = habit.frequency.pointsPerWeek || 12;
+                const target = habit.frequency.pointsPerWeek || DEFAULTS.POINTS_PER_PERIOD;
                 return { completed: points >= target, points, target, text: `${points}/${target} pts`, isPoints: true };
             }
-            if (habit.frequency.type === 'pointsPerMonth') {
-                // Sliding window: last 30 days
+            if (freqType === FREQ.POINTS_PER_MONTH) {
                 const monthAgo = new Date(today);
                 monthAgo.setDate(monthAgo.getDate() - 29);
                 const ms = toDateString(monthAgo);
                 const points = countPointsInRange(habit, ms, today);
-                const target = habit.frequency.pointsPerMonth || 30;
+                const target = habit.frequency.pointsPerMonth || DEFAULTS.POINTS_PER_PERIOD;
                 return { completed: points >= target, points, target, text: `${points}/${target} pts`, isPoints: true };
             }
             return { completed: getCompletionsForDate(habit, today).length > 0 };
@@ -1269,21 +1332,21 @@
             const today = getTodayString();
             if (habit.skippedDates && habit.skippedDates.includes(today)) return false;
             const status = getCompletionStatus(habit);
-            if (habit.frequency.type === 'twiceDaily') return true;
-            if (habit.frequency.type === 'timesPerWeek') return !status.completed;
-            if (habit.frequency.type === 'timesPerMonth') return !status.completed;
-            if (habit.frequency.type === 'pointsPerWeek') return !status.completed;
-            if (habit.frequency.type === 'pointsPerMonth') return !status.completed;
-            if (habit.frequency.type === 'everyXDays' || habit.frequency.type === 'reminder') return status.due || status.completed;
+            const freqType = habit.frequency.type;
+
+            if (freqType === FREQ.TWICE_DAILY) return true;
+            if (freqType === FREQ.TIMES_PER_WEEK || freqType === FREQ.TIMES_PER_MONTH) return !status.completed;
+            if (freqType === FREQ.POINTS_PER_WEEK || freqType === FREQ.POINTS_PER_MONTH) return !status.completed;
+            if (freqType === FREQ.EVERY_X_DAYS || freqType === FREQ.REMINDER) return status.due || status.completed;
             return true;
         }
 
         function getDaysOverdue(habit) {
             const today = getTodayString();
-            if (habit.frequency.type === 'everyXDays') {
+            if (habit.frequency.type === FREQ.EVERY_X_DAYS) {
                 const last = getLastCompletionDate(habit);
                 if (!last) return 0;
-                return Math.max(0, daysBetween(last, today) - (habit.frequency.everyXDays || 2));
+                return Math.max(0, daysBetween(last, today) - (habit.frequency.everyXDays || DEFAULTS.EVERY_X_DAYS));
             }
             return 0;
         }
@@ -1315,14 +1378,15 @@
         function calculateMomentumScore(habit) {
             const today = getTodayString();
             const freq = habit.frequency;
+            const freqType = freq.type;
 
             // Determine the cycle length for this habit type
             let cycleDays = 1;
-            if (freq.type === 'daily' || freq.type === 'twiceDaily') cycleDays = 1;
-            else if (freq.type === 'reminder') cycleDays = freq.reminderDays || 1;
-            else if (freq.type === 'timesPerWeek') cycleDays = 7 / (freq.timesPerWeek || 3);
-            else if (freq.type === 'timesPerMonth') cycleDays = 30 / (freq.timesPerMonth || 4);
-            else if (freq.type === 'everyXDays') cycleDays = freq.everyXDays || 2;
+            if (freqType === FREQ.DAILY || freqType === FREQ.TWICE_DAILY) cycleDays = 1;
+            else if (freqType === FREQ.REMINDER) cycleDays = freq.reminderDays || DEFAULTS.REMINDER_DAYS;
+            else if (freqType === FREQ.TIMES_PER_WEEK) cycleDays = 7 / (freq.timesPerWeek || DEFAULTS.TIMES_PER_PERIOD);
+            else if (freqType === FREQ.TIMES_PER_MONTH) cycleDays = 30 / (freq.timesPerMonth || DEFAULTS.TIMES_PER_PERIOD);
+            else if (freqType === FREQ.EVERY_X_DAYS) cycleDays = freq.everyXDays || DEFAULTS.EVERY_X_DAYS;
 
             // Time window is 2-3x the cycle length, minimum 14 days
             const windowDays = Math.max(14, Math.round(cycleDays * 2.5));
@@ -1347,7 +1411,6 @@
             }
 
             // Apply decay and calculate new score
-            // For each day, apply small decay if no completion
             const completionDates = new Set(habit.completions.map(c => c.date));
 
             for (let i = 1; i <= daysSinceUpdate; i++) {
@@ -1355,24 +1418,20 @@
                 checkDate.setDate(checkDate.getDate() + i);
                 const checkDateStr = toDateString(checkDate);
 
-                // Check if habit was due on this date
                 const wasDue = wasHabitDueOnDate(habit, checkDateStr);
                 const wasCompleted = completionDates.has(checkDateStr);
 
                 if (wasDue) {
                     if (wasCompleted) {
-                        // Completion: +15 points
                         score = Math.min(100, score + 15);
-                    } else if (freq.type !== 'reminder') {
-                        // Missed: -15 points, but diminishing returns when already negative
+                    } else if (freqType !== FREQ.REMINDER) {
                         // Reminders don't get penalized for being missed
                         const penalty = score < 0 ? Math.max(5, 15 + score * 0.15) : 15;
                         score = Math.max(-100, score - penalty);
                     }
                 }
 
-                // Apply daily decay (3% towards 0)
-                score = score * 0.97;
+                score = score * 0.97; // Daily decay
             }
 
             return { raw: Math.round(score), display: getDisplayScore(score) };
@@ -1380,11 +1439,13 @@
 
         function wasHabitDueOnDate(habit, dateStr) {
             const freq = habit.frequency;
-            if (freq.type === 'daily' || freq.type === 'twiceDaily') return true;
-            if (freq.type === 'timesPerWeek') return true; // Simplified - always potentially due
-            if (freq.type === 'timesPerMonth') return true; // Simplified - always potentially due
-            if (freq.type === 'everyXDays' || freq.type === 'reminder') {
-                const interval = freq.type === 'reminder' ? (freq.reminderDays || 1) : (freq.everyXDays || 2);
+            const freqType = freq.type;
+            if (freqType === FREQ.DAILY || freqType === FREQ.TWICE_DAILY) return true;
+            if (freqType === FREQ.TIMES_PER_WEEK || freqType === FREQ.TIMES_PER_MONTH) return true;
+            if (freqType === FREQ.EVERY_X_DAYS || freqType === FREQ.REMINDER) {
+                const interval = freqType === FREQ.REMINDER
+                    ? (freq.reminderDays || DEFAULTS.REMINDER_DAYS)
+                    : (freq.everyXDays || DEFAULTS.EVERY_X_DAYS);
                 const last = getLastCompletionBefore(habit, dateStr);
                 if (!last) return true;
                 const since = daysBetween(last, dateStr);
@@ -1476,13 +1537,15 @@
                 return;
             }
 
-            if (habit.frequency.type === 'twiceDaily' && !period) period = getTimeOfDayNow() === 'morning' ? 'morning' : 'night';
-            const existing = habit.completions.find(c => c.date === today && (habit.frequency.type !== 'twiceDaily' || c.period === period));
+            const freqType = habit.frequency.type;
+            if (freqType === FREQ.TWICE_DAILY && !period) {
+                period = getTimeOfDayNow() === PERIOD.MORNING ? PERIOD.MORNING : PERIOD.NIGHT;
+            }
+            const existing = habit.completions.find(c => c.date === today && (freqType !== FREQ.TWICE_DAILY || c.period === period));
             if (existing) {
                 habit.completions = habit.completions.filter(c => c !== existing);
             } else {
                 habit.completions.push({ date: today, period, timestamp: Date.now() });
-                // Initialize momentum tracking if needed
                 if (!habit.lastScoreUpdate) {
                     habit.lastScoreUpdate = habit.createdAt || today;
                     habit.momentumScore = 0;
@@ -1498,28 +1561,27 @@
             const today = getTodayString();
             const timeOfDay = getTimeOfDayNow();
             if (habit.skippedDates?.includes(today)) return false;
-            // Check if snoozed (either old 'night' format or new date format)
             if (habit.snoozedUntil) {
-                if (habit.snoozedUntil === 'night' && timeOfDay !== 'night') return false;
-                if (habit.snoozedUntil !== 'night' && habit.snoozedUntil > today) return false;
+                if (habit.snoozedUntil === PERIOD.NIGHT && timeOfDay !== PERIOD.NIGHT) return false;
+                if (habit.snoozedUntil !== PERIOD.NIGHT && habit.snoozedUntil > today) return false;
             }
 
             const status = getCompletionStatus(habit);
+            const freqType = habit.frequency.type;
 
             // Twice daily: only show in Morning and Bedtime periods
-            if (habit.frequency.type === 'twiceDaily') {
-                if (timeOfDay === 'morning' && !status.morningDone) return true;
-                if (timeOfDay === 'night' && !status.nightDone) return true;
-                // During anytime period, twice daily goes to Later (waiting for bedtime)
+            if (freqType === FREQ.TWICE_DAILY) {
+                if (timeOfDay === PERIOD.MORNING && !status.morningDone) return true;
+                if (timeOfDay === PERIOD.NIGHT && !status.nightDone) return true;
                 return false;
             }
 
-            // Times/points per week/month: if target met, goes to Optional section instead
-            if (habit.frequency.type === 'timesPerWeek' || habit.frequency.type === 'timesPerMonth' ||
-                habit.frequency.type === 'pointsPerWeek' || habit.frequency.type === 'pointsPerMonth') {
+            // Times/points per week/month: if target met, goes to Optional section
+            if (freqType === FREQ.TIMES_PER_WEEK || freqType === FREQ.TIMES_PER_MONTH ||
+                freqType === FREQ.POINTS_PER_WEEK || freqType === FREQ.POINTS_PER_MONTH) {
                 const completedToday = habit.completions.some(c => c.date === today);
                 if (completedToday) return false;
-                if (status.completed) return false; // Target met = optional, not Now
+                if (status.completed) return false;
             } else if (status.completed) {
                 return false;
             }
@@ -2083,140 +2145,48 @@
         }
 
         let editMode = false;
-        let editTimeOfDay = null;
-        let editFrequency = 'daily';
 
-        function openDetails(id) { selectedHabitId = id; editMode = false; renderDetails(); document.getElementById('detailsOverlay').classList.add('active'); }
+        function openDetails(id) {
+            selectedHabitId = id;
+            editMode = false;
+            formMode = 'create';
+            renderDetails();
+            document.getElementById('detailsOverlay').classList.add('active');
+        }
+
         function openDetailsEdit(id) {
-            // Open details directly in edit mode
             const habit = loadHabits().find(h => h.id === id);
             if (!habit) return;
             selectedHabitId = id;
             editMode = true;
-            editTimeOfDay = habit.timeOfDay;
-            editHideSubtasks = habit.showSubtasksOnMain === false;
-            editIcon = habit.icon || HABIT_EMOJIS[0];
-            editAllowOptional = habit.allowOptional !== false;
-            // Determine mode based on frequency type
-            editIsReminderMode = habit.frequency.type === 'reminder';
-            editIsPointsMode = habit.frequency.type === 'pointsPerWeek' || habit.frequency.type === 'pointsPerMonth';
-            // Map frequency type to dropdown value
-            const freqType = habit.frequency.type;
-            if (freqType === 'reminder') {
-                editFrequency = 'daily'; // Default when in reminder mode
-            } else if (freqType === 'pointsPerWeek' || freqType === 'pointsPerMonth') {
-                editFrequency = 'timesPerPeriod';
-            } else if (freqType === 'timesPerWeek' || freqType === 'timesPerMonth') {
-                editFrequency = 'timesPerPeriod';
-            } else {
-                editFrequency = freqType;
-            }
-            editTimesPeriod = (freqType === 'timesPerMonth') ? 'month' : 'week';
-            editPointsPeriod = (freqType === 'pointsPerMonth') ? 'month' : 'week';
+            formMode = 'edit';
+            formHabitId = id;
+            initFormStateFromHabit(habit);
             renderDetails();
             document.getElementById('detailsOverlay').classList.add('active');
         }
-        function closeDetails() { document.getElementById('detailsOverlay').classList.remove('active'); selectedHabitId = null; editMode = false; formMode = 'create'; }
+
+        function closeDetails() {
+            document.getElementById('detailsOverlay').classList.remove('active');
+            selectedHabitId = null;
+            editMode = false;
+            formMode = 'create';
+            resetFormState();
+        }
 
         function toggleEditMode() {
             const habit = loadHabits().find(h => h.id === selectedHabitId);
             if (!habit) return;
             editMode = !editMode;
             if (editMode) {
-                editTimeOfDay = habit.timeOfDay;
-                editHideSubtasks = habit.showSubtasksOnMain === false;
-                editIcon = habit.icon || HABIT_EMOJIS[0];
-                editAllowOptional = habit.allowOptional !== false;
-                showSubtasksInput = false; // Reset - will show if habit has subtasks
-                // Determine mode based on frequency type
-                const freqType = habit.frequency.type;
-                editIsReminderMode = freqType === 'reminder';
-                editIsPointsMode = freqType === 'pointsPerWeek' || freqType === 'pointsPerMonth';
-                // Map frequency type to dropdown value
-                if (freqType === 'reminder') {
-                    editFrequency = 'daily';
-                } else if (freqType === 'pointsPerWeek' || freqType === 'pointsPerMonth') {
-                    editFrequency = 'timesPerPeriod';
-                } else if (freqType === 'timesPerWeek' || freqType === 'timesPerMonth') {
-                    editFrequency = 'timesPerPeriod';
-                } else {
-                    editFrequency = freqType;
-                }
-                editTimesPeriod = (freqType === 'timesPerMonth') ? 'month' : 'week';
-                editPointsPeriod = (freqType === 'pointsPerMonth') ? 'month' : 'week';
+                formMode = 'edit';
+                formHabitId = habit.id;
+                initFormStateFromHabit(habit);
             } else {
-                // Reset form mode when exiting edit
                 formMode = 'create';
+                resetFormState();
             }
             renderDetails();
-        }
-
-        function toggleEditTime(t) {
-            editTimeOfDay = editTimeOfDay === t ? null : t;
-            renderDetails();
-        }
-
-        function selectEditFrequency(f) {
-            editFrequency = f;
-            // Clear time selection for Twice Daily (has its own Morning/Bedtime structure)
-            if (f === 'twiceDaily') {
-                editTimeOfDay = null;
-            }
-            // Disable points mode for daily/twiceDaily
-            if ((f === 'daily' || f === 'twiceDaily') && editIsPointsMode) {
-                editIsPointsMode = false;
-            }
-            renderDetails();
-        }
-
-        function toggleEditReminderMode() {
-            editIsReminderMode = !editIsReminderMode;
-            if (editIsReminderMode) {
-                editIsPointsMode = false;
-            }
-            renderDetails();
-        }
-
-        function toggleEditPointsMode() {
-            if (editFrequency === 'daily' || editFrequency === 'twiceDaily' || editIsReminderMode) return;
-            editIsPointsMode = !editIsPointsMode;
-            renderDetails();
-        }
-
-        function toggleEditAllowOptional() {
-            editAllowOptional = !editAllowOptional;
-            renderDetails();
-        }
-
-        let editHideSubtasks = false;
-        let editIcon = null;
-        let editTimesPeriod = 'week';
-        let editPointsPeriod = 'week';
-        let editAllowOptional = true;
-        let editIsReminderMode = false;
-        let editIsPointsMode = false;
-
-        function setEditTimesPeriod(period) {
-            editTimesPeriod = period;
-            renderDetails();
-        }
-
-        function setEditPointsPeriod(period) {
-            editPointsPeriod = period;
-            renderDetails();
-        }
-
-        function toggleHideSubtasks() {
-            editHideSubtasks = !editHideSubtasks;
-            renderDetails();
-        }
-
-        function toggleEditSubtasksSection() {
-            showSubtasksInput = !showSubtasksInput;
-            renderDetails();
-            if (showSubtasksInput) {
-                setTimeout(() => document.getElementById('editSubtaskInput')?.focus(), 0);
-            }
         }
 
         function updateEditSubtask(habitId, subtaskId, newName) {
@@ -2231,8 +2201,6 @@
             }
         }
 
-        // selectEditIcon is now handled by selectEmojiFromPopup
-
         function saveHabitEdit() {
             const habits = loadHabits();
             const habit = habits.find(h => h.id === selectedHabitId);
@@ -2243,63 +2211,50 @@
             if (!newName) return;
 
             habit.name = newName;
-            habit.icon = editIcon || habit.icon || HABIT_EMOJIS[0];
-            habit.timeOfDay = editTimeOfDay;
+            habit.icon = formState.icon || habit.icon || HABIT_EMOJIS[0];
+            habit.timeOfDay = formState.time;
 
-            // Determine frequency type based on mode and selection
-            let finalFreqType;
-            if (editIsReminderMode) {
-                finalFreqType = 'reminder';
-            } else if (editIsPointsMode) {
-                if (editFrequency === 'timesPerPeriod') {
-                    finalFreqType = editPointsPeriod === 'week' ? 'pointsPerWeek' : 'pointsPerMonth';
-                } else {
-                    finalFreqType = editFrequency; // everyXDays with points
-                }
-            } else {
-                if (editFrequency === 'timesPerPeriod') {
-                    finalFreqType = editTimesPeriod === 'week' ? 'timesPerWeek' : 'timesPerMonth';
-                } else {
-                    finalFreqType = editFrequency;
-                }
-            }
+            // Use shared frequency type determination
+            const finalFreqType = getFrequencyType();
             habit.frequency.type = finalFreqType;
-            habit.usePoints = editIsPointsMode;
+            habit.usePoints = formState.isPointsMode;
 
             // Save frequency-specific values
-            if (finalFreqType === 'timesPerWeek' || finalFreqType === 'timesPerMonth') {
+            if (finalFreqType === FREQ.TIMES_PER_WEEK || finalFreqType === FREQ.TIMES_PER_MONTH) {
                 const input = document.getElementById('editTimesPerPeriod');
-                const val = parseInt(input?.value) || 3;
+                const val = parseInt(input?.value) || DEFAULTS.TIMES_PER_PERIOD;
                 habit.frequency.timesPerWeek = val;
                 habit.frequency.timesPerMonth = val;
             }
-            if (finalFreqType === 'everyXDays') {
+            if (finalFreqType === FREQ.EVERY_X_DAYS) {
                 const input = document.getElementById('editEveryXDays');
-                habit.frequency.everyXDays = parseInt(input?.value) || 2;
-                if (editIsPointsMode) {
+                habit.frequency.everyXDays = parseInt(input?.value) || DEFAULTS.EVERY_X_DAYS;
+                if (formState.isPointsMode) {
                     const ptsInput = document.getElementById('editPointsTarget');
-                    habit.frequency.pointsTarget = parseInt(ptsInput?.value) || 5;
+                    habit.frequency.pointsTarget = parseInt(ptsInput?.value) || DEFAULTS.POINTS_TARGET;
                 }
             }
-            if (finalFreqType === 'reminder') {
+            if (finalFreqType === FREQ.REMINDER) {
                 const input = document.getElementById('editReminderDays');
-                habit.frequency.reminderDays = parseInt(input?.value) || 3;
+                habit.frequency.reminderDays = parseInt(input?.value) || DEFAULTS.REMINDER_DAYS;
             }
-            if (finalFreqType === 'pointsPerWeek' || finalFreqType === 'pointsPerMonth') {
+            if (finalFreqType === FREQ.POINTS_PER_WEEK || finalFreqType === FREQ.POINTS_PER_MONTH) {
                 const input = document.getElementById('editPointsPerPeriod');
-                const val = parseInt(input?.value) || 12;
+                const val = parseInt(input?.value) || DEFAULTS.POINTS_PER_PERIOD;
                 habit.frequency.pointsPerWeek = val;
                 habit.frequency.pointsPerMonth = val;
             }
 
             // Save subtask visibility preference
-            habit.showSubtasksOnMain = editHideSubtasks ? false : undefined;
+            habit.showSubtasksOnMain = formState.hideSubtasksOnMain ? false : undefined;
 
             // Save allow optional preference
-            habit.allowOptional = editAllowOptional;
+            habit.allowOptional = formState.allowOptional;
 
             saveHabits(habits);
             editMode = false;
+            formMode = 'create';
+            resetFormState();
             renderDetails();
             renderHabits();
         }
