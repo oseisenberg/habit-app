@@ -1599,9 +1599,14 @@
         function isCompletedToday(habit) {
             const today = getTodayString();
             // For twice daily, only fully completed (both periods) counts as "completed"
-            if (habit.frequency.type === 'twiceDaily') {
+            if (habit.frequency.type === FREQ.TWICE_DAILY) {
                 const status = getCompletionStatus(habit);
                 return status.morningDone && status.nightDone;
+            }
+            // For habits with subtasks, completed means all subtasks done
+            if (habit.subtasks && habit.subtasks.length > 0) {
+                const progress = getSubtaskProgress(habit);
+                return progress.completed === progress.total;
             }
             return habit.completions.some(c => c.date === today);
         }
