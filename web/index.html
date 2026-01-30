@@ -60,6 +60,16 @@
         .neglect-dot:nth-child(2) { top: 6px; right: 2px; }
         .neglect-dot:nth-child(3) { top: 16px; right: -2px; }
 
+        /* Reminder badge - small bell icon in top-left */
+        .reminder-badge {
+            position: absolute; top: -2px; left: -2px;
+            font-size: 0.7rem; line-height: 1;
+            background: #1a1a2e; border-radius: 50%;
+            width: 16px; height: 16px;
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: none;
+        }
+
         .habit-emoji {
             position: relative; z-index: 1; font-size: 1.3rem; line-height: 1;
         }
@@ -1424,9 +1434,10 @@
                 if (wasDue) {
                     if (wasCompleted) {
                         score = Math.min(100, score + 15);
-                    } else if (freqType !== FREQ.REMINDER) {
-                        // Reminders don't get penalized for being missed
-                        const penalty = score < 0 ? Math.max(5, 15 + score * 0.15) : 15;
+                    } else {
+                        // Apply penalty for missed days (reminders get smaller penalty)
+                        const basePenalty = score < 0 ? Math.max(5, 15 + score * 0.15) : 15;
+                        const penalty = freqType === FREQ.REMINDER ? basePenalty * 0.5 : basePenalty;
                         score = Math.max(-100, score - penalty);
                     }
                 }
@@ -1905,11 +1916,16 @@
                 if (neglectLevel > 0) ringClass = 'overdue';
             }
 
+            // Reminder badge for reminder-type habits
+            const reminderBadge = habit.frequency.type === FREQ.REMINDER
+                ? '<div class="reminder-badge">🔔</div>' : '';
+
             return `<div class="habit-icon-wrapper">
                 <div class="habit-icon" onclick="${leftClick}" oncontextmenu="${rightClick}">
                     <div class="habit-ring ${ringClass}" style="--progress: ${progress}">
                         <span class="habit-emoji">${icon}</span>
                         ${neglectDots}
+                        ${reminderBadge}
                     </div>
                 </div>
             </div>`;
@@ -2320,7 +2336,7 @@
                 const isSnoozed = habit.snoozedUntil && (habit.snoozedUntil === 'night' || habit.snoozedUntil > today);
                 const canSnooze = !isSnoozed && !isCompletedToday(habit);
 
-                const freqLabel = { daily: 'Daily', reminder: `Every ${habit.frequency.reminderDays || 1} days (no penalty)`, twiceDaily: 'Twice daily', timesPerWeek: `${habit.frequency.timesPerWeek || 3}x/week`, timesPerMonth: `${habit.frequency.timesPerMonth || 4}x/month`, everyXDays: `Every ${habit.frequency.everyXDays || 2} days`, pointsPerWeek: `${habit.frequency.pointsPerWeek || 12} pts/week`, pointsPerMonth: `${habit.frequency.pointsPerMonth || 30} pts/month` }[habit.frequency.type];
+                const freqLabel = { daily: 'Daily', reminder: `Every ${habit.frequency.reminderDays || 1} days (gentle)`, twiceDaily: 'Twice daily', timesPerWeek: `${habit.frequency.timesPerWeek || 3}x/week`, timesPerMonth: `${habit.frequency.timesPerMonth || 4}x/month`, everyXDays: `Every ${habit.frequency.everyXDays || 2} days`, pointsPerWeek: `${habit.frequency.pointsPerWeek || 12} pts/week`, pointsPerMonth: `${habit.frequency.pointsPerMonth || 30} pts/month` }[habit.frequency.type];
                 const timeLabel = habit.timeOfDay ? { morning: 'Morning', night: 'Bedtime' }[habit.timeOfDay] : 'Anytime';
 
                 // Momentum score
