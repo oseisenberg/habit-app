@@ -782,8 +782,8 @@
                         </div>
                         <input type="text" class="form-input" id="${isEdit ? 'editHabitName' : 'habitInput'}" value="${habitName}" placeholder="e.g., Brush teeth..." style="flex:1;margin:0;box-sizing:border-box" onkeypress="if(event.key==='Enter')${isEdit ? 'saveHabitEdit' : 'addHabit'}()" />
                         <div class="time-toggle" id="${isEdit ? 'editTimeToggle' : 'timeToggle'}" style="height:100%">
-                            <button type="button" class="time-toggle-btn ${state.time === PERIOD.MORNING ? 'active' : ''} ${isTwiceDaily ? 'disabled' : ''}" data-time="morning" onclick="toggleFormTime('${PERIOD.MORNING}')">🌅</button>
-                            <button type="button" class="time-toggle-btn ${state.time === PERIOD.NIGHT ? 'active' : ''} ${isTwiceDaily ? 'disabled' : ''}" data-time="night" onclick="toggleFormTime('${PERIOD.NIGHT}')">🌙</button>
+                            <button type="button" class="time-toggle-btn ${state.time === PERIOD.MORNING || isTwiceDaily ? 'active' : ''}" data-time="morning" onclick="toggleFormTime('${PERIOD.MORNING}')">🌅</button>
+                            <button type="button" class="time-toggle-btn ${state.time === PERIOD.NIGHT || isTwiceDaily ? 'active' : ''}" data-time="night" onclick="toggleFormTime('${PERIOD.NIGHT}')">🌙</button>
                         </div>
                     </div>
                 </div>
