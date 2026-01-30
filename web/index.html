@@ -428,7 +428,10 @@
     <div class="container">
         <div class="header">
             <h1>Habits</h1>
-            <button class="settings-btn" onclick="openSettings()">⚙️</button>
+            <div style="display:flex;gap:4px">
+                <button class="settings-btn" onclick="openAllHabits()">📋</button>
+                <button class="settings-btn" onclick="openSettings()">⚙️</button>
+            </div>
         </div>
         <p class="date-header" id="currentDate"></p>
         <p class="time-note" id="timeNote"></p>
@@ -502,6 +505,11 @@
     <!-- Snooze Popup -->
     <div class="points-popup-overlay" id="snoozePopupOverlay" onclick="handleOverlayClick(event, 'snoozePopupOverlay', closeSnoozePopup)">
         <div class="points-popup" id="snoozePopup"></div>
+    </div>
+
+    <!-- All Habits View -->
+    <div class="modal-overlay" id="allHabitsOverlay" onclick="handleOverlayClick(event, 'allHabitsOverlay', closeAllHabits)">
+        <div class="modal" id="allHabitsModal"></div>
     </div>
 
     <!-- Debug -->
@@ -2469,6 +2477,58 @@
         }
 
         // ========================================
+        // ALL HABITS VIEW
+        // ========================================
+
+        function openAllHabits() {
+            renderAllHabits();
+            document.getElementById('allHabitsOverlay').classList.add('active');
+        }
+
+        function closeAllHabits() {
+            document.getElementById('allHabitsOverlay').classList.remove('active');
+        }
+
+        function renderAllHabits() {
+            const habits = loadHabits();
+            const modal = document.getElementById('allHabitsModal');
+
+            if (!habits.length) {
+                modal.innerHTML = `
+                    <div class="modal-header">
+                        <h2 class="modal-title">All Habits</h2>
+                        <button class="modal-close" onclick="closeAllHabits()">&times;</button>
+                    </div>
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <div>No habits yet</div>
+                    </div>`;
+                return;
+            }
+
+            // Sort alphabetically for consistent display
+            const sorted = [...habits].sort((a, b) => a.name.localeCompare(b.name));
+
+            const habitsHtml = sorted.map(habit => {
+                const icon = habit.icon || '📌';
+                return `<div class="habit-icon-wrapper">
+                    <div class="habit-icon" onclick="closeAllHabits();openDetails(${habit.id})">
+                        <div class="habit-ring" style="--progress: 0%; background: #2a2a3e;">
+                            <span class="habit-emoji">${icon}</span>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            modal.innerHTML = `
+                <div class="modal-header">
+                    <h2 class="modal-title">All Habits</h2>
+                    <button class="modal-close" onclick="closeAllHabits()">&times;</button>
+                </div>
+                <div class="habits-grid">${habitsHtml}</div>`;
+        }
+
+        // ========================================
         // UTILITIES & TEST DATA
         // ========================================
 
@@ -2517,7 +2577,7 @@
             }
         }
 
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetails(); closeSettings(); closeSubtaskPopup(); closePointsPopup(); closeEmojiPopup(); closeSnoozePopup(); } });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetails(); closeSettings(); closeSubtaskPopup(); closePointsPopup(); closeEmojiPopup(); closeSnoozePopup(); closeAllHabits(); } });
 
         // On first visit (no data), load test data as initial experience
         if (!localStorage.getItem('habits_v3')) {
