@@ -1630,6 +1630,26 @@
             renderHabits();
         }
 
+        function completeHabitFromDetails(id) {
+            const habits = loadHabits(), habit = habits.find(h => h.id === id);
+            if (!habit) return;
+
+            // If habit has subtasks, show popup instead
+            if (habit.subtasks && habit.subtasks.length > 0) {
+                openSubtaskPopup(id);
+                return;
+            }
+
+            // For twice daily, complete the appropriate period
+            if (habit.frequency.type === FREQ.TWICE_DAILY) {
+                completeTwiceDaily(id);
+            } else {
+                completeHabit(id);
+            }
+            // Re-render details to show updated state
+            renderDetails();
+        }
+
         // ========================================
         // HABIT STATE FUNCTIONS
         // ========================================
@@ -2442,6 +2462,27 @@
 
                 const scoreClass = rawScore > 0 ? 'positive' : (rawScore < 0 ? 'negative' : 'neutral');
                 const icon = habit.icon || '📌';
+
+                // Determine if habit can be completed and how
+                const isPointsBased = habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH;
+                const isTwiceDaily = habit.frequency.type === FREQ.TWICE_DAILY;
+                const completedToday = isCompletedToday(habit);
+                const status = getCompletionStatus(habit);
+
+                let completeButton = '';
+                if (!completedToday) {
+                    if (isPointsBased) {
+                        completeButton = `<button class="submit-btn" style="flex:1;background:#4ade80" onclick="closeDetails();openPointsPopup(${habit.id})">Complete</button>`;
+                    } else if (isTwiceDaily) {
+                        const canComplete = !status.morningDone || !status.nightDone;
+                        if (canComplete) {
+                            completeButton = `<button class="submit-btn" style="flex:1;background:#4ade80" onclick="completeHabitFromDetails(${habit.id})">Complete</button>`;
+                        }
+                    } else {
+                        completeButton = `<button class="submit-btn" style="flex:1;background:#4ade80" onclick="completeHabitFromDetails(${habit.id})">Complete</button>`;
+                    }
+                }
+
                 document.getElementById('detailsModal').innerHTML = `
                     <div class="modal-header"><span></span><button class="modal-close" onclick="closeDetails()">&times;</button></div>
                     <div class="details-icon-header">
@@ -2462,13 +2503,14 @@
                     </div>
                     ${recoveryText}
                     <div class="action-buttons">
+                        ${completeButton ? `<div style="display:flex;gap:6px">${completeButton}</div>` : ''}
                         <div style="display:flex;gap:6px">
                             <button class="submit-btn" style="flex:1" onclick="toggleEditMode()">Edit</button>
                             ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id})">Snooze</button>` : ''}
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
-                            <button class="submit-btn secondary" style="flex:1" onclick="skipHabit(${habit.id})">Skip</button>
                         </div>
                         <div style="display:flex;gap:6px">
+                            <button class="submit-btn secondary" style="flex:1" onclick="skipHabit(${habit.id})">Skip</button>
                             ${canFreshStart ? `<button class="submit-btn secondary" style="flex:1" onclick="freshStartHabit(${habit.id})">Fresh Start</button>` : ''}
                             <button class="submit-btn danger" style="flex:1" onclick="deleteHabit(${habit.id})">Delete</button>
                         </div>
