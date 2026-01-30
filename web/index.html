@@ -6,6 +6,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0f0f1a">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
     <title>Habits</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -293,6 +295,14 @@
         .toggle-switch::after { content: ''; position: absolute; width: 20px; height: 20px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: left 0.2s; }
         .toggle-switch.active::after { left: 22px; }
 
+        /* Checkbox toggle switch */
+        label.toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        label.toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #2a2a3e; transition: 0.2s; border-radius: 24px; }
+        .toggle-slider::before { content: ''; position: absolute; width: 18px; height: 18px; background: white; border-radius: 50%; top: 3px; left: 3px; transition: 0.2s; }
+        label.toggle-switch input:checked + .toggle-slider { background: #4ade80; }
+        label.toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+
         .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #2a2a3e; }
         .settings-label { color: #ccc; font-size: 0.85rem; }
         .settings-value { display: flex; align-items: center; gap: 6px; }
@@ -479,9 +489,46 @@
                     <span style="color:#666">:00</span>
                 </div>
             </div>
-            <div class="settings-row" style="border-bottom:none; color:#666; font-size:0.8rem;">
+            <div class="settings-row" style="color:#666; font-size:0.8rem;">
                 Completions before morning count as previous day's night.
             </div>
+
+            <!-- Notifications Section -->
+            <div class="settings-row" style="margin-top:16px; border-top:1px solid #333; padding-top:16px;">
+                <span class="settings-label">Notifications</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="notificationsEnabled" onchange="toggleNotifications()">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div id="notificationSettings" style="display:none;">
+                <div class="settings-row">
+                    <span class="settings-label">Morning reminder</span>
+                    <div class="settings-value">
+                        <input type="number" class="settings-input" id="morningReminderTime" min="0" max="23" value="5">
+                        <span style="color:#666">:00</span>
+                    </div>
+                </div>
+                <div class="settings-row">
+                    <span class="settings-label">Night reminder</span>
+                    <div class="settings-value">
+                        <input type="number" class="settings-input" id="nightReminderTime" min="0" max="23" value="18">
+                        <span style="color:#666">:00</span>
+                    </div>
+                </div>
+                <div class="settings-row" style="border-bottom:none;">
+                    <span class="settings-label">Weekly summary (Sun)</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="weeklySummaryEnabled">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div id="installPrompt" style="display:none; margin-top:12px; padding:12px; background:#1a1a2e; border-radius:8px; font-size:0.85rem;">
+                <div style="color:#f59e0b; margin-bottom:8px;">Install app for notifications</div>
+                <div style="color:#888;">Tap <span style="color:#fff;">Share</span> then <span style="color:#fff;">Add to Home Screen</span></div>
+            </div>
+
             <button class="submit-btn" onclick="saveSettings()">Save Settings</button>
             <button class="submit-btn secondary" onclick="exportData()" style="margin-top:8px">Export All Data (JSON)</button>
         </div>
@@ -950,7 +997,16 @@
 
         function getSettings() {
             const s = localStorage.getItem('habit_settings');
-            return s ? JSON.parse(s) : { morningStart: 5, nightStart: 18, sortMethod: 'default' };
+            const defaults = {
+                morningStart: 5,
+                nightStart: 18,
+                sortMethod: 'default',
+                notificationsEnabled: false,
+                morningReminderTime: 5,
+                nightReminderTime: 18,
+                weeklySummaryEnabled: false
+            };
+            return s ? { ...defaults, ...JSON.parse(s) } : defaults;
         }
 
         // ========================================
@@ -1171,17 +1227,220 @@
             document.getElementById('morningStart').value = s.morningStart;
             document.getElementById('nightStart').value = s.nightStart;
             document.getElementById('sortMethod').value = s.sortMethod || 'default';
+            document.getElementById('notificationsEnabled').checked = s.notificationsEnabled;
+            document.getElementById('morningReminderTime').value = s.morningReminderTime;
+            document.getElementById('nightReminderTime').value = s.nightReminderTime;
+            document.getElementById('weeklySummaryEnabled').checked = s.weeklySummaryEnabled;
+            document.getElementById('notificationSettings').style.display = s.notificationsEnabled ? 'block' : 'none';
+            updateInstallPromptVisibility();
             document.getElementById('settingsOverlay').classList.add('active');
         }
         function closeSettings() { document.getElementById('settingsOverlay').classList.remove('active'); }
         function saveSettings() {
-            localStorage.setItem('habit_settings', JSON.stringify({
+            const settings = {
                 morningStart: parseInt(document.getElementById('morningStart').value) || 5,
                 nightStart: parseInt(document.getElementById('nightStart').value) || 18,
-                sortMethod: document.getElementById('sortMethod').value || 'default'
-            }));
+                sortMethod: document.getElementById('sortMethod').value || 'default',
+                notificationsEnabled: document.getElementById('notificationsEnabled').checked,
+                morningReminderTime: parseInt(document.getElementById('morningReminderTime').value) || 5,
+                nightReminderTime: parseInt(document.getElementById('nightReminderTime').value) || 18,
+                weeklySummaryEnabled: document.getElementById('weeklySummaryEnabled').checked
+            };
+            localStorage.setItem('habit_settings', JSON.stringify(settings));
+            if (settings.notificationsEnabled) {
+                scheduleNotifications();
+            }
             closeSettings();
             updateDisplay();
+        }
+
+        // ========================================
+        // NOTIFICATIONS
+        // ========================================
+
+        let notificationTimers = [];
+        let swRegistration = null;
+
+        function isStandalone() {
+            return window.matchMedia('(display-mode: standalone)').matches ||
+                   window.navigator.standalone === true;
+        }
+
+        function updateInstallPromptVisibility() {
+            const prompt = document.getElementById('installPrompt');
+            const notifEnabled = document.getElementById('notificationsEnabled').checked;
+            // Show install prompt if notifications enabled but not installed as PWA
+            if (notifEnabled && !isStandalone()) {
+                prompt.style.display = 'block';
+            } else {
+                prompt.style.display = 'none';
+            }
+        }
+
+        async function toggleNotifications() {
+            const checkbox = document.getElementById('notificationsEnabled');
+            const settingsDiv = document.getElementById('notificationSettings');
+
+            if (checkbox.checked) {
+                // Request permission
+                const permission = await requestNotificationPermission();
+                if (permission !== 'granted') {
+                    checkbox.checked = false;
+                    settingsDiv.style.display = 'none';
+                    alert('Notification permission denied. Please enable in browser settings.');
+                    return;
+                }
+                settingsDiv.style.display = 'block';
+            } else {
+                settingsDiv.style.display = 'none';
+                clearNotificationTimers();
+            }
+            updateInstallPromptVisibility();
+        }
+
+        async function requestNotificationPermission() {
+            if (!('Notification' in window)) {
+                return 'denied';
+            }
+            if (Notification.permission === 'granted') {
+                return 'granted';
+            }
+            if (Notification.permission !== 'denied') {
+                return await Notification.requestPermission();
+            }
+            return Notification.permission;
+        }
+
+        function clearNotificationTimers() {
+            notificationTimers.forEach(timer => clearTimeout(timer));
+            notificationTimers = [];
+        }
+
+        function scheduleNotifications() {
+            clearNotificationTimers();
+
+            const settings = getSettings();
+            if (!settings.notificationsEnabled) return;
+
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+            // Schedule morning reminder
+            const morningTime = new Date(today);
+            morningTime.setHours(settings.morningReminderTime, 0, 0, 0);
+            if (morningTime > now) {
+                const delay = morningTime - now;
+                const timer = setTimeout(() => showHabitNotification('morning'), delay);
+                notificationTimers.push(timer);
+            }
+
+            // Schedule night reminder
+            const nightTime = new Date(today);
+            nightTime.setHours(settings.nightReminderTime, 0, 0, 0);
+            if (nightTime > now) {
+                const delay = nightTime - now;
+                const timer = setTimeout(() => showHabitNotification('night'), delay);
+                notificationTimers.push(timer);
+            }
+
+            // Schedule weekly summary for Sunday at 10am
+            if (settings.weeklySummaryEnabled) {
+                const sunday = new Date(today);
+                sunday.setDate(sunday.getDate() + (7 - sunday.getDay()) % 7);
+                sunday.setHours(10, 0, 0, 0);
+                if (sunday > now) {
+                    const delay = sunday - now;
+                    const timer = setTimeout(() => showWeeklySummary(), delay);
+                    notificationTimers.push(timer);
+                }
+            }
+        }
+
+        function showHabitNotification(period) {
+            const habits = loadHabits();
+            const todayStr = getTodayString();
+
+            // Count incomplete habits for this period
+            const incompleteHabits = habits.filter(h => {
+                if (h.timeOfDay && h.timeOfDay !== period) return false;
+                if (h.isReminder) return false;
+                return !isHabitComplete(h, todayStr, period);
+            });
+
+            if (incompleteHabits.length === 0) return;
+
+            const title = period === 'morning' ? 'Morning Routine' : 'Evening Routine';
+            const body = `${incompleteHabits.length} habit${incompleteHabits.length > 1 ? 's' : ''} waiting`;
+
+            sendNotification(title, body, `habit-${period}`);
+        }
+
+        function showWeeklySummary() {
+            const habits = loadHabits();
+            const weeklyHabits = habits.filter(h =>
+                h.frequency.type === 'timesPerWeek' || h.frequency.type === 'pointsPerWeek'
+            );
+
+            if (weeklyHabits.length === 0) return;
+
+            let onTrack = 0;
+            weeklyHabits.forEach(h => {
+                const progress = getWeeklyProgress(h);
+                if (progress.current >= progress.target) onTrack++;
+            });
+
+            const title = 'Weekly Summary';
+            const body = `${onTrack}/${weeklyHabits.length} weekly goals on track`;
+
+            sendNotification(title, body, 'weekly-summary');
+        }
+
+        function getWeeklyProgress(habit) {
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - dayOfWeek);
+            weekStart.setHours(0, 0, 0, 0);
+
+            const completionsThisWeek = habit.completions.filter(c => {
+                const cDate = new Date(c.date);
+                return cDate >= weekStart;
+            });
+
+            const target = habit.frequency.timesPerWeek || habit.frequency.pointsPerWeek || 1;
+            const current = habit.usePoints
+                ? completionsThisWeek.reduce((sum, c) => sum + (c.points || 0), 0)
+                : completionsThisWeek.length;
+
+            return { current, target };
+        }
+
+        function sendNotification(title, body, tag) {
+            if (swRegistration) {
+                // Use service worker for notification
+                swRegistration.active.postMessage({
+                    type: 'SHOW_NOTIFICATION',
+                    title,
+                    body,
+                    tag,
+                    data: { url: '/' }
+                });
+            } else if ('Notification' in window && Notification.permission === 'granted') {
+                // Fallback to regular notification
+                new Notification(title, { body, tag });
+            }
+        }
+
+        // Register service worker
+        async function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                try {
+                    swRegistration = await navigator.serviceWorker.register('/sw.js');
+                    console.log('Service worker registered');
+                } catch (err) {
+                    console.log('Service worker registration failed:', err);
+                }
+            }
         }
 
         function exportData() {
@@ -2697,6 +2956,12 @@
         // Update scores on page load to persist momentum for missed days
         updateAllHabitScores();
         updateDisplay();
+
+        // Initialize PWA and notifications
+        registerServiceWorker();
+        if (getSettings().notificationsEnabled) {
+            scheduleNotifications();
+        }
     </script>
 </body>
 </html>
