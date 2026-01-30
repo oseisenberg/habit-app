@@ -968,11 +968,8 @@
                 }
             }
 
-            // Sync all habits' lastScoreUpdate to new simulated date to prevent false neglect
-            const newToday = getTodayString();
-            const habits = loadHabits();
-            habits.forEach(h => { h.lastScoreUpdate = newToday; });
-            saveHabits(habits);
+            // Update momentum scores for any days that passed (applies penalties for missed days)
+            updateAllHabitScores();
             updateDebugDisplay();
             updateDisplay();
         }
@@ -988,11 +985,8 @@
         function debugResetTime() {
             debugDayOffset = 0;
             debugHourOverride = null;
-            // Sync all habits' lastScoreUpdate to real date to prevent false neglect
-            const newToday = getTodayString();
-            const habits = loadHabits();
-            habits.forEach(h => { h.lastScoreUpdate = newToday; });
-            saveHabits(habits);
+            // Update momentum scores and sync lastScoreUpdate to real date
+            updateAllHabitScores();
             updateDebugDisplay();
             updateDisplay();
         }
