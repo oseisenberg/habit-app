@@ -46,6 +46,7 @@
         }
         .habit-ring.completed { background: #4ade80; }
         .habit-ring.completed::before { background: #4ade80; }
+        .habit-ring.partial { background: conic-gradient(#4ade80 var(--progress), #2a2a3e var(--progress)); }
         .habit-ring.overdue { background: conic-gradient(#dc2626 var(--progress), #2a2a3e var(--progress)); }
 
         /* Neglect indicators - 1 to 3 red dots along the circle arc */
@@ -1849,25 +1850,43 @@
                 </div>`;
             }
 
+            // Check subtask progress for partial fill
+            const subtaskProgress = getSubtaskProgress(habit);
+            const hasSubtasks = subtaskProgress && subtaskProgress.total > 0;
+            const subtaskPct = hasSubtasks ? Math.round((subtaskProgress.completed / subtaskProgress.total) * 100) : 0;
+            const allSubtasksDone = hasSubtasks && subtaskProgress.completed === subtaskProgress.total;
+
             if (isCompleted) {
-                // In Finished section - show green if completed today
+                // In Finished section
                 const today = getTodayString();
                 const completedToday = habit.completions.some(c => c.date === today);
-                if (completedToday || status.completed) {
-                    ringClass = 'completed';
-                    progress = '100%';
+                if (completedToday || status.completed || allSubtasksDone) {
+                    if (hasSubtasks && !allSubtasksDone) {
+                        // Partial subtask completion - show green partial fill
+                        ringClass = 'partial';
+                        progress = `${subtaskPct}%`;
+                    } else {
+                        ringClass = 'completed';
+                        progress = '100%';
+                    }
                 } else {
-                    // Missed (in Finished but not actually completed)
                     ringClass = 'overdue';
                     progress = '0%';
                 }
-            } else if (status.completed) {
+            } else if (allSubtasksDone || status.completed) {
                 ringClass = 'completed';
                 progress = '100%';
-            } else if (habit.frequency.type === 'timesPerWeek' || habit.frequency.type === 'timesPerMonth' ||
-                       habit.frequency.type === 'pointsPerWeek' || habit.frequency.type === 'pointsPerMonth') {
-                // For weekly/monthly/points habits, just show done/not-done for today
-                // Red dots already indicate if behind schedule
+            } else if (hasSubtasks) {
+                // Partial subtask progress - show green partial fill
+                progress = `${subtaskPct}%`;
+                if (subtaskPct > 0) {
+                    ringClass = 'partial';
+                } else if (neglectLevel > 0) {
+                    ringClass = 'overdue';
+                }
+            } else if (habit.frequency.type === FREQ.TIMES_PER_WEEK || habit.frequency.type === FREQ.TIMES_PER_MONTH ||
+                       habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH) {
+                // For weekly/monthly/points habits without subtasks
                 const today = getTodayString();
                 const completedToday = habit.completions.some(c => c.date === today);
                 if (completedToday) {
@@ -1878,21 +1897,8 @@
                     if (neglectLevel > 0) ringClass = 'overdue';
                 }
             } else {
-                // Show partial fill based on subtask progress
-                const subtaskProgress = getSubtaskProgress(habit);
-                if (subtaskProgress && subtaskProgress.total > 0) {
-                    const pct = Math.round((subtaskProgress.completed / subtaskProgress.total) * 100);
-                    progress = `${pct}%`;
-                    // Mark as completed when all subtasks are done
-                    if (subtaskProgress.completed === subtaskProgress.total) {
-                        ringClass = 'completed';
-                    } else if (neglectLevel > 0) {
-                        ringClass = 'overdue';
-                    }
-                } else {
-                    progress = '0%';
-                    if (neglectLevel > 0) ringClass = 'overdue';
-                }
+                progress = '0%';
+                if (neglectLevel > 0) ringClass = 'overdue';
             }
 
             return `<div class="habit-icon-wrapper">
