@@ -644,14 +644,16 @@
             formState.hideSubtasksOnMain = habit.showSubtasksOnMain === false;
             formState.showSubtasks = false; // Will show if habit has subtasks
 
-            // Determine mode based on frequency type
+            // Determine mode based on frequency type and flags
             const freqType = habit.frequency.type;
-            formState.isReminderMode = freqType === FREQ.REMINDER;
+            // Reminder is now a modifier - check both new flag and old frequency type for backward compat
+            formState.isReminderMode = habit.isReminder || freqType === FREQ.REMINDER;
             formState.isPointsMode = freqType === FREQ.POINTS_PER_DAY || freqType === FREQ.POINTS_PER_WEEK || freqType === FREQ.POINTS_PER_MONTH;
 
             // Map frequency type to dropdown value
             if (freqType === FREQ.REMINDER) {
-                formState.frequency = FREQ.DAILY;
+                // Old reminder habits: map to Every X days
+                formState.frequency = FREQ.EVERY_X_DAYS;
             } else if (freqType === FREQ.POINTS_PER_DAY || freqType === FREQ.POINTS_PER_WEEK || freqType === FREQ.POINTS_PER_MONTH ||
                        freqType === FREQ.TIMES_PER_WEEK || freqType === FREQ.TIMES_PER_MONTH) {
                 formState.frequency = FREQ.TIMES_PER_PERIOD;
@@ -678,10 +680,10 @@
             const state = getFormState(habit);
             const currentIcon = state.icon || (habit?.icon) || '📌';
             const habitName = habit ? escapeHtml(habit.name) : '';
-            // Points only disabled when Reminder is active (frequency auto-switches when Points enabled)
-            const pointsDisabled = state.isReminderMode;
-            // Allow Extra disabled only for twice daily and reminders
-            const optionalDisabled = state.frequency === FREQ.TWICE_DAILY || state.isReminderMode;
+            // Points disabled only for twice daily (frequency auto-switches when Points enabled)
+            const pointsDisabled = state.frequency === FREQ.TWICE_DAILY;
+            // Allow Extra disabled only for twice daily
+            const optionalDisabled = state.frequency === FREQ.TWICE_DAILY;
             const isTwiceDaily = state.frequency === FREQ.TWICE_DAILY;
 
             // Build frequency inputs (use lowercase IDs for create, camelCase with 'edit' prefix for edit)
@@ -808,7 +810,7 @@
                 </div>
                 <div class="form-group" id="${isEdit ? 'editFrequencyGroup' : 'frequencyGroup'}">
                     <label class="form-label">Frequency</label>
-                    <div class="frequency-row" id="${isEdit ? 'editFrequencyRow' : 'frequencyRow'}" style="${state.isReminderMode ? 'display:none' : 'display:flex'}">
+                    <div class="frequency-row" id="${isEdit ? 'editFrequencyRow' : 'frequencyRow'}">
                         <select class="form-input" id="${isEdit ? 'editFrequencySelect' : 'frequencySelect'}" onchange="selectFormFrequency(this.value)" style="flex:1">
                             <option value="${FREQ.DAILY}" ${state.frequency === FREQ.DAILY ? 'selected' : ''} ${state.isPointsMode ? 'disabled' : ''}>Daily${state.isPointsMode ? ' (not with Points)' : ''}</option>
                             <option value="${FREQ.TWICE_DAILY}" ${state.frequency === FREQ.TWICE_DAILY ? 'selected' : ''} ${state.isPointsMode ? 'disabled' : ''}>Morning & Bedtime${state.isPointsMode ? ' (not with Points)' : ''}</option>
@@ -816,11 +818,6 @@
                             <option value="${FREQ.TIMES_PER_PERIOD}" ${state.frequency === FREQ.TIMES_PER_PERIOD ? 'selected' : ''}>X per period</option>
                         </select>
                         <div id="${isEdit ? 'editFrequencyInputs' : 'frequencyInputs'}">${freqInputsHtml}</div>
-                    </div>
-                    <div class="frequency-row dimmed" id="${isEdit ? 'editReminderRow' : 'reminderRow'}" style="${state.isReminderMode ? 'display:flex' : 'display:none'}">
-                        <span style="color:#888">Every</span>
-                        <input type="number" class="frequency-input" id="${isEdit ? 'editReminderDays' : 'reminderDays'}" value="${reminderDays}" min="1">
-                        <span style="color:#888">days</span>
                     </div>
                 </div>
                 ${subtasksHtml}
@@ -863,15 +860,10 @@
 
         function toggleFormReminderMode() {
             formState.isReminderMode = !formState.isReminderMode;
-            if (formState.isReminderMode) {
-                formState.isPointsMode = false;
-            }
             rerenderForm();
         }
 
         function toggleFormPointsMode() {
-            // Points is not compatible with Reminder mode
-            if (formState.isReminderMode) return;
             formState.isPointsMode = !formState.isPointsMode;
             // When enabling points, auto-switch from incompatible frequencies
             if (formState.isPointsMode && (formState.frequency === FREQ.DAILY || formState.frequency === FREQ.TWICE_DAILY)) {
@@ -881,7 +873,7 @@
         }
 
         function toggleFormAllowOptional() {
-            const optionalDisabled = formState.frequency === FREQ.TWICE_DAILY || formState.isReminderMode;
+            const optionalDisabled = formState.frequency === FREQ.TWICE_DAILY;
             if (optionalDisabled) return;
             formState.allowOptional = !formState.allowOptional;
             rerenderForm();
@@ -1206,9 +1198,7 @@
 
         // Determine the final frequency type based on form state
         function getFrequencyType() {
-            if (formState.isReminderMode) {
-                return FREQ.REMINDER;
-            }
+            // Reminder is now a modifier, not a frequency type
             if (formState.isPointsMode) {
                 if (formState.frequency === FREQ.TIMES_PER_PERIOD) {
                     if (formState.pointsPeriod === PERIOD.DAY) return FREQ.POINTS_PER_DAY;
@@ -1254,6 +1244,7 @@
                     reminderDays: reminderDaysVal
                 },
                 usePoints: formState.isPointsMode,
+                isReminder: formState.isReminderMode,
                 allowOptional: formState.allowOptional,
                 completions: [], skippedDates: [], snoozedUntil: null, subtasks: [...newHabitSubtasks], createdAt: getTodayString()
             });
@@ -1515,7 +1506,8 @@
                     } else {
                         // Apply penalty for missed days (reminders get smaller penalty)
                         const basePenalty = score < 0 ? Math.max(5, 15 + score * 0.15) : 15;
-                        const penalty = freqType === FREQ.REMINDER ? basePenalty * 0.5 : basePenalty;
+                        const isReminder = habit.isReminder || freqType === FREQ.REMINDER;
+                        const penalty = isReminder ? basePenalty * 0.5 : basePenalty;
                         score = Math.max(-100, score - penalty);
                     }
                 }
@@ -1636,7 +1628,7 @@
             } else {
                 habit.completions.push({ date: today, period, timestamp: Date.now() });
                 // Reset momentum to neutral for reminders when completed
-                if (freqType === FREQ.REMINDER) {
+                if (habit.isReminder || freqType === FREQ.REMINDER) {
                     habit.momentumScore = 0;
                     habit.lastScoreUpdate = today;
                 } else if (!habit.lastScoreUpdate) {
@@ -2052,7 +2044,8 @@
             }
 
             // Reminder badge for reminder-type habits (subtle dot indicator)
-            const reminderBadge = habit.frequency.type === FREQ.REMINDER
+            const isReminder = habit.isReminder || habit.frequency.type === FREQ.REMINDER;
+            const reminderBadge = isReminder
                 ? '<div class="reminder-badge"></div>' : '';
 
             return `<div class="habit-icon-wrapper">
@@ -2440,6 +2433,9 @@
 
             // Save allow optional preference
             habit.allowOptional = formState.allowOptional;
+
+            // Save reminder mode flag
+            habit.isReminder = formState.isReminderMode;
 
             saveHabits(habits);
             editMode = false;
