@@ -1117,8 +1117,11 @@
 
         function loadHabits() {
             const h = localStorage.getItem('habits_v3');
-            if (h) return JSON.parse(h);
-            // Load default habits on first start
+            if (h) {
+                const parsed = JSON.parse(h);
+                if (parsed.length > 0) return parsed;
+            }
+            // Load default habits on first start (or if empty)
             const defaults = getDefaultHabits();
             saveHabits(defaults);
             return defaults;
