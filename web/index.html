@@ -1706,7 +1706,9 @@
                 }
 
                 // Morning habits missed at night → Done (nothing more to do today)
-                if (h.timeOfDay === 'morning' && timeOfDay === 'night' && !isCompletedToday(h)) {
+                // For habits with subtasks, also check if there's a completion entry (user may have clicked Complete All)
+                const hasCompletionEntry = h.completions.some(c => c.date === getTodayString());
+                if (h.timeOfDay === 'morning' && timeOfDay === 'night' && !isCompletedToday(h) && !hasCompletionEntry) {
                     done.push(h);
                     return;
                 }
@@ -1974,21 +1976,24 @@
             const periodKey = getSubtaskPeriodKey(habit);
             if (!subtask.completedPeriods) subtask.completedPeriods = {};
 
-            if (subtask.completedPeriods[periodKey]) {
+            const wasCompleted = subtask.completedPeriods[periodKey];
+            if (wasCompleted) {
                 delete subtask.completedPeriods[periodKey];
+                // When unchecking a subtask, remove today's completion entry since habit is no longer fully done
+                const today = getTodayString();
+                habit.completions = habit.completions.filter(c => c.date !== today);
             } else {
                 subtask.completedPeriods[periodKey] = Date.now();
-            }
+                // Auto-complete main habit when all subtasks are done
+                const allCompleted = habit.subtasks.every(s => s.completedPeriods && s.completedPeriods[periodKey]);
+                const today = getTodayString();
+                const alreadyCompleted = habit.completions.some(c => c.date === today);
 
-            // Auto-complete main habit when all subtasks are done
-            const allCompleted = habit.subtasks.every(s => s.completedPeriods && s.completedPeriods[periodKey]);
-            const today = getTodayString();
-            const alreadyCompleted = habit.completions.some(c => c.date === today);
-
-            if (allCompleted && !alreadyCompleted) {
-                habit.completions.push({ date: today, timestamp: Date.now() });
-                habit.momentumScore = (habit.momentumScore || 0) + 15;
-                habit.lastScoreUpdate = today;
+                if (allCompleted && !alreadyCompleted) {
+                    habit.completions.push({ date: today, timestamp: Date.now() });
+                    habit.momentumScore = (habit.momentumScore || 0) + 15;
+                    habit.lastScoreUpdate = today;
+                }
             }
 
             saveHabits(habits);
@@ -2101,8 +2106,12 @@
             const periodKey = getSubtaskPeriodKey(habit);
             if (!subtask.completedPeriods) subtask.completedPeriods = {};
 
-            if (subtask.completedPeriods[periodKey]) {
+            const wasCompleted = subtask.completedPeriods[periodKey];
+            if (wasCompleted) {
                 delete subtask.completedPeriods[periodKey];
+                // When unchecking a subtask, remove today's completion entry since habit is no longer fully done
+                const today = getTodayString();
+                habit.completions = habit.completions.filter(c => c.date !== today);
             } else {
                 subtask.completedPeriods[periodKey] = Date.now();
             }
