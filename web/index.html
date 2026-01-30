@@ -769,7 +769,7 @@
                             <span class="option-pill-check">✓</span>
                             <span>Points</span>
                         </label>
-                        <label class="option-pill ${state.allowOptional ? 'active' : ''} ${optionalDisabled ? 'disabled' : ''}" id="${isEdit ? 'editOptionalPill' : 'optionalPill'}" onclick="toggleFormAllowOptional()">
+                        <label class="option-pill ${state.allowOptional && !optionalDisabled ? 'active' : ''} ${optionalDisabled ? 'disabled' : ''}" id="${isEdit ? 'editOptionalPill' : 'optionalPill'}" onclick="toggleFormAllowOptional()">
                             <span class="option-pill-check">✓</span>
                             <span>Allow extra</span>
                         </label>
@@ -938,6 +938,7 @@
             document.getElementById('debugToggle').classList.toggle('active');
             document.getElementById('debugPanel').classList.toggle('active');
             updateDebugDisplay();
+            renderHabits(); // Re-render to expand/collapse sections based on debug mode
         }
 
         function debugChangePeriod(direction) {
@@ -1786,7 +1787,9 @@
         function renderSection(habits, sectionId, icon, title, defaultCollapsed, renderOpts = {}) {
             if (!habits.length) return '';
             if (collapsedSections[sectionId] === undefined) collapsedSections[sectionId] = defaultCollapsed;
-            const collapsed = collapsedSections[sectionId];
+            // Auto-expand all sections when debug mode is active
+            const debugActive = document.getElementById('debugPanel')?.classList.contains('active');
+            const collapsed = debugActive ? false : collapsedSections[sectionId];
             const contentClass = collapsed ? 'section-content collapsed' : 'section-content';
             const headerClass = collapsed ? 'section-header collapsible collapsed' : 'section-header collapsible';
             const sectionClass = renderOpts.inactive ? 'habits-section inactive-section' : 'habits-section';
@@ -1875,10 +1878,16 @@
                 if (subtaskProgress && subtaskProgress.total > 0) {
                     const pct = Math.round((subtaskProgress.completed / subtaskProgress.total) * 100);
                     progress = `${pct}%`;
+                    // Mark as completed when all subtasks are done
+                    if (subtaskProgress.completed === subtaskProgress.total) {
+                        ringClass = 'completed';
+                    } else if (neglectLevel > 0) {
+                        ringClass = 'overdue';
+                    }
                 } else {
                     progress = '0%';
+                    if (neglectLevel > 0) ringClass = 'overdue';
                 }
-                if (neglectLevel > 0) ringClass = 'overdue';
             }
 
             return `<div class="habit-icon-wrapper">
