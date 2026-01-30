@@ -610,7 +610,7 @@
             frequency: FREQ.DAILY,               // dropdown value
             isReminderMode: false,               // task type: reminder vs regular
             isPointsMode: false,                 // measurement: points vs completions
-            allowOptional: true,                 // allow extra completions
+            allowOptional: false,                // allow extra completions
             showSubtasks: false,                 // show subtasks input area
             icon: null,                          // selected emoji
             timesPeriod: PERIOD.WEEK,            // 'week' or 'month' for times
@@ -628,7 +628,7 @@
             formState.frequency = FREQ.DAILY;
             formState.isReminderMode = false;
             formState.isPointsMode = false;
-            formState.allowOptional = true;
+            formState.allowOptional = false;
             formState.showSubtasks = false;
             formState.icon = null;
             formState.timesPeriod = PERIOD.WEEK;
@@ -1742,12 +1742,11 @@
                 return status.completed;
             }
 
-            // Weekly/monthly/points: goes to Optional when target met but not done today
+            // Weekly/monthly/points: goes to Optional when target met (stays there for extra completions)
             if (freqType === FREQ.TIMES_PER_WEEK || freqType === FREQ.TIMES_PER_MONTH ||
                 freqType === FREQ.POINTS_PER_WEEK || freqType === FREQ.POINTS_PER_MONTH) {
-                if (completedToday) return false; // Already done today, goes to Done
                 const status = getCompletionStatus(habit);
-                return status.completed; // Target met but not done today = optional
+                return status.completed; // Target met = optional (can do more)
             }
 
             return false;
