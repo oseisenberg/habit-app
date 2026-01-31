@@ -2406,11 +2406,24 @@
         function renderHabitIcon(habit, isLater = false, isCompleted = false) {
             const status = getCompletionStatus(habit);
             const scoreData = calculateMomentumScore(habit);
-            // Show neglect indicators if habit has history (lastScoreUpdate or createdAt) and negative score
-            // Skip neglect indicators for reminders - they're meant to be low-stress
             const isReminder = habit.isReminder || habit.frequency.type === FREQ.REMINDER;
             const hasHistory = !!(habit.lastScoreUpdate || habit.createdAt);
-            const neglectLevel = !isReminder && hasHistory && scoreData.display < 0 ? Math.min(3, Math.abs(scoreData.display)) : 0;
+
+            // Calculate neglect level differently for reminders vs regular habits
+            let neglectLevel = 0;
+            if (isReminder) {
+                // For reminders: show dots based on days since last completion
+                const lastCompletion = getLastCompletionDate(habit);
+                if (lastCompletion) {
+                    const daysSince = daysBetween(lastCompletion, getTodayString());
+                    if (daysSince >= 7) neglectLevel = 3;
+                    else if (daysSince >= 4) neglectLevel = 2;
+                    else if (daysSince >= 2) neglectLevel = 1;
+                }
+            } else {
+                // For regular habits: show dots based on negative momentum score
+                neglectLevel = hasHistory && scoreData.display < 0 ? Math.min(3, Math.abs(scoreData.display)) : 0;
+            }
             const icon = habit.icon || '📌';
 
             // Calculate progress for ring
