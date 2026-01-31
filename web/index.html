@@ -34,6 +34,11 @@
         .habit-icon-wrapper.large .habit-ring { width: 156px; height: 156px; }
         .habit-icon-wrapper.large .habit-ring::before { width: 140px; height: 140px; }
         .habit-icon-wrapper.large .habit-emoji { font-size: 3.5rem; }
+        .habit-icon-wrapper.large .neglect-dot { width: 14px; height: 14px; }
+        .habit-icon-wrapper.large .neglect-dot:nth-child(1) { top: 2px; right: 38px; }
+        .habit-icon-wrapper.large .neglect-dot:nth-child(2) { top: 16px; right: 16px; }
+        .habit-icon-wrapper.large .neglect-dot:nth-child(3) { top: 38px; right: 2px; }
+        .habit-icon-wrapper.large .reminder-badge { width: 14px; height: 14px; top: 16px; left: 16px; }
         .habit-icon {
             display: flex; flex-direction: column; align-items: center; gap: 2px;
             cursor: pointer; padding: 2px; border-radius: 12px; transition: background 0.15s;
@@ -61,14 +66,14 @@
             position: absolute; width: 10px; height: 10px;
             background: #dc2626; border-radius: 50%; border: 1.5px solid #1a1a2e;
         }
-        /* Position dots along the top-right arc of the 64px circle (centered on ring) */
-        .neglect-dot:nth-child(1) { top: 1px; right: 13px; }
-        .neglect-dot:nth-child(2) { top: 7px; right: 3px; }
-        .neglect-dot:nth-child(3) { top: 17px; right: -2px; }
+        /* Position dots along the top-right arc, centered on the ring stroke */
+        .neglect-dot:nth-child(1) { top: 0px; right: 20px; }
+        .neglect-dot:nth-child(2) { top: 8px; right: 8px; }
+        .neglect-dot:nth-child(3) { top: 20px; right: 0px; }
 
-        /* Reminder badge - subtle dot indicator in top-left at 45 degrees (mirrors 2nd red dot) */
+        /* Reminder badge - subtle dot indicator in top-left, centered on ring stroke */
         .reminder-badge {
-            position: absolute; top: 7px; left: 3px;
+            position: absolute; top: 8px; left: 8px;
             width: 10px; height: 10px;
             background: #667eea; border-radius: 50%;
             border: 1.5px solid #1a1a2e;
