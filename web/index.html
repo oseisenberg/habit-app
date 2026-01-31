@@ -28,12 +28,12 @@
         .time-note { color: #f59e0b; font-size: 0.65rem; margin-bottom: 6px; }
 
         /* Icon Grid Layout */
-        .habits-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px 0; padding: 8px; justify-items: center; }
+        .habits-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 0; padding: 8px; justify-items: center; }
         .habit-icon-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .habit-icon-wrapper.large { grid-column: span 2; }
-        .habit-icon-wrapper.large .habit-ring { width: 80px; height: 80px; }
-        .habit-icon-wrapper.large .habit-ring::before { width: 68px; height: 68px; }
-        .habit-icon-wrapper.large .habit-emoji { font-size: 1.8rem; }
+        .habit-icon-wrapper.large .habit-ring { width: 88px; height: 88px; }
+        .habit-icon-wrapper.large .habit-ring::before { width: 76px; height: 76px; }
+        .habit-icon-wrapper.large .habit-emoji { font-size: 2rem; }
         .habit-icon {
             display: flex; flex-direction: column; align-items: center; gap: 2px;
             cursor: pointer; padding: 2px; border-radius: 12px; transition: background 0.15s;
@@ -41,13 +41,13 @@
         .habit-icon:active { background: rgba(255,255,255,0.05); }
 
         .habit-ring {
-            width: 64px; height: 64px; border-radius: 50%; position: relative;
+            width: 72px; height: 72px; border-radius: 50%; position: relative;
             display: flex; align-items: center; justify-content: center;
             background: conic-gradient(#667eea var(--progress), #2a2a3e var(--progress));
             transition: all 0.2s;
         }
         .habit-ring::before {
-            content: ''; position: absolute; width: 54px; height: 54px;
+            content: ''; position: absolute; width: 60px; height: 60px;
             background: #1a1a2e; border-radius: 50%;
         }
         .habit-ring.completed { background: #4ade80; }
@@ -76,7 +76,7 @@
         }
 
         .habit-emoji {
-            position: relative; z-index: 1; font-size: 1.3rem; line-height: 1;
+            position: relative; z-index: 1; font-size: 1.5rem; line-height: 1;
         }
         .habit-ring.completed .habit-emoji { filter: brightness(1.2); }
 
