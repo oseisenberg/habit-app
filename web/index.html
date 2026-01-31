@@ -806,7 +806,7 @@
             let freqInputsHtml = '';
             if (state.frequency === FREQ.EVERY_X_DAYS) {
                 const daysVal = habit?.frequency?.everyXDays || DEFAULTS.EVERY_X_DAYS;
-                freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'E' : 'e'}veryXDays" value="${daysVal}" min="1"><span style="color:#888">days</span>`;
+                freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'E' : 'e'}veryXDays" value="${daysVal}" min="1"><span style="color:#888">days after</span>`;
             } else if (state.frequency === FREQ.TIMES_PER_PERIOD) {
                 if (state.isPointsMode) {
                     const ptsVal = habit?.frequency?.pointsPerDay || habit?.frequency?.pointsPerWeek || habit?.frequency?.pointsPerMonth || DEFAULTS.POINTS_PER_PERIOD;
@@ -934,8 +934,8 @@
                         <select class="form-input" id="${isEdit ? 'editFrequencySelect' : 'frequencySelect'}" onchange="selectFormFrequency(this.value)" style="flex:1">
                             <option value="${FREQ.DAILY}" ${state.frequency === FREQ.DAILY ? 'selected' : ''}>Daily</option>
                             <option value="${FREQ.TWICE_DAILY}" ${state.frequency === FREQ.TWICE_DAILY ? 'selected' : ''} ${state.isPointsMode ? 'disabled' : ''}>Morning & Bedtime${state.isPointsMode ? ' (not with Points)' : ''}</option>
-                            <option value="${FREQ.EVERY_X_DAYS}" ${state.frequency === FREQ.EVERY_X_DAYS ? 'selected' : ''}>Every X days</option>
-                            <option value="${FREQ.TIMES_PER_PERIOD}" ${state.frequency === FREQ.TIMES_PER_PERIOD ? 'selected' : ''}>X per period</option>
+                            <option value="${FREQ.EVERY_X_DAYS}" ${state.frequency === FREQ.EVERY_X_DAYS ? 'selected' : ''}>After completion</option>
+                            <option value="${FREQ.TIMES_PER_PERIOD}" ${state.frequency === FREQ.TIMES_PER_PERIOD ? 'selected' : ''}>Within period</option>
                         </select>
                         <div id="${isEdit ? 'editFrequencyInputs' : 'frequencyInputs'}">${freqInputsHtml}</div>
                     </div>
@@ -2970,7 +2970,7 @@
                 const isSnoozed = habit.snoozedUntil && (habit.snoozedUntil === 'night' || habit.snoozedUntil > today);
                 const canSnooze = !isSnoozed && !isCompletedToday(habit);
 
-                const freqLabel = { daily: 'Daily', reminder: `Every ${habit.frequency.reminderDays || 1} days (gentle)`, twiceDaily: 'Twice daily', timesPerWeek: `${habit.frequency.timesPerWeek || 3}x/week`, timesPerMonth: `${habit.frequency.timesPerMonth || 4}x/month`, everyXDays: `Every ${habit.frequency.everyXDays || 2} days`, pointsPerDay: `${habit.frequency.pointsPerDay || 4} pts/day`, pointsPerWeek: `${habit.frequency.pointsPerWeek || 12} pts/week`, pointsPerMonth: `${habit.frequency.pointsPerMonth || 30} pts/month` }[habit.frequency.type];
+                const freqLabel = { daily: 'Daily', reminder: `${habit.frequency.reminderDays || 1} days after`, twiceDaily: 'Twice daily', timesPerDay: `${habit.frequency.timesPerDay || 1}x within day`, timesPerWeek: `${habit.frequency.timesPerWeek || 3}x within week`, timesPerMonth: `${habit.frequency.timesPerMonth || 4}x within month`, everyXDays: `${habit.frequency.everyXDays || 2} days after`, pointsPerDay: `${habit.frequency.pointsPerDay || 4} pts within day`, pointsPerWeek: `${habit.frequency.pointsPerWeek || 12} pts within week`, pointsPerMonth: `${habit.frequency.pointsPerMonth || 30} pts within month` }[habit.frequency.type];
                 const timeLabel = habit.timeOfDay ? { morning: 'Morning', night: 'Bedtime' }[habit.timeOfDay] : 'Anytime';
 
                 // Momentum score
