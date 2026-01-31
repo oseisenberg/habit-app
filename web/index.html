@@ -166,6 +166,9 @@
         .modal-title { font-size: 1.1rem; font-weight: 600; color: #fff; }
         .modal-close { background: none; border: none; font-size: 1.4rem; color: #666; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
 
+        .all-habits-search-wrapper { margin-bottom: 12px; }
+        .all-habits-search-wrapper .form-input { padding: 10px 14px; font-size: 0.95rem; }
+
         .form-group { margin-bottom: 14px; }
         .form-label { display: block; font-size: 0.7rem; color: #888; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
         .form-input {
@@ -2952,13 +2955,81 @@
         // ALL HABITS VIEW
         // ========================================
 
+        let allHabitsSearchQuery = '';
+
         function openAllHabits() {
+            allHabitsSearchQuery = '';
             renderAllHabits();
             document.getElementById('allHabitsOverlay').classList.add('active');
+            setTimeout(() => document.getElementById('allHabitsSearch')?.focus(), 100);
         }
 
         function closeAllHabits() {
             document.getElementById('allHabitsOverlay').classList.remove('active');
+            allHabitsSearchQuery = '';
+        }
+
+        // Simple fuzzy match - checks if all characters appear in order
+        function fuzzyMatch(text, query) {
+            if (!query) return true;
+            text = text.toLowerCase();
+            query = query.toLowerCase();
+
+            // First check if query is a substring (best match)
+            if (text.includes(query)) return { match: true, score: 2 };
+
+            // Then check fuzzy match (characters in order)
+            let qi = 0;
+            for (let i = 0; i < text.length && qi < query.length; i++) {
+                if (text[i] === query[qi]) qi++;
+            }
+            if (qi === query.length) return { match: true, score: 1 };
+
+            return { match: false, score: 0 };
+        }
+
+        function onAllHabitsSearch(value) {
+            allHabitsSearchQuery = value;
+            renderAllHabitsGrid();
+        }
+
+        function renderAllHabitsGrid() {
+            const habits = loadHabits();
+            const grid = document.getElementById('allHabitsGrid');
+            const noResults = document.getElementById('allHabitsNoResults');
+            if (!grid) return;
+
+            // Filter and sort
+            let filtered = habits;
+            if (allHabitsSearchQuery) {
+                filtered = habits
+                    .map(h => ({ habit: h, ...fuzzyMatch(h.name, allHabitsSearchQuery) }))
+                    .filter(h => h.match)
+                    .sort((a, b) => b.score - a.score)
+                    .map(h => h.habit);
+            } else {
+                filtered = [...habits].sort((a, b) => a.name.localeCompare(b.name));
+            }
+
+            if (!filtered.length) {
+                grid.innerHTML = '';
+                if (noResults) noResults.style.display = 'block';
+                return;
+            }
+
+            if (noResults) noResults.style.display = 'none';
+            grid.innerHTML = filtered.map(habit => {
+                const icon = habit.icon || '📌';
+                const largeClass = habit.isLarge ? 'large' : '';
+                return `<div class="habit-icon-wrapper ${largeClass}">
+                    <div class="habit-icon" onclick="closeAllHabits();openDetails(${habit.id})">
+                        <div class="habit-ring" style="--progress: 0%; background: #2a2a3e;">
+                            <span class="habit-emoji">${icon}</span>
+                        </div>
+                    </div>
+                    <span class="habit-name">${escapeHtml(habit.name)}</span>
+                </div>`;
+            }).join('');
         }
 
         function renderAllHabits() {
@@ -2978,27 +3049,21 @@
                 return;
             }
 
-            // Sort alphabetically for consistent display
-            const sorted = [...habits].sort((a, b) => a.name.localeCompare(b.name));
-
-            const habitsHtml = sorted.map(habit => {
-                const icon = habit.icon || '📌';
-                const largeClass = habit.isLarge ? 'large' : '';
-                return `<div class="habit-icon-wrapper ${largeClass}">
-                    <div class="habit-icon" onclick="closeAllHabits();openDetails(${habit.id})">
-                        <div class="habit-ring" style="--progress: 0%; background: #2a2a3e;">
-                            <span class="habit-emoji">${icon}</span>
-                        </div>
-                    </div>
-                </div>`;
-            }).join('');
-
             modal.innerHTML = `
                 <div class="modal-header">
                     <h2 class="modal-title">All Habits</h2>
                     <button class="modal-close" onclick="closeAllHabits()">&times;</button>
                 </div>
-                <div class="habits-grid">${habitsHtml}</div>`;
+                <div class="all-habits-search-wrapper">
+                    <input type="text" id="allHabitsSearch" class="form-input" placeholder="Search habits..."
+                        oninput="onAllHabitsSearch(this.value)" value="${escapeHtml(allHabitsSearchQuery)}" />
+                </div>
+                <div id="allHabitsNoResults" class="empty-state" style="display:none;padding:20px 0">
+                    <div style="color:#888">No matching habits</div>
+                </div>
+                <div class="habits-grid" id="allHabitsGrid"></div>`;
+
+            renderAllHabitsGrid();
         }
 
         // ========================================
