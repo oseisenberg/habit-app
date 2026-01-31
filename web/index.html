@@ -699,6 +699,7 @@
 
         // Global app state
         let selectedHabitId = null;
+        let detailsOpenedFromAllHabits = false; // Track if details was opened from All Habits view
         let debugDayOffset = 0;
         let debugHourOverride = null;
         let emojiPopupMode = null; // 'new' or habit id for edit
@@ -1270,7 +1271,6 @@
                     { id: 10, name: 'Take out all trash, in all rooms', completedPeriods: {} },
                     { id: 11, name: 'Check apartment mailbox', completedPeriods: {} }
                 ], createdAt: today },
-                { id: 21, name: 'Periodic Hygiene', icon: '🧼', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
                 { id: 22, name: 'Posture corrector', icon: '🧘', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: true },
                 { id: 24, name: 'Dandruff', icon: '❄️', timeOfDay: null, frequency: { type: 'everyXDays', everyXDays: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false },
                 { id: 25, name: 'Rogaine', icon: '🌱', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, isReminder: false, allowOptional: false, isLarge: false },
@@ -1284,8 +1284,8 @@
                 ], createdAt: today, usePoints: false, isReminder: true, allowOptional: false, isLarge: false },
                 { id: 30, name: 'Protein', icon: '🥩', timeOfDay: null, frequency: { type: 'pointsPerDay', pointsPerDay: 4 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: true, allowOptional: true, isReminder: false, isLarge: false },
                 { id: 31, name: 'Clean glasses', icon: '🤓', timeOfDay: null, frequency: { type: 'everyXDays', everyXDays: 3 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false, isLarge: false },
-                { id: 32, name: 'Close tabs', icon: '🗂️', timeOfDay: null, frequency: { type: 'timesPerWeek', timesPerWeek: 1 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false, isLarge: false },
-                { id: 33, name: 'Hair management', icon: '💇‍♂️', timeOfDay: null, frequency: { type: 'timesPerMonth', timesPerMonth: 1 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [
+                { id: 32, name: 'Close tabs', icon: '🗂️', timeOfDay: null, frequency: { type: 'timesPerWeek', timesPerWeek: 1 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: true, isLarge: false },
+                { id: 33, name: 'Hair management', icon: '✂️', timeOfDay: null, frequency: { type: 'timesPerMonth', timesPerMonth: 1 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [
                     { id: 1, name: 'Cut hair', completedPeriods: {} },
                     { id: 2, name: 'Clean dandruff', completedPeriods: {} },
                     { id: 3, name: 'Trim', completedPeriods: {} },
@@ -1294,7 +1294,7 @@
                     { id: 6, name: 'Eyebrow plucking', completedPeriods: {} },
                     { id: 7, name: 'Trim eyebrows with scissors', completedPeriods: {} }
                 ], createdAt: today, usePoints: false, allowOptional: false, isReminder: false, isLarge: false },
-                { id: 34, name: 'Cut fingernails', icon: '✂️', timeOfDay: null, frequency: { type: 'timesPerWeek', timesPerWeek: 1 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: true, isLarge: false },
+                { id: 34, name: 'Cut fingernails', icon: '🖐️', timeOfDay: null, frequency: { type: 'timesPerWeek', timesPerWeek: 1 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: true, isLarge: false },
                 { id: 35, name: 'Cut toenails', icon: '🦶', timeOfDay: null, frequency: { type: 'timesPerMonth', timesPerMonth: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: true, isLarge: false }
             ];
         }
@@ -2407,8 +2407,10 @@
             const status = getCompletionStatus(habit);
             const scoreData = calculateMomentumScore(habit);
             // Show neglect indicators if habit has history (lastScoreUpdate or createdAt) and negative score
+            // Skip neglect indicators for reminders - they're meant to be low-stress
+            const isReminder = habit.isReminder || habit.frequency.type === FREQ.REMINDER;
             const hasHistory = !!(habit.lastScoreUpdate || habit.createdAt);
-            const neglectLevel = hasHistory && scoreData.display < 0 ? Math.min(3, Math.abs(scoreData.display)) : 0;
+            const neglectLevel = !isReminder && hasHistory && scoreData.display < 0 ? Math.min(3, Math.abs(scoreData.display)) : 0;
             const icon = habit.icon || '📌';
 
             // Calculate progress for ring
@@ -2790,6 +2792,16 @@
 
         function openDetails(id) {
             selectedHabitId = id;
+            detailsOpenedFromAllHabits = false;
+            editMode = false;
+            formMode = 'create';
+            renderDetails();
+            document.getElementById('detailsOverlay').classList.add('active');
+        }
+
+        function openDetailsFromAllHabits(id) {
+            selectedHabitId = id;
+            detailsOpenedFromAllHabits = true;
             editMode = false;
             formMode = 'create';
             renderDetails();
@@ -2814,6 +2826,11 @@
             editMode = false;
             formMode = 'create';
             resetFormState();
+            // Return to All Habits if that's where we came from
+            if (detailsOpenedFromAllHabits) {
+                detailsOpenedFromAllHabits = false;
+                openAllHabits();
+            }
         }
 
         function toggleEditMode() {
@@ -2961,6 +2978,7 @@
 
                 const scoreClass = rawScore > 0 ? 'positive' : (rawScore < 0 ? 'negative' : 'neutral');
                 const icon = habit.icon || '📌';
+                const isReminder = habit.isReminder || habit.frequency.type === FREQ.REMINDER;
 
                 // Determine if habit can be completed and how
                 const isPointsBased = habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH;
@@ -2989,19 +3007,19 @@
                         <div class="details-habit-name">${escapeHtml(habit.name)}</div>
                         ${habit.description ? `<div style="color:#888;font-size:0.85rem;margin-top:4px">${escapeHtml(habit.description)}</div>` : ''}
                     </div>
-                    <div class="momentum-display">
+                    ${!isReminder ? `<div class="momentum-display">
                         <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
                         <div class="momentum-label">Momentum</div>
-                    </div>
+                    </div>` : ''}
                     <div class="detail-row"><span class="detail-label">Time</span><span class="detail-value">${timeLabel}</span></div>
                     <div class="detail-row"><span class="detail-label">Frequency</span><span class="detail-value">${freqLabel}</span></div>
                     ${(habit.frequency.type === FREQ.POINTS_PER_DAY || habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH) ? `<div class="detail-row"><span class="detail-label">Progress</span><span class="detail-value">${getCompletionStatus(habit).text}</span></div>` : ''}
-                    <div class="stats-grid">
+                    ${!isReminder ? `<div class="stats-grid">
                         <div class="stat-box"><div class="stat-number">${total}</div><div class="stat-label">Total</div></div>
                         <div class="stat-box"><div class="stat-number">${rate}%</div><div class="stat-label">Rate</div></div>
                         <div class="stat-box"><div class="stat-number">${avgInterval}</div><div class="stat-label">Avg Gap</div></div>
                     </div>
-                    ${recoveryText}
+                    ${recoveryText}` : ''}
                     <div class="action-buttons">
                         <div style="display:flex;gap:6px">
                             ${completeButton || ''}
@@ -3010,7 +3028,7 @@
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
                         </div>
                         <div style="display:flex;gap:6px">
-                            ${canFreshStart ? `<button class="submit-btn secondary" style="flex:1" onclick="freshStartHabit(${habit.id})">Fresh Start</button>` : ''}
+                            ${!isReminder && canFreshStart ? `<button class="submit-btn secondary" style="flex:1" onclick="freshStartHabit(${habit.id})">Fresh Start</button>` : ''}
                             <button class="submit-btn danger" style="flex:1" onclick="deleteHabit(${habit.id})">Delete</button>
                         </div>
                     </div>`;
@@ -3088,7 +3106,7 @@
                 const icon = habit.icon || '📌';
                 const largeClass = habit.isLarge ? 'large' : '';
                 return `<div class="habit-icon-wrapper ${largeClass}">
-                    <div class="habit-icon" onclick="closeAllHabits();openDetails(${habit.id})">
+                    <div class="habit-icon" onclick="openDetailsFromAllHabits(${habit.id})">
                         <div class="habit-ring" style="--progress: 0%; background: #2a2a3e;">
                             <span class="habit-emoji">${icon}</span>
                         </div>
