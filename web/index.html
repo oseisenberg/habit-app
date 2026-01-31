@@ -411,6 +411,26 @@
         }
         .points-btn:active { transform: scale(0.95); background: #667eea; border-color: #667eea; }
 
+        /* Snooze popup styles */
+        .snooze-popup-content { padding: 8px 0; }
+        .snooze-popup-title { font-size: 1rem; font-weight: 600; color: #fff; margin-bottom: 16px; }
+        .snooze-options { display: flex; flex-direction: column; gap: 8px; }
+        .snooze-option {
+            display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+            background: #0f0f1a; border: 1px solid #2a2a3e; border-radius: 10px;
+            color: #fff; font-size: 0.95rem; cursor: pointer; transition: all 0.15s;
+            text-align: left;
+        }
+        .snooze-option:hover { background: #1a1a2e; border-color: #667eea; }
+        .snooze-option:active { transform: scale(0.98); }
+        .snooze-option-icon { font-size: 1.2rem; width: 28px; text-align: center; }
+        .snooze-cancel {
+            width: 100%; margin-top: 12px; padding: 10px; background: transparent;
+            border: 1px solid #3a3a4e; border-radius: 8px; color: #888;
+            font-size: 0.9rem; cursor: pointer; transition: all 0.15s;
+        }
+        .snooze-cancel:hover { color: #fff; border-color: #888; }
+
         /* Emoji picker popup */
         .emoji-popup-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -534,7 +554,8 @@
             </div>
 
             <button class="submit-btn" onclick="saveSettings()">Save Settings</button>
-            <button class="submit-btn secondary" onclick="exportData()" style="margin-top:8px">Export All Data (JSON)</button>
+            <button class="submit-btn secondary" onclick="exportData()" style="margin-top:8px">Export All Data</button>
+            <button class="submit-btn secondary" onclick="exportData(true)" style="margin-top:8px">Export Tasks Only (no history)</button>
         </div>
     </div>
 
@@ -659,6 +680,7 @@
         // Form state object - single source of truth for form data
         const formState = {
             name: '',                            // habit name
+            description: '',                     // habit description
             time: null,                          // null = anytime, 'morning', 'night'
             frequency: FREQ.DAILY,               // dropdown value
             isReminderMode: false,               // task type: reminder vs regular
@@ -679,6 +701,7 @@
         // Reset form state to defaults
         function resetFormState() {
             formState.name = '';
+            formState.description = '';
             formState.time = null;
             formState.frequency = FREQ.DAILY;
             formState.isReminderMode = false;
@@ -695,6 +718,7 @@
         // Initialize form state from habit (for edit mode)
         function initFormStateFromHabit(habit) {
             formState.name = habit.name || '';
+            formState.description = habit.description || '';
             formState.icon = habit.icon || HABIT_EMOJIS[0];
             formState.allowOptional = habit.allowOptional !== false;
             formState.hideSubtasksOnMain = habit.showSubtasksOnMain === false;
@@ -739,6 +763,7 @@
             const state = getFormState(habit);
             const currentIcon = state.icon || (habit?.icon) || '📌';
             const habitName = escapeHtml(formState.name || '');
+            const habitDesc = escapeHtml(formState.description || '');
             // Points disabled for twice daily and every X days
             const isTwiceDaily = state.frequency === FREQ.TWICE_DAILY;
             const isEveryXDays = state.frequency === FREQ.EVERY_X_DAYS;
@@ -840,6 +865,7 @@
                             <button type="button" class="time-toggle-btn ${state.time === PERIOD.NIGHT ? 'active' : ''}" data-time="night" onclick="${isTwiceDaily ? '' : `toggleFormTime('${PERIOD.NIGHT}')`}">🌙</button>
                         </div>
                     </div>
+                    <textarea class="form-input" id="${isEdit ? 'editHabitDesc' : 'habitDesc'}" placeholder="Description (optional)" rows="2" style="margin:0;resize:none;font-size:0.85rem">${habitDesc}</textarea>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Options</label>
@@ -892,11 +918,16 @@
 
         // Re-render form based on current mode
         function rerenderForm() {
-            // Save name from input before re-rendering
+            // Save name and description from inputs before re-rendering
             const nameInputId = formMode === 'edit' ? 'editHabitName' : 'habitInput';
+            const descInputId = formMode === 'edit' ? 'editHabitDesc' : 'habitDesc';
             const nameInput = document.getElementById(nameInputId);
+            const descInput = document.getElementById(descInputId);
             if (nameInput) {
                 formState.name = nameInput.value;
+            }
+            if (descInput) {
+                formState.description = descInput.value;
             }
 
             if (formMode === 'create') {
@@ -1479,19 +1510,30 @@
             }
         }
 
-        function exportData() {
+        function exportData(noHistory = false) {
+            let habits = loadHabits();
+            if (noHistory) {
+                habits = habits.map(h => ({
+                    ...h,
+                    completions: [],
+                    skippedDates: [],
+                    snoozedUntil: null,
+                    subtasks: h.subtasks?.map(s => ({ ...s, completedPeriods: {} })) || []
+                }));
+            }
             const data = {
                 exportedAt: new Date().toISOString(),
                 version: 'habits_v3',
                 settings: getSettings(),
-                habits: loadHabits()
+                habits
             };
             const json = JSON.stringify(data, null, 2);
             const blob = new Blob([json], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `habits-export-${getTodayString()}.json`;
+            const suffix = noHistory ? '-tasks-only' : '';
+            a.download = `habits-export${suffix}-${getTodayString()}.json`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1547,6 +1589,7 @@
         function addHabit() {
             const name = document.getElementById('habitInput').value.trim();
             if (!name) return;
+            const description = document.getElementById('habitDesc')?.value.trim() || '';
             const habits = loadHabits();
             const freqType = getFrequencyType();
             const timesVal = parseInt(document.getElementById('timesPerPeriod')?.value) || DEFAULTS.TIMES_PER_PERIOD;
@@ -1555,7 +1598,7 @@
             const reminderDaysVal = parseInt(document.getElementById('reminderDays')?.value) || DEFAULTS.REMINDER_DAYS;
             const everyXDaysVal = parseInt(document.getElementById('everyXDays')?.value) || DEFAULTS.EVERY_X_DAYS;
             habits.push({
-                id: Date.now(), name,
+                id: Date.now(), name, description,
                 icon: formState.icon,
                 timeOfDay: formState.time,
                 frequency: {
@@ -1596,6 +1639,7 @@
             if (habit && !habit.skippedDates.includes(today)) {
                 habit.skippedDates.push(today);
                 saveHabits(habits);
+                closeSnoozePopup();
                 closeDetails();
                 renderHabits();
             }
@@ -1606,16 +1650,31 @@
         function openSnoozePopup(id) {
             snoozePopupHabitId = id;
             document.getElementById('snoozePopup').innerHTML = `
-                <div class="points-popup-header">
-                    <span class="points-popup-title">Snooze for how long?</span>
-                </div>
-                <div class="points-popup-buttons">
-                    <button class="points-btn" onclick="snoozeHabit(1)">1 day</button>
-                    <button class="points-btn" onclick="snoozeHabit(2)">2 days</button>
-                    <button class="points-btn" onclick="snoozeHabit(3)">3 days</button>
-                </div>
-                <div class="points-popup-buttons" style="margin-top:8px">
-                    <button class="points-btn" onclick="snoozeHabit(7)">1 week</button>
+                <div class="snooze-popup-content">
+                    <div class="snooze-popup-title">Snooze Task</div>
+                    <div class="snooze-options">
+                        <button class="snooze-option" onclick="skipHabit(snoozePopupHabitId)">
+                            <span class="snooze-option-icon">⏭️</span>
+                            <span>Skip today</span>
+                        </button>
+                        <button class="snooze-option" onclick="snoozeHabit(1)">
+                            <span class="snooze-option-icon">1️⃣</span>
+                            <span>Tomorrow</span>
+                        </button>
+                        <button class="snooze-option" onclick="snoozeHabit(2)">
+                            <span class="snooze-option-icon">2️⃣</span>
+                            <span>2 days</span>
+                        </button>
+                        <button class="snooze-option" onclick="snoozeHabit(3)">
+                            <span class="snooze-option-icon">3️⃣</span>
+                            <span>3 days</span>
+                        </button>
+                        <button class="snooze-option" onclick="snoozeHabit(7)">
+                            <span class="snooze-option-icon">📅</span>
+                            <span>1 week</span>
+                        </button>
+                    </div>
+                    <button class="snooze-cancel" onclick="closeSnoozePopup()">Cancel</button>
                 </div>`;
             document.getElementById('snoozePopupOverlay').classList.add('active');
         }
@@ -2721,10 +2780,12 @@
             if (!habit) return;
 
             const nameInput = document.getElementById('editHabitName');
+            const descInput = document.getElementById('editHabitDesc');
             const newName = nameInput ? nameInput.value.trim() : habit.name;
             if (!newName) return;
 
             habit.name = newName;
+            habit.description = descInput ? descInput.value.trim() : (habit.description || '');
             habit.icon = formState.icon || habit.icon || HABIT_EMOJIS[0];
             habit.timeOfDay = formState.time;
 
@@ -2857,6 +2918,7 @@
                     <div class="details-icon-header">
                         <div class="details-large-icon">${icon}</div>
                         <div class="details-habit-name">${escapeHtml(habit.name)}</div>
+                        ${habit.description ? `<div style="color:#888;font-size:0.85rem;margin-top:4px">${escapeHtml(habit.description)}</div>` : ''}
                     </div>
                     <div class="momentum-display">
                         <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
@@ -2879,7 +2941,6 @@
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
                         </div>
                         <div style="display:flex;gap:6px">
-                            <button class="submit-btn secondary" style="flex:1" onclick="skipHabit(${habit.id})">Skip</button>
                             ${canFreshStart ? `<button class="submit-btn secondary" style="flex:1" onclick="freshStartHabit(${habit.id})">Fresh Start</button>` : ''}
                             <button class="submit-btn danger" style="flex:1" onclick="deleteHabit(${habit.id})">Delete</button>
                         </div>
