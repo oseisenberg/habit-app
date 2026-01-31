@@ -708,6 +708,7 @@
         const formState = {
             name: '',                            // habit name
             description: '',                     // habit description
+            showDescription: false,              // show description field
             time: null,                          // null = anytime, 'morning', 'night'
             frequency: FREQ.DAILY,               // dropdown value
             isReminderMode: false,               // task type: reminder vs regular
@@ -729,6 +730,7 @@
         function resetFormState() {
             formState.name = '';
             formState.description = '';
+            formState.showDescription = false;
             formState.time = null;
             formState.frequency = FREQ.DAILY;
             formState.isReminderMode = false;
@@ -746,11 +748,12 @@
         function initFormStateFromHabit(habit) {
             formState.name = habit.name || '';
             formState.description = habit.description || '';
+            formState.showDescription = !!(habit.description);
             formState.icon = habit.icon || HABIT_EMOJIS[0];
             formState.allowOptional = habit.allowOptional !== false;
             formState.hideSubtasksOnMain = habit.showSubtasksOnMain === false;
             formState.isLarge = habit.isLarge || false;
-            formState.showSubtasks = false; // Will show if habit has subtasks
+            formState.showSubtasks = (habit.subtasks?.length > 0); // Show if habit has existing subtasks
 
             // Determine mode based on frequency type and flags
             const freqType = habit.frequency.type;
@@ -777,10 +780,6 @@
 
         // Get current form state (for compatibility with renderHabitForm)
         function getFormState(habit = null) {
-            // For edit mode with existing subtasks, override showSubtasks
-            if (formMode === 'edit' && habit?.subtasks?.length > 0) {
-                return { ...formState, showSubtasks: true };
-            }
             return formState;
         }
 
@@ -791,12 +790,10 @@
             const currentIcon = state.icon || (habit?.icon) || '📌';
             const habitName = escapeHtml(formState.name || '');
             const habitDesc = escapeHtml(formState.description || '');
-            // Points disabled for twice daily and every X days
+            // Points disabled only for twice daily (morning & bedtime makes no sense with points)
             const isTwiceDaily = state.frequency === FREQ.TWICE_DAILY;
-            const isEveryXDays = state.frequency === FREQ.EVERY_X_DAYS;
-            const pointsDisabled = isTwiceDaily || isEveryXDays;
-            // Allow Extra disabled for twice daily
-            const optionalDisabled = isTwiceDaily;
+            const pointsDisabled = isTwiceDaily;
+            // Allow Extra is now compatible with all frequencies
 
             // Build frequency inputs (use lowercase IDs for create, camelCase with 'edit' prefix for edit)
             const idPrefix = isEdit ? 'edit' : '';
@@ -824,9 +821,9 @@
                 }
             }
 
-            // Subtasks section (for create mode or edit mode with subtasks)
+            // Subtasks section (show if toggle is on OR habit has existing subtasks)
             const subtasks = isEdit ? (habit?.subtasks || []) : newHabitSubtasks;
-            const showSubtasksArea = isEdit || state.showSubtasks;
+            const showSubtasksArea = state.showSubtasks || subtasks.length > 0;
             let subtasksHtml = '';
             if (showSubtasksArea || subtasks.length > 0) {
                 const subtaskItems = isEdit ? subtasks.map(s => `
@@ -892,7 +889,6 @@
                             <button type="button" class="time-toggle-btn ${state.time === PERIOD.NIGHT ? 'active' : ''}" data-time="night" onclick="${isTwiceDaily ? '' : `toggleFormTime('${PERIOD.NIGHT}')`}">🌙</button>
                         </div>
                     </div>
-                    <textarea class="form-input" id="${isEdit ? 'editHabitDesc' : 'habitDesc'}" placeholder="Description (optional)" rows="2" style="margin:0;resize:none;font-size:0.85rem">${habitDesc}</textarea>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Options</label>
@@ -905,7 +901,7 @@
                             <span class="option-pill-check">✓</span>
                             <span>Points</span>
                         </label>
-                        <label class="option-pill ${state.allowOptional && !optionalDisabled ? 'active' : ''} ${optionalDisabled ? 'disabled' : ''}" id="${isEdit ? 'editOptionalPill' : 'optionalPill'}" onclick="toggleFormAllowOptional()">
+                        <label class="option-pill ${state.allowOptional ? 'active' : ''}" id="${isEdit ? 'editOptionalPill' : 'optionalPill'}" onclick="toggleFormAllowOptional()">
                             <span class="option-pill-check">✓</span>
                             <span>Allow extra</span>
                         </label>
@@ -917,13 +913,20 @@
                             <span class="option-pill-check">✓</span>
                             <span>Large</span>
                         </label>
+                        <label class="option-pill ${state.showDescription ? 'active' : ''}" id="${isEdit ? 'editDescPill' : 'descPill'}" onclick="toggleFormDescription()">
+                            <span class="option-pill-check">✓</span>
+                            <span>Description</span>
+                        </label>
                     </div>
                 </div>
+                ${state.showDescription ? `<div class="form-group">
+                    <textarea class="form-input" id="${isEdit ? 'editHabitDesc' : 'habitDesc'}" placeholder="Add a description..." rows="2" style="resize:none;font-size:0.85rem">${habitDesc}</textarea>
+                </div>` : ''}
                 <div class="form-group" id="${isEdit ? 'editFrequencyGroup' : 'frequencyGroup'}">
                     <label class="form-label">Schedule</label>
                     <div class="frequency-row" id="${isEdit ? 'editFrequencyRow' : 'frequencyRow'}">
                         <select class="form-input" id="${isEdit ? 'editFrequencySelect' : 'frequencySelect'}" onchange="selectFormFrequency(this.value)" style="flex:1">
-                            <option value="${FREQ.DAILY}" ${state.frequency === FREQ.DAILY ? 'selected' : ''} ${state.isPointsMode ? 'disabled' : ''}>Daily${state.isPointsMode ? ' (not with Points)' : ''}</option>
+                            <option value="${FREQ.DAILY}" ${state.frequency === FREQ.DAILY ? 'selected' : ''}>Daily</option>
                             <option value="${FREQ.TWICE_DAILY}" ${state.frequency === FREQ.TWICE_DAILY ? 'selected' : ''} ${state.isPointsMode ? 'disabled' : ''}>Morning & Bedtime${state.isPointsMode ? ' (not with Points)' : ''}</option>
                             <option value="${FREQ.EVERY_X_DAYS}" ${state.frequency === FREQ.EVERY_X_DAYS ? 'selected' : ''}>Every X days</option>
                             <option value="${FREQ.TIMES_PER_PERIOD}" ${state.frequency === FREQ.TIMES_PER_PERIOD ? 'selected' : ''}>X per period</option>
@@ -988,15 +991,14 @@
 
         function toggleFormPointsMode() {
             formState.isPointsMode = !formState.isPointsMode;
-            // When enabling points, auto-switch from incompatible frequencies
-            if (formState.isPointsMode && (formState.frequency === FREQ.DAILY || formState.frequency === FREQ.TWICE_DAILY || formState.frequency === FREQ.EVERY_X_DAYS)) {
+            // When enabling points, only auto-switch from twice daily (the only incompatible option)
+            if (formState.isPointsMode && formState.frequency === FREQ.TWICE_DAILY) {
                 formState.frequency = FREQ.TIMES_PER_PERIOD;
             }
             rerenderForm();
         }
 
         function toggleFormAllowOptional() {
-            if (formState.frequency === FREQ.TWICE_DAILY) return;
             formState.allowOptional = !formState.allowOptional;
             rerenderForm();
         }
@@ -1004,6 +1006,15 @@
         function toggleFormIsLarge() {
             formState.isLarge = !formState.isLarge;
             rerenderForm();
+        }
+
+        function toggleFormDescription() {
+            formState.showDescription = !formState.showDescription;
+            rerenderForm();
+            if (formState.showDescription) {
+                const inputId = formMode === 'edit' ? 'editHabitDesc' : 'habitDesc';
+                setTimeout(() => document.getElementById(inputId)?.focus(), 0);
+            }
         }
 
         function toggleFormSubtasks() {
