@@ -2310,11 +2310,13 @@
             const { now: nowHabits, optional: optionalHabits, later: laterHabits, done: completedHabits,
                     morning: morningSpecific, bedtime: bedtimeSpecific, anytime: anytimeHabits, timeOfDay } = categorizeHabits(habits);
 
-            // Helper: render a sub-section with header and habits grid
-            const subSection = (habits, icon, title) => habits.length
-                ? `<div class="sub-header"><span class="sub-header-icon">${icon}</span>${title}</div>
-                   <div class="habits-grid">${habits.map(h => renderHabitIcon(h)).join('')}</div>`
-                : '';
+            // Helper: render a sub-section with header and habits grid (large tasks sorted first)
+            const subSection = (habits, icon, title) => {
+                if (!habits.length) return '';
+                const sorted = [...habits].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0));
+                return `<div class="sub-header"><span class="sub-header-icon">${icon}</span>${title}</div>
+                   <div class="habits-grid">${sorted.map(h => renderHabitIcon(h)).join('')}</div>`;
+            };
 
             let html = '';
 
@@ -2371,7 +2373,9 @@
             const contentClass = collapsed ? 'section-content collapsed' : 'section-content';
             const headerClass = collapsed ? 'section-header collapsible collapsed' : 'section-header collapsible';
             const sectionClass = renderOpts.inactive ? 'habits-section inactive-section' : 'habits-section';
-            const habitsHtml = habits.map(h => renderHabitIcon(h, renderOpts.isLater, renderOpts.isCompleted)).join('');
+            // Sort large tasks first for better grid layout
+            const sorted = [...habits].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0));
+            const habitsHtml = sorted.map(h => renderHabitIcon(h, renderOpts.isLater, renderOpts.isCompleted)).join('');
             return `<div class="${sectionClass}">
                 <div class="${headerClass}" onclick="toggleSection('${sectionId}')">
                     <span class="section-icon">${icon}</span>
@@ -3047,16 +3051,16 @@
             const noResults = document.getElementById('allHabitsNoResults');
             if (!grid) return;
 
-            // Filter and sort
+            // Filter and sort (large tasks always first)
             let filtered = habits;
             if (allHabitsSearchQuery) {
                 filtered = habits
                     .map(h => ({ habit: h, ...fuzzyMatch(h.name, allHabitsSearchQuery) }))
                     .filter(h => h.match)
-                    .sort((a, b) => b.score - a.score)
+                    .sort((a, b) => (b.habit.isLarge ? 1 : 0) - (a.habit.isLarge ? 1 : 0) || b.score - a.score)
                     .map(h => h.habit);
             } else {
-                filtered = [...habits].sort((a, b) => a.name.localeCompare(b.name));
+                filtered = [...habits].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0) || a.name.localeCompare(b.name));
             }
 
             if (!filtered.length) {
