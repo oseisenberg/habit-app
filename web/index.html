@@ -300,6 +300,7 @@
         .subtask-indicator.partial { color: #f59e0b; }
         .subtask-indicator.complete { color: #4ade80; }
         .subtask-list { margin-top: 10px; }
+        .subtasks-scroll-container { background: #0f0f1a; border-radius: 8px; padding: 8px 12px; max-height: 200px; overflow-y: auto; margin-bottom: 8px; }
         .subtask-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #2a2a3e; min-height: 36px; }
         .subtask-item:last-child { border-bottom: none; }
         .subtask-checkbox { width: 18px; height: 18px; border-radius: 4px; border: 2px solid #444; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -725,7 +726,6 @@
             timesPeriod: PERIOD.WEEK,            // 'day', 'week' or 'month' for times
             pointsPeriod: PERIOD.WEEK,           // 'day', 'week' or 'month' for points
             afterPeriod: PERIOD.DAY,             // 'day', 'week' or 'month' for after completion
-            hideSubtasksOnMain: false,           // hide subtasks on main screen (edit only)
             isLarge: false                       // show as large (2 columns) in grid
         };
 
@@ -748,7 +748,6 @@
             formState.timesPeriod = PERIOD.WEEK;
             formState.pointsPeriod = PERIOD.WEEK;
             formState.afterPeriod = PERIOD.DAY;
-            formState.hideSubtasksOnMain = false;
             formState.isLarge = false;
         }
 
@@ -759,7 +758,6 @@
             formState.showDescription = !!(habit.description);
             formState.icon = habit.icon || HABIT_EMOJIS[0];
             formState.allowOptional = habit.allowOptional !== false;
-            formState.hideSubtasksOnMain = habit.showSubtasksOnMain === false;
             formState.isLarge = habit.isLarge || false;
             formState.showSubtasks = (habit.subtasks?.length > 0); // Show if habit has existing subtasks
 
@@ -862,23 +860,11 @@
                 subtasksHtml = `
                     <div class="form-group" id="${isEdit ? 'editSubtasksArea' : 'subtasksInputArea'}" style="${showSubtasksArea ? '' : 'display:none'}">
                         <label class="form-label">Subtasks</label>
-                        <div id="${isEdit ? 'editSubtasksList' : 'newHabitSubtasksList'}">${subtaskItems}</div>
+                        <div class="subtasks-scroll-container" id="${isEdit ? 'editSubtasksList' : 'newHabitSubtasksList'}">${subtaskItems}</div>
                         <div class="add-subtask">
                             <input type="text" id="${isEdit ? 'editSubtaskInput' : 'newHabitSubtaskInput'}" placeholder="Add subtask..."
                                 onkeypress="if(event.key==='Enter'){event.preventDefault();${isEdit ? `addSubtask(${habit.id})` : 'addNewHabitSubtask()'};}">
                             <button type="button" onclick="${isEdit ? `addSubtask(${habit.id})` : 'addNewHabitSubtask()'}">+</button>
-                        </div>
-                    </div>`;
-            }
-
-            // Hide subtasks toggle (only for edit mode with existing subtasks)
-            let hideSubtasksHtml = '';
-            if (isEdit && subtasks.length > 0) {
-                hideSubtasksHtml = `
-                    <div class="form-group">
-                        <div class="settings-row" style="border:none;padding:8px 0">
-                            <span class="settings-label">Hide subtasks on main screen</span>
-                            <div class="toggle-switch ${formState.hideSubtasksOnMain ? 'active' : ''}" id="hideSubtasksToggle" onclick="toggleFormHideSubtasks()"></div>
                         </div>
                     </div>`;
             }
@@ -952,7 +938,6 @@
                     </div>
                 </div>
                 ${subtasksHtml}
-                ${hideSubtasksHtml}
                 <div class="action-buttons">
                     <button class="submit-btn" onclick="${isEdit ? 'saveHabitEdit' : 'addHabit'}()">${isEdit ? 'Save Changes' : 'Add Habit'}</button>
                     ${isEdit ? '<button class="submit-btn secondary" onclick="toggleEditMode()">Cancel</button>' : ''}
@@ -1043,11 +1028,6 @@
                 const inputId = formMode === 'edit' ? 'editSubtaskInput' : 'newHabitSubtaskInput';
                 setTimeout(() => document.getElementById(inputId)?.focus(), 0);
             }
-        }
-
-        function toggleFormHideSubtasks() {
-            formState.hideSubtasksOnMain = !formState.hideSubtasksOnMain;
-            rerenderForm();
         }
 
         function selectFormFrequency(f) {
@@ -1258,7 +1238,7 @@
         function getDefaultHabits() {
             const today = getTodayString();
             return [
-                { id: 2, name: 'Shower', icon: '🚿', timeOfDay: 'night', frequency: { type: 'everyXDays', everyXDays: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: true, isReminder: false, isLarge: false },
+                { id: 2, name: 'Shower', icon: '🚿', timeOfDay: 'night', frequency: { type: 'everyXDays', everyXDays: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false, isLarge: false },
                 { id: 3, name: 'Exercise', icon: '🏋️‍♂️', timeOfDay: null, frequency: { type: 'timesPerWeek', timesPerWeek: 3 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false },
                 { id: 4, name: 'Zoryve', icon: '🫧', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false },
                 { id: 8, name: 'Shave', icon: '🪒', timeOfDay: null, frequency: { type: 'everyXDays', everyXDays: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false },
@@ -2282,12 +2262,12 @@
             const settings = getSettings();
             const method = settings.sortMethod || 'default';
             if (method === 'default') return habits;
-            if (method === 'alphabetical') return [...habits].sort((a, b) => a.name.localeCompare(b.name));
+            if (method === 'alphabetical') return [...habits].sort((a, b) => (a.isReminder ? 1 : 0) - (b.isReminder ? 1 : 0) || a.name.localeCompare(b.name));
             // 'attention' (and legacy 'overdue'/'score') - sort by momentum score
             if (method === 'attention' || method === 'overdue' || method === 'score') {
                 const scoresMap = new Map();
                 habits.forEach(h => scoresMap.set(h.id, calculateMomentumScore(h).raw));
-                return [...habits].sort((a, b) => scoresMap.get(a.id) - scoresMap.get(b.id));
+                return [...habits].sort((a, b) => (a.isReminder ? 1 : 0) - (b.isReminder ? 1 : 0) || scoresMap.get(a.id) - scoresMap.get(b.id));
             }
             return habits;
         }
@@ -2364,7 +2344,7 @@
             // Helper: render a sub-section with header and habits grid (large tasks sorted first)
             const subSection = (habits, icon, title) => {
                 if (!habits.length) return '';
-                const sorted = [...habits].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0));
+                const sorted = [...habits].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0) || (a.isReminder ? 1 : 0) - (b.isReminder ? 1 : 0));
                 return `<div class="sub-header"><span class="sub-header-icon">${icon}</span>${title}</div>
                    <div class="habits-grid">${sorted.map(h => renderHabitIcon(h)).join('')}</div>`;
             };
@@ -2424,8 +2404,8 @@
             const contentClass = collapsed ? 'section-content collapsed' : 'section-content';
             const headerClass = collapsed ? 'section-header collapsible collapsed' : 'section-header collapsible';
             const sectionClass = renderOpts.inactive ? 'habits-section inactive-section' : 'habits-section';
-            // Sort large tasks first for better grid layout
-            const sorted = [...habits].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0));
+            // Sort: large tasks first, reminders last
+            const sorted = [...habits].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0) || (a.isReminder ? 1 : 0) - (b.isReminder ? 1 : 0));
             const habitsHtml = sorted.map(h => renderHabitIcon(h, renderOpts.isLater, renderOpts.isCompleted)).join('');
             return `<div class="${sectionClass}">
                 <div class="${headerClass}" onclick="toggleSection('${sectionId}')">
@@ -2960,9 +2940,6 @@
                 habit.frequency.pointsPerMonth = val;
             }
 
-            // Save subtask visibility preference
-            habit.showSubtasksOnMain = formState.hideSubtasksOnMain ? false : undefined;
-
             // Save allow optional preference
             habit.allowOptional = formState.allowOptional;
 
@@ -3145,10 +3122,10 @@
                 filtered = habits
                     .map(h => ({ habit: h, ...fuzzyMatch(h.name, allHabitsSearchQuery) }))
                     .filter(h => h.match)
-                    .sort((a, b) => (b.habit.isLarge ? 1 : 0) - (a.habit.isLarge ? 1 : 0) || b.score - a.score)
+                    .sort((a, b) => (b.habit.isLarge ? 1 : 0) - (a.habit.isLarge ? 1 : 0) || (a.habit.isReminder ? 1 : 0) - (b.habit.isReminder ? 1 : 0) || b.score - a.score)
                     .map(h => h.habit);
             } else {
-                filtered = [...habits].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0) || a.name.localeCompare(b.name));
+                filtered = [...habits].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0) || (a.isReminder ? 1 : 0) - (b.isReminder ? 1 : 0) || a.name.localeCompare(b.name));
             }
 
             if (!filtered.length) {
