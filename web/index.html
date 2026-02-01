@@ -531,7 +531,7 @@
             <div class="settings-row">
                 <span class="settings-label">Sort habits by</span>
                 <select class="settings-select" id="sortMethod">
-                    <option value="default">Default</option>
+                    <option value="default" selected>Default</option>
                     <option value="attention">Needs attention</option>
                     <option value="alphabetical">A-Z</option>
                 </select>
@@ -591,8 +591,10 @@
             </div>
 
             <button class="submit-btn" onclick="saveSettings()">Save Settings</button>
-            <button class="submit-btn secondary" onclick="exportData()" style="margin-top:8px">Export All Data</button>
-            <button class="submit-btn secondary" onclick="exportData(true)" style="margin-top:8px">Export Tasks Only (no history)</button>
+            <div style="display:flex;gap:8px;margin-top:8px">
+                <button class="submit-btn secondary" onclick="exportData()" style="flex:1;font-size:0.85rem">Export All Data</button>
+                <button class="submit-btn secondary" onclick="exportData(true)" style="flex:1;font-size:0.85rem">Export Tasks Only (no history)</button>
+            </div>
         </div>
     </div>
 
@@ -1256,8 +1258,9 @@
             const today = getTodayString();
             return [
                 { id: 2, name: 'Shower', icon: '🚿', timeOfDay: 'night', frequency: { type: 'everyXDays', everyXDays: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false, isLarge: false },
+                { id: 36, name: 'Brush teeth', icon: '🦷', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false },
                 { id: 3, name: 'Exercise', icon: '🏋️‍♂️', timeOfDay: null, frequency: { type: 'timesPerWeek', timesPerWeek: 3 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false },
-                { id: 4, name: 'Zoryve', icon: '🫧', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false },
+                { id: 4, name: 'Zoryve', icon: '🫧', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false },
                 { id: 8, name: 'Shave', icon: '🪒', timeOfDay: null, frequency: { type: 'everyXDays', everyXDays: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false },
                 { id: 9, name: 'Change clothes', icon: '👔', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false },
                 { id: 10, name: 'Vitamins: Biotin', icon: '🍬', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today },
@@ -1295,7 +1298,7 @@
                 { id: 30, name: 'Protein', icon: '🥩', timeOfDay: null, frequency: { type: 'pointsPerDay', pointsPerDay: 4 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: true, allowOptional: true, isReminder: false, isLarge: false },
                 { id: 31, name: 'Clean glasses', icon: '🤓', timeOfDay: null, frequency: { type: 'everyXDays', everyXDays: 3 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false, isLarge: false },
                 { id: 32, name: 'Close tabs', icon: '🗂️', timeOfDay: null, frequency: { type: 'timesPerWeek', timesPerWeek: 1 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: true, isLarge: false },
-                { id: 33, name: 'Hair management', icon: '✂️', timeOfDay: null, frequency: { type: 'timesPerMonth', timesPerMonth: 1 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [
+                { id: 33, name: 'Hair management', icon: '✂️', timeOfDay: null, frequency: { type: 'everyXDays', everyXWeeks: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [
                     { id: 1, name: 'Cut hair', completedPeriods: {} },
                     { id: 2, name: 'Clean dandruff', completedPeriods: {} },
                     { id: 3, name: 'Trim', completedPeriods: {} },
@@ -1303,7 +1306,7 @@
                     { id: 5, name: 'Forehead hair plucking', completedPeriods: {} },
                     { id: 6, name: 'Eyebrow plucking', completedPeriods: {} },
                     { id: 7, name: 'Trim eyebrows with scissors', completedPeriods: {} }
-                ], createdAt: today, usePoints: false, allowOptional: false, isReminder: false, isLarge: false },
+                ], createdAt: today, usePoints: false, allowOptional: false, isReminder: true, isLarge: false },
                 { id: 34, name: 'Cut fingernails', icon: '🖐️', timeOfDay: null, frequency: { type: 'timesPerWeek', timesPerWeek: 1 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: true, isLarge: false },
                 { id: 35, name: 'Cut toenails', icon: '🦶', timeOfDay: null, frequency: { type: 'timesPerMonth', timesPerMonth: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: true, isLarge: false }
             ];
@@ -2929,6 +2932,8 @@
             detailsOpenedFromAllHabits = true;
             editMode = false;
             formMode = 'create';
+            // Close All Habits overlay first so details can be seen
+            document.getElementById('allHabitsOverlay').classList.remove('active');
             renderDetails();
             document.getElementById('detailsOverlay').classList.add('active');
         }
