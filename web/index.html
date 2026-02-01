@@ -302,6 +302,10 @@
         .subtask-list { margin-top: 10px; }
         .subtasks-scroll-container { background: #0f0f1a; border-radius: 8px; padding: 8px 12px; max-height: 200px; overflow-y: auto; margin-bottom: 8px; }
         .subtask-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #2a2a3e; min-height: 36px; }
+        .subtask-item.dragging { opacity: 0.5; background: #1a1a2e; }
+        .subtask-item.drag-over { border-top: 2px solid #667eea; }
+        .subtask-drag-handle { color: #555; cursor: grab; padding: 4px; font-size: 0.8rem; user-select: none; }
+        .subtask-drag-handle:active { cursor: grabbing; }
         .subtask-item:last-child { border-bottom: none; }
         .subtask-checkbox { width: 18px; height: 18px; border-radius: 4px; border: 2px solid #444; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .subtask-checkbox.checked { background: #667eea; border-color: #667eea; }
@@ -841,15 +845,25 @@
             const showSubtasksArea = state.showSubtasks || subtasks.length > 0;
             let subtasksHtml = '';
             if (showSubtasksArea || subtasks.length > 0) {
-                const subtaskItems = isEdit ? subtasks.map(s => `
-                    <div class="subtask-item">
+                const subtaskItems = isEdit ? subtasks.map((s, i) => `
+                    <div class="subtask-item" draggable="true" data-subtask-id="${s.id}" data-index="${i}"
+                        ondragstart="handleSubtaskDragStart(event, 'edit', ${habit.id})"
+                        ondragover="handleSubtaskDragOver(event)"
+                        ondragleave="handleSubtaskDragLeave(event)"
+                        ondrop="handleSubtaskDrop(event, 'edit', ${habit.id})">
+                        <span class="subtask-drag-handle">⋮⋮</span>
                         <input type="text" class="subtask-name-input" value="${escapeHtml(s.name)}"
                             onchange="updateEditSubtask(${habit.id}, ${s.id}, this.value)"
                             onkeypress="if(event.key==='Enter')this.blur()">
                         <span class="subtask-delete" onclick="deleteSubtask(${habit.id}, ${s.id})">✕</span>
                     </div>
-                `).join('') : subtasks.map(s => `
-                    <div class="subtask-item">
+                `).join('') : subtasks.map((s, i) => `
+                    <div class="subtask-item" draggable="true" data-subtask-id="${s.id}" data-index="${i}"
+                        ondragstart="handleSubtaskDragStart(event, 'new')"
+                        ondragover="handleSubtaskDragOver(event)"
+                        ondragleave="handleSubtaskDragLeave(event)"
+                        ondrop="handleSubtaskDrop(event, 'new')">
+                        <span class="subtask-drag-handle">⋮⋮</span>
                         <input type="text" class="subtask-name-input" value="${escapeHtml(s.name)}"
                             onchange="updateNewHabitSubtask(${s.id}, this.value)"
                             onkeypress="if(event.key==='Enter')this.blur()">
@@ -1621,6 +1635,64 @@
             if (subtask && newName.trim()) {
                 subtask.name = newName.trim();
             }
+        }
+
+        // Drag and drop for subtask reordering
+        let draggedSubtaskId = null;
+
+        function handleSubtaskDragStart(event, mode, habitId = null) {
+            draggedSubtaskId = parseInt(event.target.dataset.subtaskId);
+            event.target.classList.add('dragging');
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', draggedSubtaskId);
+        }
+
+        function handleSubtaskDragOver(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            const item = event.target.closest('.subtask-item');
+            if (item && parseInt(item.dataset.subtaskId) !== draggedSubtaskId) {
+                item.classList.add('drag-over');
+            }
+        }
+
+        function handleSubtaskDragLeave(event) {
+            const item = event.target.closest('.subtask-item');
+            if (item) item.classList.remove('drag-over');
+        }
+
+        function handleSubtaskDrop(event, mode, habitId = null) {
+            event.preventDefault();
+            const item = event.target.closest('.subtask-item');
+            if (item) item.classList.remove('drag-over');
+
+            const targetId = parseInt(item?.dataset.subtaskId);
+            if (!targetId || targetId === draggedSubtaskId) return;
+
+            if (mode === 'new') {
+                // Reorder newHabitSubtasks array
+                const fromIndex = newHabitSubtasks.findIndex(s => s.id === draggedSubtaskId);
+                const toIndex = newHabitSubtasks.findIndex(s => s.id === targetId);
+                if (fromIndex !== -1 && toIndex !== -1) {
+                    const [moved] = newHabitSubtasks.splice(fromIndex, 1);
+                    newHabitSubtasks.splice(toIndex, 0, moved);
+                    rerenderForm();
+                }
+            } else if (mode === 'edit' && habitId) {
+                // Reorder existing habit's subtasks
+                const habit = habits.find(h => h.id === habitId);
+                if (habit && habit.subtasks) {
+                    const fromIndex = habit.subtasks.findIndex(s => s.id === draggedSubtaskId);
+                    const toIndex = habit.subtasks.findIndex(s => s.id === targetId);
+                    if (fromIndex !== -1 && toIndex !== -1) {
+                        const [moved] = habit.subtasks.splice(fromIndex, 1);
+                        habit.subtasks.splice(toIndex, 0, moved);
+                        saveHabits(habits);
+                        rerenderForm();
+                    }
+                }
+            }
+            draggedSubtaskId = null;
         }
 
         // Determine the final frequency type based on form state
