@@ -722,8 +722,9 @@
             allowOptional: false,                // allow extra completions
             showSubtasks: false,                 // show subtasks input area
             icon: null,                          // selected emoji
-            timesPeriod: PERIOD.WEEK,            // 'week' or 'month' for times
-            pointsPeriod: PERIOD.WEEK,           // 'week' or 'month' for points
+            timesPeriod: PERIOD.WEEK,            // 'day', 'week' or 'month' for times
+            pointsPeriod: PERIOD.WEEK,           // 'day', 'week' or 'month' for points
+            afterPeriod: PERIOD.DAY,             // 'day', 'week' or 'month' for after completion
             hideSubtasksOnMain: false,           // hide subtasks on main screen (edit only)
             isLarge: false                       // show as large (2 columns) in grid
         };
@@ -746,6 +747,7 @@
             formState.icon = null;
             formState.timesPeriod = PERIOD.WEEK;
             formState.pointsPeriod = PERIOD.WEEK;
+            formState.afterPeriod = PERIOD.DAY;
             formState.hideSubtasksOnMain = false;
             formState.isLarge = false;
         }
@@ -782,6 +784,10 @@
 
             formState.timesPeriod = (freqType === FREQ.TIMES_PER_DAY) ? PERIOD.DAY : ((freqType === FREQ.TIMES_PER_MONTH) ? PERIOD.MONTH : PERIOD.WEEK);
             formState.pointsPeriod = (freqType === FREQ.POINTS_PER_DAY) ? PERIOD.DAY : ((freqType === FREQ.POINTS_PER_MONTH) ? PERIOD.MONTH : PERIOD.WEEK);
+            // Determine after period from habit frequency
+            if (habit.frequency.everyXWeeks) formState.afterPeriod = PERIOD.WEEK;
+            else if (habit.frequency.everyXMonths) formState.afterPeriod = PERIOD.MONTH;
+            else formState.afterPeriod = PERIOD.DAY;
         }
 
         // Get current form state (for compatibility with renderHabitForm)
@@ -805,8 +811,13 @@
             const idPrefix = isEdit ? 'edit' : '';
             let freqInputsHtml = '';
             if (state.frequency === FREQ.EVERY_X_DAYS) {
-                const daysVal = habit?.frequency?.everyXDays || DEFAULTS.EVERY_X_DAYS;
-                freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'E' : 'e'}veryXDays" value="${daysVal}" min="1"><span style="color:#888">days after</span>`;
+                const afterVal = habit?.frequency?.everyXDays || habit?.frequency?.everyXWeeks || habit?.frequency?.everyXMonths || DEFAULTS.EVERY_X_DAYS;
+                freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'E' : 'e'}veryXPeriod" value="${afterVal}" min="1">
+                    <div class="period-toggle">
+                        <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.DAY}')">day</button>
+                        <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.WEEK}')">wk</button>
+                        <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.MONTH ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.MONTH}')">mo</button>
+                    </div><span style="color:#888">after</span>`;
             } else if (state.frequency === FREQ.TIMES_PER_PERIOD) {
                 if (state.isPointsMode) {
                     const ptsVal = habit?.frequency?.pointsPerDay || habit?.frequency?.pointsPerWeek || habit?.frequency?.pointsPerMonth || DEFAULTS.POINTS_PER_PERIOD;
@@ -978,6 +989,8 @@
         function setFormPeriod(type, period) {
             if (type === 'times') {
                 formState.timesPeriod = period;
+            } else if (type === 'after') {
+                formState.afterPeriod = period;
             } else {
                 formState.pointsPeriod = period;
             }
@@ -1661,7 +1674,7 @@
             const pointsVal = parseInt(document.getElementById('pointsPerPeriod')?.value) || DEFAULTS.POINTS_PER_PERIOD;
             const pointsTargetVal = parseInt(document.getElementById('pointsTarget')?.value) || DEFAULTS.POINTS_TARGET;
             const reminderDaysVal = parseInt(document.getElementById('reminderDays')?.value) || DEFAULTS.REMINDER_DAYS;
-            const everyXDaysVal = parseInt(document.getElementById('everyXDays')?.value) || DEFAULTS.EVERY_X_DAYS;
+            const everyXVal = parseInt(document.getElementById('everyXPeriod')?.value) || DEFAULTS.EVERY_X_DAYS;
             habits.push({
                 id: Date.now(), name, description,
                 icon: formState.icon,
@@ -1671,7 +1684,9 @@
                     timesPerDay: timesVal,
                     timesPerWeek: timesVal,
                     timesPerMonth: timesVal,
-                    everyXDays: everyXDaysVal,
+                    everyXDays: formState.afterPeriod === PERIOD.DAY ? everyXVal : null,
+                    everyXWeeks: formState.afterPeriod === PERIOD.WEEK ? everyXVal : null,
+                    everyXMonths: formState.afterPeriod === PERIOD.MONTH ? everyXVal : null,
                     pointsPerDay: pointsVal,
                     pointsPerWeek: pointsVal,
                     pointsPerMonth: pointsVal,
@@ -1823,9 +1838,16 @@
             }
             if (freqType === FREQ.EVERY_X_DAYS || freqType === FREQ.REMINDER) {
                 const last = getLastCompletionDate(habit);
-                const target = freqType === FREQ.REMINDER
-                    ? (habit.frequency.reminderDays || DEFAULTS.REMINDER_DAYS)
-                    : (habit.frequency.everyXDays || DEFAULTS.EVERY_X_DAYS);
+                let target;
+                if (freqType === FREQ.REMINDER) {
+                    target = habit.frequency.reminderDays || DEFAULTS.REMINDER_DAYS;
+                } else if (habit.frequency.everyXWeeks) {
+                    target = habit.frequency.everyXWeeks * 7;
+                } else if (habit.frequency.everyXMonths) {
+                    target = habit.frequency.everyXMonths * 30;
+                } else {
+                    target = habit.frequency.everyXDays || DEFAULTS.EVERY_X_DAYS;
+                }
                 if (!last) return { completed: false, due: true, daysOverdue: 0 };
                 const since = daysBetween(last, today);
                 return { completed: since === 0, due: since >= target, daysOverdue: Math.max(0, since - target) };
@@ -1872,7 +1894,11 @@
             if (habit.frequency.type === FREQ.EVERY_X_DAYS) {
                 const last = getLastCompletionDate(habit);
                 if (!last) return 0;
-                return Math.max(0, daysBetween(last, today) - (habit.frequency.everyXDays || DEFAULTS.EVERY_X_DAYS));
+                let target;
+                if (habit.frequency.everyXWeeks) target = habit.frequency.everyXWeeks * 7;
+                else if (habit.frequency.everyXMonths) target = habit.frequency.everyXMonths * 30;
+                else target = habit.frequency.everyXDays || DEFAULTS.EVERY_X_DAYS;
+                return Math.max(0, daysBetween(last, today) - target);
             }
             return 0;
         }
@@ -1915,7 +1941,11 @@
             else if (freqType === FREQ.REMINDER) cycleDays = freq.reminderDays || DEFAULTS.REMINDER_DAYS;
             else if (freqType === FREQ.TIMES_PER_WEEK) cycleDays = 7 / (freq.timesPerWeek || DEFAULTS.TIMES_PER_PERIOD);
             else if (freqType === FREQ.TIMES_PER_MONTH) cycleDays = 30 / (freq.timesPerMonth || DEFAULTS.TIMES_PER_PERIOD);
-            else if (freqType === FREQ.EVERY_X_DAYS) cycleDays = freq.everyXDays || DEFAULTS.EVERY_X_DAYS;
+            else if (freqType === FREQ.EVERY_X_DAYS) {
+                if (freq.everyXWeeks) cycleDays = freq.everyXWeeks * 7;
+                else if (freq.everyXMonths) cycleDays = freq.everyXMonths * 30;
+                else cycleDays = freq.everyXDays || DEFAULTS.EVERY_X_DAYS;
+            }
 
             // Time window is 2-3x the cycle length, minimum 14 days
             const windowDays = Math.max(14, Math.round(cycleDays * 2.5));
@@ -1981,9 +2011,16 @@
             if (freqType === FREQ.DAILY || freqType === FREQ.TWICE_DAILY || freqType === FREQ.POINTS_PER_DAY || freqType === FREQ.TIMES_PER_DAY) return true;
             if (freqType === FREQ.TIMES_PER_WEEK || freqType === FREQ.TIMES_PER_MONTH) return true;
             if (freqType === FREQ.EVERY_X_DAYS || freqType === FREQ.REMINDER) {
-                const interval = freqType === FREQ.REMINDER
-                    ? (freq.reminderDays || DEFAULTS.REMINDER_DAYS)
-                    : (freq.everyXDays || DEFAULTS.EVERY_X_DAYS);
+                let interval;
+                if (freqType === FREQ.REMINDER) {
+                    interval = freq.reminderDays || DEFAULTS.REMINDER_DAYS;
+                } else if (freq.everyXWeeks) {
+                    interval = freq.everyXWeeks * 7;
+                } else if (freq.everyXMonths) {
+                    interval = freq.everyXMonths * 30;
+                } else {
+                    interval = freq.everyXDays || DEFAULTS.EVERY_X_DAYS;
+                }
                 const last = getLastCompletionBefore(habit, dateStr);
                 if (!last) return true;
                 const since = daysBetween(last, dateStr);
@@ -2901,8 +2938,11 @@
                 habit.frequency.timesPerMonth = val;
             }
             if (finalFreqType === FREQ.EVERY_X_DAYS) {
-                const input = document.getElementById('editEveryXDays');
-                habit.frequency.everyXDays = parseInt(input?.value) || DEFAULTS.EVERY_X_DAYS;
+                const input = document.getElementById('editEveryXPeriod');
+                const val = parseInt(input?.value) || DEFAULTS.EVERY_X_DAYS;
+                habit.frequency.everyXDays = formState.afterPeriod === PERIOD.DAY ? val : null;
+                habit.frequency.everyXWeeks = formState.afterPeriod === PERIOD.WEEK ? val : null;
+                habit.frequency.everyXMonths = formState.afterPeriod === PERIOD.MONTH ? val : null;
                 if (formState.isPointsMode) {
                     const ptsInput = document.getElementById('editPointsTarget');
                     habit.frequency.pointsTarget = parseInt(ptsInput?.value) || DEFAULTS.POINTS_TARGET;
@@ -2970,7 +3010,11 @@
                 const isSnoozed = habit.snoozedUntil && (habit.snoozedUntil === 'night' || habit.snoozedUntil > today);
                 const canSnooze = !isSnoozed && !isCompletedToday(habit);
 
-                const freqLabel = { daily: 'Daily', reminder: `${habit.frequency.reminderDays || 1} days after`, twiceDaily: 'Twice daily', timesPerDay: `${habit.frequency.timesPerDay || 1}x within day`, timesPerWeek: `${habit.frequency.timesPerWeek || 3}x within week`, timesPerMonth: `${habit.frequency.timesPerMonth || 4}x within month`, everyXDays: `${habit.frequency.everyXDays || 2} days after`, pointsPerDay: `${habit.frequency.pointsPerDay || 4} pts within day`, pointsPerWeek: `${habit.frequency.pointsPerWeek || 12} pts within week`, pointsPerMonth: `${habit.frequency.pointsPerMonth || 30} pts within month` }[habit.frequency.type];
+                // Build "after completion" label dynamically
+                const afterLabel = habit.frequency.everyXWeeks ? `${habit.frequency.everyXWeeks} weeks after` :
+                                   habit.frequency.everyXMonths ? `${habit.frequency.everyXMonths} months after` :
+                                   `${habit.frequency.everyXDays || 2} days after`;
+                const freqLabel = { daily: 'Daily', reminder: `${habit.frequency.reminderDays || 1} days after`, twiceDaily: 'Twice daily', timesPerDay: `${habit.frequency.timesPerDay || 1}x within day`, timesPerWeek: `${habit.frequency.timesPerWeek || 3}x within week`, timesPerMonth: `${habit.frequency.timesPerMonth || 4}x within month`, everyXDays: afterLabel, pointsPerDay: `${habit.frequency.pointsPerDay || 4} pts within day`, pointsPerWeek: `${habit.frequency.pointsPerWeek || 12} pts within week`, pointsPerMonth: `${habit.frequency.pointsPerMonth || 30} pts within month` }[habit.frequency.type];
                 const timeLabel = habit.timeOfDay ? { morning: 'Morning', night: 'Bedtime' }[habit.timeOfDay] : 'Anytime';
 
                 // Momentum score
