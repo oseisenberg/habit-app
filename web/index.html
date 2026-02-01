@@ -59,6 +59,10 @@
         .habit-ring.completed::before { background: #4ade80; }
         .habit-ring.partial { background: conic-gradient(#4ade80 var(--progress), #2a2a3e var(--progress)); }
         .habit-ring.missed { background: rgba(220, 38, 38, 0.15); } /* Muted red for missed tasks (not completed today) */
+        .habit-ring.negative { background: linear-gradient(135deg, #2a2a3e 0%, #3d2a2a 100%); border: 2px solid #5c3030; }
+        .habit-ring.negative::before { background: #1a1a2e; }
+        .habit-ring.negative-logged { background: #dc2626; border: none; }
+        .habit-ring.negative-logged::before { background: #dc2626; }
 
         /* Neglect indicators - 1 to 3 red dots along the circle arc */
         .neglect-dots { position: absolute; inset: 0; pointer-events: none; }
@@ -736,7 +740,8 @@
             timesPeriod: PERIOD.WEEK,            // 'day', 'week' or 'month' for times
             pointsPeriod: PERIOD.WEEK,           // 'day', 'week' or 'month' for points
             afterPeriod: PERIOD.DAY,             // 'day', 'week' or 'month' for after completion
-            isLarge: false                       // show as large (2 columns) in grid
+            isLarge: false,                      // show as large (2 columns) in grid
+            isNegative: false                    // negative habit (track avoiding)
         };
 
         // ========================================
@@ -759,6 +764,7 @@
             formState.pointsPeriod = PERIOD.WEEK;
             formState.afterPeriod = PERIOD.DAY;
             formState.isLarge = false;
+            formState.isNegative = false;
         }
 
         // Initialize form state from habit (for edit mode)
@@ -796,6 +802,8 @@
             if (habit.frequency.everyXWeeks) formState.afterPeriod = PERIOD.WEEK;
             else if (habit.frequency.everyXMonths) formState.afterPeriod = PERIOD.MONTH;
             else formState.afterPeriod = PERIOD.DAY;
+
+            formState.isNegative = habit.isNegative || false;
         }
 
         // Get current form state (for compatibility with renderHabitForm)
@@ -942,6 +950,10 @@
                             <span class="option-pill-check">✓</span>
                             <span>Description</span>
                         </label>
+                        <label class="option-pill ${state.isNegative ? 'active' : ''}" id="${isEdit ? 'editNegativePill' : 'negativePill'}" onclick="toggleFormNegative()" style="${state.isNegative ? 'border-color:#dc2626;background:rgba(220,38,38,0.15)' : ''}">
+                            <span class="option-pill-check">✓</span>
+                            <span>Negative</span>
+                        </label>
                     </div>
                 </div>
                 ${state.showDescription ? `<div class="form-group">
@@ -1042,6 +1054,11 @@
                 const inputId = formMode === 'edit' ? 'editHabitDesc' : 'habitDesc';
                 setTimeout(() => document.getElementById(inputId)?.focus(), 0);
             }
+        }
+
+        function toggleFormNegative() {
+            formState.isNegative = !formState.isNegative;
+            rerenderForm();
         }
 
         function toggleFormSubtasks() {
@@ -1312,7 +1329,11 @@
                     { id: 7, name: 'Trim eyebrows with scissors', completedPeriods: {} }
                 ], createdAt: today, usePoints: false, allowOptional: false, isReminder: true, isLarge: false },
                 { id: 34, name: 'Cut fingernails', icon: '🖐️', timeOfDay: null, frequency: { type: 'timesPerWeek', timesPerWeek: 1 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: true, isLarge: false },
-                { id: 35, name: 'Cut toenails', icon: '🦶', timeOfDay: null, frequency: { type: 'timesPerMonth', timesPerMonth: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: true, isLarge: false }
+                { id: 35, name: 'Cut toenails', icon: '🦶', timeOfDay: null, frequency: { type: 'timesPerMonth', timesPerMonth: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: true, isLarge: false },
+                // Negative habits (things to avoid)
+                { id: 40, name: 'Junk food', icon: '🍔', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false, isLarge: false, isNegative: true },
+                { id: 41, name: 'Alcohol', icon: '🍺', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false, isLarge: false, isNegative: true },
+                { id: 42, name: 'Soda', icon: '🥤', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, usePoints: false, allowOptional: false, isReminder: false, isLarge: false, isNegative: true }
             ];
         }
 
@@ -1759,6 +1780,7 @@
                 isReminder: formState.isReminderMode,
                 allowOptional: formState.allowOptional,
                 isLarge: formState.isLarge,
+                isNegative: formState.isNegative,
                 completions: [], skippedDates: [], snoozedUntil: null, subtasks: [...newHabitSubtasks], createdAt: getTodayString()
             });
             saveHabits(habits);
@@ -2090,17 +2112,30 @@
                 }
 
                 if (wasDue) {
+                    const isNegativeHabit = habit.isNegative;
                     if (wasCompleted) {
-                        // Reward scaled by frequency (completing a weekly task = less daily boost)
-                        const reward = 15 * frequencyScale;
-                        score = Math.min(100, score + reward);
+                        if (isNegativeHabit) {
+                            // Negative habit: completing (doing bad thing) = penalty
+                            const basePenalty = score < 0 ? Math.max(5, 15 + score * 0.15) : 15;
+                            const penalty = basePenalty * frequencyScale;
+                            score = Math.max(-100, score - penalty);
+                        } else {
+                            // Positive habit: completing = reward
+                            const reward = 15 * frequencyScale;
+                            score = Math.min(100, score + reward);
+                        }
                     } else {
-                        // Apply penalty for missed days, scaled by frequency
-                        // (missing a weekly task for one day is less impactful than missing daily)
-                        const basePenalty = score < 0 ? Math.max(5, 15 + score * 0.15) : 15;
-                        const isReminder = habit.isReminder || freqType === FREQ.REMINDER;
-                        const penalty = (isReminder ? basePenalty * 0.5 : basePenalty) * frequencyScale;
-                        score = Math.max(-100, score - penalty);
+                        if (isNegativeHabit) {
+                            // Negative habit: not doing (avoiding) = small reward
+                            const reward = 5 * frequencyScale;
+                            score = Math.min(100, score + reward);
+                        } else {
+                            // Positive habit: missing = penalty
+                            const basePenalty = score < 0 ? Math.max(5, 15 + score * 0.15) : 15;
+                            const isReminder = habit.isReminder || freqType === FREQ.REMINDER;
+                            const penalty = (isReminder ? basePenalty * 0.5 : basePenalty) * frequencyScale;
+                            score = Math.max(-100, score - penalty);
+                        }
                     }
                 }
 
@@ -2671,13 +2706,23 @@
             const reminderBadge = isReminder
                 ? '<div class="reminder-badge"></div>' : '';
 
+            // Handle negative habits differently
+            const isNegative = habit.isNegative;
+            const today = getTodayString();
+            const loggedToday = habit.completions.some(c => c.date === today);
+
+            if (isNegative) {
+                // Negative habits: logged = bad (red), not logged = avoiding successfully
+                ringClass = loggedToday ? 'negative-logged' : 'negative';
+            }
+
             const largeClass = habit.isLarge ? 'large' : '';
 
             return `<div class="habit-icon-wrapper ${largeClass}">
                 <div class="habit-icon" onclick="${leftClick}" oncontextmenu="${rightClick}">
                     <div class="habit-ring ${ringClass}" style="--progress: ${progress}">
                         <span class="habit-emoji">${icon}</span>
-                        ${neglectDots}
+                        ${isNegative && !loggedToday ? '' : neglectDots}
                         ${reminderBadge}
                     </div>
                 </div>
@@ -3084,6 +3129,9 @@
 
             // Save large display preference
             habit.isLarge = formState.isLarge;
+
+            // Save negative habit flag
+            habit.isNegative = formState.isNegative;
 
             saveHabits(habits);
             editMode = false;
