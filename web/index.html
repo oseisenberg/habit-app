@@ -857,10 +857,12 @@
                     </div>
                 `).join('');
 
+                // Only show the scroll container if there are subtasks
+                const hasSubtasks = subtaskItems.length > 0;
                 subtasksHtml = `
                     <div class="form-group" id="${isEdit ? 'editSubtasksArea' : 'subtasksInputArea'}" style="${showSubtasksArea ? '' : 'display:none'}">
                         <label class="form-label">Subtasks</label>
-                        <div class="subtasks-scroll-container" id="${isEdit ? 'editSubtasksList' : 'newHabitSubtasksList'}">${subtaskItems}</div>
+                        ${hasSubtasks ? `<div class="subtasks-scroll-container" id="${isEdit ? 'editSubtasksList' : 'newHabitSubtasksList'}">${subtaskItems}</div>` : `<div id="${isEdit ? 'editSubtasksList' : 'newHabitSubtasksList'}"></div>`}
                         <div class="add-subtask">
                             <input type="text" id="${isEdit ? 'editSubtaskInput' : 'newHabitSubtaskInput'}" placeholder="Add subtask..."
                                 onkeypress="if(event.key==='Enter'){event.preventDefault();${isEdit ? `addSubtask(${habit.id})` : 'addNewHabitSubtask()'};}">
@@ -923,6 +925,7 @@
                     </div>
                 </div>
                 ${state.showDescription ? `<div class="form-group">
+                    <label class="form-label">Description</label>
                     <textarea class="form-input" id="${isEdit ? 'editHabitDesc' : 'habitDesc'}" placeholder="Add a description..." rows="2" style="resize:none;font-size:0.85rem">${habitDesc}</textarea>
                 </div>` : ''}
                 <div class="form-group" id="${isEdit ? 'editFrequencyGroup' : 'frequencyGroup'}">
