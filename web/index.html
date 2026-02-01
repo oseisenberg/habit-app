@@ -1915,17 +1915,26 @@
             const freq = habit.frequency;
             const freqType = freq.type;
 
-            // Determine the cycle length for this habit type
+            // Determine the cycle length for this habit type (expected days between completions)
             let cycleDays = 1;
-            if (freqType === FREQ.DAILY || freqType === FREQ.TWICE_DAILY || freqType === FREQ.POINTS_PER_DAY || freqType === FREQ.TIMES_PER_DAY) cycleDays = 1;
+            if (freqType === FREQ.DAILY || freqType === FREQ.TWICE_DAILY || freqType === FREQ.TIMES_PER_DAY) cycleDays = 1;
+            else if (freqType === FREQ.POINTS_PER_DAY) cycleDays = 1;
             else if (freqType === FREQ.REMINDER) cycleDays = freq.reminderDays || DEFAULTS.REMINDER_DAYS;
             else if (freqType === FREQ.TIMES_PER_WEEK) cycleDays = 7 / (freq.timesPerWeek || DEFAULTS.TIMES_PER_PERIOD);
             else if (freqType === FREQ.TIMES_PER_MONTH) cycleDays = 30 / (freq.timesPerMonth || DEFAULTS.TIMES_PER_PERIOD);
+            else if (freqType === FREQ.POINTS_PER_WEEK) cycleDays = 7 / (freq.pointsPerWeek || DEFAULTS.POINTS_PER_PERIOD);
+            else if (freqType === FREQ.POINTS_PER_MONTH) cycleDays = 30 / (freq.pointsPerMonth || DEFAULTS.POINTS_PER_PERIOD);
             else if (freqType === FREQ.EVERY_X_DAYS) {
                 if (freq.everyXWeeks) cycleDays = freq.everyXWeeks * 7;
                 else if (freq.everyXMonths) cycleDays = freq.everyXMonths * 30;
                 else cycleDays = freq.everyXDays || DEFAULTS.EVERY_X_DAYS;
             }
+
+            // Frequency scale factor: for types that are "due" every day, scale by cycle length
+            // This ensures missing a weekly task for a week has similar impact to missing a daily for a day
+            const dueEveryDay = freqType === FREQ.TIMES_PER_WEEK || freqType === FREQ.TIMES_PER_MONTH ||
+                                freqType === FREQ.POINTS_PER_WEEK || freqType === FREQ.POINTS_PER_MONTH;
+            const frequencyScale = dueEveryDay ? (1 / cycleDays) : 1;
 
             // Time window is 2-3x the cycle length, minimum 14 days
             const windowDays = Math.max(14, Math.round(cycleDays * 2.5));
@@ -1969,12 +1978,15 @@
 
                 if (wasDue) {
                     if (wasCompleted) {
-                        score = Math.min(100, score + 15);
+                        // Reward scaled by frequency (completing a weekly task = less daily boost)
+                        const reward = 15 * frequencyScale;
+                        score = Math.min(100, score + reward);
                     } else {
-                        // Apply penalty for missed days (reminders get smaller penalty)
+                        // Apply penalty for missed days, scaled by frequency
+                        // (missing a weekly task for one day is less impactful than missing daily)
                         const basePenalty = score < 0 ? Math.max(5, 15 + score * 0.15) : 15;
                         const isReminder = habit.isReminder || freqType === FREQ.REMINDER;
-                        const penalty = isReminder ? basePenalty * 0.5 : basePenalty;
+                        const penalty = (isReminder ? basePenalty * 0.5 : basePenalty) * frequencyScale;
                         score = Math.max(-100, score - penalty);
                     }
                 }
@@ -2429,13 +2441,22 @@
             // Calculate neglect level differently for reminders vs regular habits
             let neglectLevel = 0;
             if (isReminder) {
-                // For reminders: show dots based on days since last completion
+                // For reminders: show dots based on days since last completion, scaled by expected frequency
                 const lastCompletion = getLastCompletionDate(habit);
                 if (lastCompletion) {
+                    const freq = habit.frequency;
+                    // Calculate expected cycle days for this reminder
+                    let expectedCycle = 7; // default
+                    if (freq.reminderDays) expectedCycle = freq.reminderDays;
+                    else if (freq.everyXWeeks) expectedCycle = freq.everyXWeeks * 7;
+                    else if (freq.everyXMonths) expectedCycle = freq.everyXMonths * 30;
+                    else if (freq.everyXDays) expectedCycle = freq.everyXDays;
+
                     const daysSince = daysBetween(lastCompletion, getTodayString());
-                    if (daysSince >= 7) neglectLevel = 3;
-                    else if (daysSince >= 4) neglectLevel = 2;
-                    else if (daysSince >= 2) neglectLevel = 1;
+                    // Scale thresholds based on expected cycle (dots appear as you approach/pass due date)
+                    if (daysSince >= expectedCycle * 1.75) neglectLevel = 3;      // Significantly overdue
+                    else if (daysSince >= expectedCycle) neglectLevel = 2;        // Overdue
+                    else if (daysSince >= expectedCycle * 0.5) neglectLevel = 1;  // Approaching due
                 }
             } else {
                 // For regular habits: show dots based on negative momentum score
