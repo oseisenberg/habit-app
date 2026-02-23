@@ -38,7 +38,7 @@
         .habit-icon-wrapper.large .neglect-dot:nth-child(1) { top: 2px; right: 38px; }
         .habit-icon-wrapper.large .neglect-dot:nth-child(2) { top: 16px; right: 16px; }
         .habit-icon-wrapper.large .neglect-dot:nth-child(3) { top: 38px; right: 2px; }
-        .habit-icon-wrapper.large .reminder-badge { width: 14px; height: 14px; top: 16px; left: 16px; }
+        .habit-icon-wrapper.large .extra-indicator { bottom: 22px; right: 22px; font-size: 0.85rem; }
         .habit-icon {
             display: flex; flex-direction: column; align-items: center; gap: 2px;
             cursor: pointer; padding: 2px; border-radius: 12px; transition: background 0.15s;
@@ -76,13 +76,11 @@
         .neglect-dot:nth-child(2) { top: 8px; right: 8px; }
         .neglect-dot:nth-child(3) { top: 20px; right: 0px; }
 
-        /* Reminder badge - subtle dot indicator in top-left, centered on ring stroke */
-        .reminder-badge {
-            position: absolute; top: 8px; left: 8px;
-            width: 10px; height: 10px;
-            background: #667eea; border-radius: 50%;
-            border: 1.5px solid #1a1a2e;
-            pointer-events: none;
+        /* Subtle indicator for habits with subtasks or points */
+        .extra-indicator {
+            position: absolute; bottom: 12px; right: 12px;
+            font-size: 0.7rem; color: rgba(255,255,255,0.4);
+            pointer-events: none; line-height: 1;
         }
 
         .habit-emoji {
@@ -2728,9 +2726,10 @@
                 // Red dots show momentum, no red background here
             }
 
-            // Reminder badge for reminder-type habits (subtle dot indicator)
-            const reminderBadge = isReminder
-                ? '<div class="reminder-badge"></div>' : '';
+            // Subtle indicator for habits with extra interactions (subtasks or points)
+            const hasSubtasks = habit.subtasks && habit.subtasks.length > 0;
+            const isPointsBased = habit.frequency.type === FREQ.POINTS_PER_DAY || habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH;
+            const extraIndicator = (hasSubtasks || isPointsBased) ? '<div class="extra-indicator">⋯</div>' : '';
 
             // Handle negative habits differently
             const isNegative = habit.isNegative;
@@ -2749,7 +2748,7 @@
                     <div class="habit-ring ${ringClass}" style="--progress: ${progress}">
                         <span class="habit-emoji">${icon}</span>
                         ${isNegative && !loggedToday ? '' : neglectDots}
-                        ${reminderBadge}
+                        ${extraIndicator}
                     </div>
                 </div>
             </div>`;
