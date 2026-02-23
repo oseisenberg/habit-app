@@ -607,7 +607,10 @@
                 <button class="submit-btn secondary" onclick="exportData()" style="flex:1;font-size:0.85rem">Export All Data</button>
                 <button class="submit-btn secondary" onclick="exportData(true)" style="flex:1;font-size:0.85rem">Export Tasks Only (no history)</button>
             </div>
-            <button class="submit-btn secondary" onclick="resetAllMomentum()" style="margin-top:8px;font-size:0.85rem;background:#dc2626">Reset All Momentum</button>
+            <div style="display:flex;gap:8px;margin-top:8px">
+                <button class="submit-btn secondary" onclick="resetAllMomentum()" style="flex:1;font-size:0.85rem;background:#dc2626">Reset All Momentum</button>
+                <button class="submit-btn secondary" onclick="reloadDefaultTasks()" style="flex:1;font-size:0.85rem;background:#dc2626">Reload Default Tasks</button>
+            </div>
         </div>
     </div>
 
@@ -1665,6 +1668,13 @@
                 h.lastScoreUpdate = null;
             });
             saveHabits(habits);
+            updateDisplay();
+            closeSettings();
+        }
+
+        function reloadDefaultTasks() {
+            if (!confirm('Replace all tasks with defaults? This will delete your current tasks and cannot be undone.')) return;
+            saveHabits(getDefaultHabits());
             updateDisplay();
             closeSettings();
         }
