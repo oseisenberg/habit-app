@@ -3198,6 +3198,28 @@
                 const isSnoozed = habit.snoozedUntil && (habit.snoozedUntil === 'night' || habit.snoozedUntil > today);
                 const canSnooze = !isSnoozed && !isCompletedToday(habit);
 
+                // Determine "appears" status for snoozed or later tasks
+                let appearsStatus = '';
+                if (habit.snoozedUntil === 'night') {
+                    appearsStatus = 'Snoozed until tonight';
+                } else if (habit.snoozedUntil && habit.snoozedUntil > today) {
+                    const snoozeDate = new Date(habit.snoozedUntil + 'T00:00:00');
+                    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+                    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+                    if (habit.snoozedUntil === tomorrowStr) {
+                        appearsStatus = 'Snoozed until tomorrow';
+                    } else {
+                        appearsStatus = `Snoozed until ${snoozeDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`;
+                    }
+                } else if (habit.timeOfDay === 'night' && getTimeOfDayNow() === 'morning') {
+                    appearsStatus = 'Appears at bedtime';
+                } else if (habit.frequency.type === FREQ.TWICE_DAILY) {
+                    const twiceStatus = getCompletionStatus(habit);
+                    if (twiceStatus.morningDone && !twiceStatus.nightDone && getTimeOfDayNow() === 'morning') {
+                        appearsStatus = 'Morning done, waiting for bedtime';
+                    }
+                }
+
                 // Build "after completion" label dynamically
                 const afterLabel = habit.frequency.everyXWeeks ? `${habit.frequency.everyXWeeks} weeks after` :
                                    habit.frequency.everyXMonths ? `${habit.frequency.everyXMonths} months after` :
@@ -3257,6 +3279,7 @@
                     </div>` : ''}
                     <div class="detail-row"><span class="detail-label">Time</span><span class="detail-value">${timeLabel}</span></div>
                     <div class="detail-row"><span class="detail-label">Frequency</span><span class="detail-value">${freqLabel}</span></div>
+                    ${appearsStatus ? `<div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" style="color:#f59e0b">${appearsStatus}</span></div>` : ''}
                     ${(habit.frequency.type === FREQ.POINTS_PER_DAY || habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH) ? `<div class="detail-row"><span class="detail-label">Progress</span><span class="detail-value">${getCompletionStatus(habit).text}</span></div>` : ''}
                     ${!isReminder ? `<div class="stats-grid">
                         <div class="stat-box"><div class="stat-number">${total}</div><div class="stat-label">Total</div></div>
