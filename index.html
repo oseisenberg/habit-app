@@ -2628,7 +2628,7 @@
                 // Split ring for twice daily - with divider line
                 const bothDone = status.morningDone && status.nightDone;
                 return `<div class="habit-icon-wrapper">
-                    <div class="habit-icon" onclick="${bothDone ? `openDetails(${habit.id})` : `completeTwiceDaily(${habit.id})`}" oncontextmenu="${rightClick}">
+                    <div class="habit-icon" data-habit-id="${habit.id}" onclick="${bothDone ? `openDetails(${habit.id})` : `completeTwiceDaily(${habit.id})`}" oncontextmenu="${rightClick}">
                         <div class="habit-ring split ${bothDone ? 'completed' : ''}">
                             <div class="half-fill left ${status.morningDone ? 'filled' : ''}"></div>
                             <div class="half-fill right ${status.nightDone ? 'filled' : ''}"></div>
@@ -2718,7 +2718,7 @@
             const largeClass = habit.isLarge ? 'large' : '';
 
             return `<div class="habit-icon-wrapper ${largeClass}">
-                <div class="habit-icon" onclick="${leftClick}" oncontextmenu="${rightClick}">
+                <div class="habit-icon" data-habit-id="${habit.id}" onclick="${leftClick}" oncontextmenu="${rightClick}">
                     <div class="habit-ring ${ringClass}" style="--progress: ${progress}">
                         <span class="habit-emoji">${icon}</span>
                         ${isNegative && !loggedToday ? '' : neglectDots}
@@ -3420,6 +3420,60 @@
         }
 
         document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetails(); closeSettings(); closeSubtaskPopup(); closePointsPopup(); closeEmojiPopup(); closeSnoozePopup(); closeAllHabits(); } });
+
+        // Long press support for touch devices (equivalent to right-click)
+        let longPressTimer = null;
+        let longPressTriggered = false;
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        document.addEventListener('touchstart', e => {
+            const habitIcon = e.target.closest('.habit-icon');
+            if (!habitIcon) return;
+
+            const habitId = habitIcon.dataset.habitId;
+            if (!habitId) return;
+
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            longPressTriggered = false;
+
+            longPressTimer = setTimeout(() => {
+                longPressTriggered = true;
+                openDetails(parseInt(habitId));
+                // Haptic feedback if available
+                if (navigator.vibrate) navigator.vibrate(50);
+            }, 500);
+        }, { passive: true });
+
+        document.addEventListener('touchmove', e => {
+            if (!longPressTimer) return;
+            const moveX = Math.abs(e.touches[0].clientX - touchStartX);
+            const moveY = Math.abs(e.touches[0].clientY - touchStartY);
+            if (moveX > 10 || moveY > 10) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchend', e => {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+            if (longPressTriggered) {
+                e.preventDefault();
+                longPressTriggered = false;
+            }
+        });
+
+        document.addEventListener('touchcancel', () => {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+            longPressTriggered = false;
+        });
 
         // On first visit (no data), load test data as initial experience
         if (!localStorage.getItem('habits_v3')) {
