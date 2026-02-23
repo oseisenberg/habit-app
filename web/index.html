@@ -457,18 +457,19 @@
         .snooze-popup-title { font-size: 1rem; font-weight: 600; color: #fff; margin-bottom: 12px; text-align: center; }
         .snooze-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
         .snooze-option {
-            display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px;
+            display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 8px;
             background: #0f0f1a; border: 1px solid #2a2a3e; border-radius: 10px;
-            color: #fff; font-size: 0.8rem; cursor: pointer; transition: all 0.15s;
+            color: #fff; font-size: 0.85rem; cursor: pointer; transition: all 0.15s;
             text-align: center;
         }
         .snooze-option:hover { background: #1a1a2e; border-color: #667eea; }
         .snooze-option:active { transform: scale(0.95); }
-        .snooze-option-icon { font-size: 1.3rem; }
-        .snooze-option.skip { grid-column: span 3; flex-direction: row; justify-content: center; gap: 8px; padding: 10px; background: #1a1a2e; }
-        .snooze-custom { display: flex; gap: 8px; margin-top: 8px; }
-        .snooze-custom input { flex: 1; padding: 10px; border: 1px solid #2a2a3e; border-radius: 8px; background: #0f0f1a; color: #fff; font-size: 0.9rem; }
-        .snooze-custom button { padding: 10px 16px; background: #667eea; border: none; border-radius: 8px; color: #fff; font-size: 0.9rem; cursor: pointer; }
+        .snooze-option-icon { font-size: 1.4rem; }
+        .snooze-custom { margin-top: 12px; }
+        .snooze-custom-label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .snooze-custom-row { display: flex; gap: 8px; }
+        .snooze-custom-row input { flex: 1; padding: 10px; border: 1px solid #2a2a3e; border-radius: 8px; background: #0f0f1a; color: #fff; font-size: 0.9rem; }
+        .snooze-custom-row button { padding: 10px 16px; background: #667eea; border: none; border-radius: 8px; color: #fff; font-size: 0.9rem; cursor: pointer; }
         .snooze-cancel {
             width: 100%; margin-top: 12px; padding: 10px; background: transparent;
             border: 1px solid #3a3a4e; border-radius: 8px; color: #888;
@@ -1823,11 +1824,11 @@
                             <span>Tomorrow</span>
                         </button>
                         <button class="snooze-option" onclick="snoozeHabit(2)">
-                            <span class="snooze-option-icon">📆</span>
+                            <span class="snooze-option-icon">2️⃣</span>
                             <span>2 days</span>
                         </button>
                         <button class="snooze-option" onclick="snoozeHabit(3)">
-                            <span class="snooze-option-icon">🗓️</span>
+                            <span class="snooze-option-icon">3️⃣</span>
                             <span>3 days</span>
                         </button>
                         <button class="snooze-option" onclick="snoozeHabit(7)">
@@ -1835,21 +1836,20 @@
                             <span>1 week</span>
                         </button>
                         <button class="snooze-option" onclick="snoozeHabit(14)">
-                            <span class="snooze-option-icon">🌙</span>
+                            <span class="snooze-option-icon">📆</span>
                             <span>2 weeks</span>
                         </button>
                         <button class="snooze-option" onclick="snoozeHabit(30)">
-                            <span class="snooze-option-icon">📆</span>
+                            <span class="snooze-option-icon">🗓️</span>
                             <span>1 month</span>
-                        </button>
-                        <button class="snooze-option skip" onclick="skipHabit(snoozePopupHabitId)">
-                            <span class="snooze-option-icon">⏭️</span>
-                            <span>Skip today only</span>
                         </button>
                     </div>
                     <div class="snooze-custom">
-                        <input type="date" id="snoozeCustomDate" min="${toDateString(tomorrow)}">
-                        <button onclick="snoozeToDate()">Set</button>
+                        <div class="snooze-custom-label">Or pick a date</div>
+                        <div class="snooze-custom-row">
+                            <input type="date" id="snoozeCustomDate" min="${toDateString(tomorrow)}">
+                            <button onclick="snoozeToDate()">Set</button>
+                        </div>
                     </div>
                     <button class="snooze-cancel" onclick="closeSnoozePopup()">Cancel</button>
                 </div>`;
