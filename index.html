@@ -3464,7 +3464,6 @@
             }
             if (longPressTriggered) {
                 e.preventDefault();
-                longPressTriggered = false;
             }
         });
 
@@ -3475,6 +3474,15 @@
             }
             longPressTriggered = false;
         });
+
+        // Prevent click event after long press
+        document.addEventListener('click', e => {
+            if (longPressTriggered) {
+                e.stopPropagation();
+                e.preventDefault();
+                longPressTriggered = false;
+            }
+        }, true);
 
         // On first visit (no data), load test data as initial experience
         if (!localStorage.getItem('habits_v3')) {
