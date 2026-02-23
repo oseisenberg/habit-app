@@ -3218,6 +3218,30 @@
                     if (twiceStatus.morningDone && !twiceStatus.nightDone && getTimeOfDayNow() === 'morning') {
                         appearsStatus = 'Morning done, waiting for bedtime';
                     }
+                } else if (habit.frequency.type === FREQ.EVERY_X_DAYS || habit.frequency.type === FREQ.REMINDER) {
+                    // Show when everyXDays habit will reappear after completion
+                    const lastCompletion = getLastCompletionDate(habit);
+                    if (lastCompletion) {
+                        let intervalDays;
+                        if (habit.frequency.everyXWeeks) intervalDays = habit.frequency.everyXWeeks * 7;
+                        else if (habit.frequency.everyXMonths) intervalDays = habit.frequency.everyXMonths * 30;
+                        else intervalDays = habit.frequency.everyXDays || habit.frequency.reminderDays || 2;
+
+                        const lastDate = new Date(lastCompletion + 'T00:00:00');
+                        const nextDueDate = new Date(lastDate);
+                        nextDueDate.setDate(nextDueDate.getDate() + intervalDays);
+                        const nextDueStr = nextDueDate.toISOString().split('T')[0];
+
+                        if (nextDueStr > today) {
+                            const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+                            const tomorrowStr = tomorrow.toISOString().split('T')[0];
+                            if (nextDueStr === tomorrowStr) {
+                                appearsStatus = 'Reappears tomorrow';
+                            } else {
+                                appearsStatus = `Reappears ${nextDueDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`;
+                            }
+                        }
+                    }
                 }
 
                 // Build "after completion" label dynamically
