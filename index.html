@@ -3487,6 +3487,13 @@
             if (savedDataBeforeTest !== null) {
                 localStorage.setItem('habits_v3', savedDataBeforeTest);
                 savedDataBeforeTest = null;
+                // Reset momentum to avoid negative scores from "missed" days
+                const habits = loadHabits();
+                habits.forEach(h => {
+                    h.momentumScore = 0;
+                    h.lastScoreUpdate = null;
+                });
+                saveHabits(habits);
                 renderHabits();
             }
         }
