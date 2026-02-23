@@ -38,7 +38,7 @@
         .habit-icon-wrapper.large .neglect-dot:nth-child(1) { top: 2px; right: 38px; }
         .habit-icon-wrapper.large .neglect-dot:nth-child(2) { top: 16px; right: 16px; }
         .habit-icon-wrapper.large .neglect-dot:nth-child(3) { top: 38px; right: 2px; }
-        .habit-icon-wrapper.large .extra-indicator { bottom: 22px; right: 22px; font-size: 0.85rem; }
+        .habit-icon-wrapper.large .extra-indicator { bottom: 24px; right: 24px; width: 8px; height: 8px; }
         .habit-icon {
             display: flex; flex-direction: column; align-items: center; gap: 2px;
             cursor: pointer; padding: 2px; border-radius: 12px; transition: background 0.15s;
@@ -78,9 +78,10 @@
 
         /* Subtle indicator for habits with subtasks or points */
         .extra-indicator {
-            position: absolute; bottom: 12px; right: 12px;
-            font-size: 0.7rem; color: rgba(255,255,255,0.4);
-            pointer-events: none; line-height: 1;
+            position: absolute; bottom: 14px; right: 14px;
+            width: 6px; height: 6px; border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            pointer-events: none;
         }
 
         .habit-emoji {
@@ -2727,7 +2728,7 @@
             }
 
             // Subtle indicator for habits with extra interactions (subtasks or points)
-            const extraIndicator = (hasSubtasks || isPointsBased) ? '<div class="extra-indicator">⋯</div>' : '';
+            const extraIndicator = (hasSubtasks || isPointsBased) ? '<div class="extra-indicator"></div>' : '';
 
             // Handle negative habits differently
             const isNegative = habit.isNegative;
