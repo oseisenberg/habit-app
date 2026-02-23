@@ -362,10 +362,10 @@
             .modal { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
         }
 
-        .debug-toggle { position: fixed; top: 8px; left: 8px; background: rgba(255,255,255,0.1); color: #666; border: none; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; z-index: 500; opacity: 0.4; }
+        .debug-toggle { position: fixed; top: calc(8px + env(safe-area-inset-top, 0px)); left: 8px; background: rgba(255,255,255,0.1); color: #666; border: none; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; z-index: 500; opacity: 0.4; }
         .debug-toggle:hover { opacity: 1; }
         .debug-toggle.active { background: #dc2626; color: white; opacity: 1; }
-        .debug-panel { position: fixed; top: 42px; left: 8px; max-width: 320px; background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 10px; padding: 14px; z-index: 500; display: none; font-size: 0.85rem; }
+        .debug-panel { position: fixed; top: calc(42px + env(safe-area-inset-top, 0px)); left: 8px; max-width: 320px; background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 10px; padding: 14px; z-index: 500; display: none; font-size: 0.85rem; }
         .debug-panel.active { display: block; }
         .debug-row { display: flex; justify-content: space-between; padding: 6px 0; }
         .debug-label { color: #888; }
