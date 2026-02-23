@@ -3560,35 +3560,73 @@
         // Swipe down to dismiss modals/popups
         let swipeStartY = 0;
         let swipeElement = null;
+        let swipeActive = false;
 
         document.addEventListener('touchstart', e => {
             const modal = e.target.closest('.modal, .subtask-popup, .points-popup, .emoji-popup');
             if (modal) {
-                swipeStartY = e.touches[0].clientY;
-                swipeElement = modal;
+                // Only enable swipe if at top of scrollable content
+                const scrollable = modal.querySelector('.all-habits-scroll-area') || modal;
+                if (scrollable.scrollTop <= 0) {
+                    swipeStartY = e.touches[0].clientY;
+                    swipeElement = modal;
+                    swipeActive = false;
+                }
             }
         }, { passive: true });
+
+        document.addEventListener('touchmove', e => {
+            if (!swipeElement || swipeStartY === 0) return;
+            const currentY = e.touches[0].clientY;
+            const delta = currentY - swipeStartY;
+
+            // Only activate swipe if moving down
+            if (delta > 10) {
+                swipeActive = true;
+                // Apply transform with resistance (moves slower than finger)
+                const resistance = 0.5;
+                const translateY = Math.min(delta * resistance, 200);
+                swipeElement.style.transform = `translateY(${translateY}px)`;
+                swipeElement.style.transition = 'none';
+                e.preventDefault();
+            }
+        }, { passive: false });
 
         document.addEventListener('touchend', e => {
             if (!swipeElement || swipeStartY === 0) return;
             const swipeEndY = e.changedTouches[0].clientY;
             const swipeDelta = swipeEndY - swipeStartY;
 
-            // If swiped down more than 80px, close the modal
-            if (swipeDelta > 80) {
-                // Find which overlay is active and close it
-                if (document.getElementById('modalOverlay').classList.contains('active')) closeModal();
-                else if (document.getElementById('detailsOverlay').classList.contains('active')) closeDetails();
-                else if (document.getElementById('settingsOverlay').classList.contains('active')) closeSettings();
-                else if (document.getElementById('subtaskPopupOverlay').classList.contains('active')) closeSubtaskPopup();
-                else if (document.getElementById('pointsPopupOverlay').classList.contains('active')) closePointsPopup();
-                else if (document.getElementById('emojiPopupOverlay').classList.contains('active')) closeEmojiPopup();
-                else if (document.getElementById('snoozePopupOverlay').classList.contains('active')) closeSnoozePopup();
-                else if (document.getElementById('allHabitsOverlay').classList.contains('active')) closeAllHabits();
+            if (swipeActive && swipeDelta > 80) {
+                // Animate out then close
+                swipeElement.style.transition = 'transform 0.2s ease-out';
+                swipeElement.style.transform = 'translateY(100%)';
+                setTimeout(() => {
+                    if (document.getElementById('modalOverlay').classList.contains('active')) closeModal();
+                    else if (document.getElementById('detailsOverlay').classList.contains('active')) closeDetails();
+                    else if (document.getElementById('settingsOverlay').classList.contains('active')) closeSettings();
+                    else if (document.getElementById('subtaskPopupOverlay').classList.contains('active')) closeSubtaskPopup();
+                    else if (document.getElementById('pointsPopupOverlay').classList.contains('active')) closePointsPopup();
+                    else if (document.getElementById('emojiPopupOverlay').classList.contains('active')) closeEmojiPopup();
+                    else if (document.getElementById('snoozePopupOverlay').classList.contains('active')) closeSnoozePopup();
+                    else if (document.getElementById('allHabitsOverlay').classList.contains('active')) closeAllHabits();
+                    if (swipeElement) {
+                        swipeElement.style.transform = '';
+                        swipeElement.style.transition = '';
+                    }
+                }, 200);
+            } else if (swipeActive) {
+                // Snap back
+                swipeElement.style.transition = 'transform 0.2s ease-out';
+                swipeElement.style.transform = '';
+                setTimeout(() => {
+                    if (swipeElement) swipeElement.style.transition = '';
+                }, 200);
             }
 
             swipeStartY = 0;
             swipeElement = null;
+            swipeActive = false;
         }, { passive: true });
 
         // On first visit (no data), load test data as initial experience
