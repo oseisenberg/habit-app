@@ -2728,7 +2728,6 @@
 
             // Subtle indicator for habits with extra interactions (subtasks or points)
             const hasSubtasks = habit.subtasks && habit.subtasks.length > 0;
-            const isPointsBased = habit.frequency.type === FREQ.POINTS_PER_DAY || habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH;
             const extraIndicator = (hasSubtasks || isPointsBased) ? '<div class="extra-indicator">⋯</div>' : '';
 
             // Handle negative habits differently
