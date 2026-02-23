@@ -3557,6 +3557,40 @@
             }
         }, true);
 
+        // Swipe down to dismiss modals/popups
+        let swipeStartY = 0;
+        let swipeElement = null;
+
+        document.addEventListener('touchstart', e => {
+            const modal = e.target.closest('.modal, .subtask-popup, .points-popup, .emoji-popup');
+            if (modal) {
+                swipeStartY = e.touches[0].clientY;
+                swipeElement = modal;
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchend', e => {
+            if (!swipeElement || swipeStartY === 0) return;
+            const swipeEndY = e.changedTouches[0].clientY;
+            const swipeDelta = swipeEndY - swipeStartY;
+
+            // If swiped down more than 80px, close the modal
+            if (swipeDelta > 80) {
+                // Find which overlay is active and close it
+                if (document.getElementById('modalOverlay').classList.contains('active')) closeModal();
+                else if (document.getElementById('detailsOverlay').classList.contains('active')) closeDetails();
+                else if (document.getElementById('settingsOverlay').classList.contains('active')) closeSettings();
+                else if (document.getElementById('subtaskPopupOverlay').classList.contains('active')) closeSubtaskPopup();
+                else if (document.getElementById('pointsPopupOverlay').classList.contains('active')) closePointsPopup();
+                else if (document.getElementById('emojiPopupOverlay').classList.contains('active')) closeEmojiPopup();
+                else if (document.getElementById('snoozePopupOverlay').classList.contains('active')) closeSnoozePopup();
+                else if (document.getElementById('allHabitsOverlay').classList.contains('active')) closeAllHabits();
+            }
+
+            swipeStartY = 0;
+            swipeElement = null;
+        }, { passive: true });
+
         // On first visit (no data), load test data as initial experience
         if (!localStorage.getItem('habits_v3')) {
             loadTestData();
