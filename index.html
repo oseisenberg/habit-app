@@ -608,6 +608,7 @@
                 <button class="submit-btn secondary" onclick="exportData()" style="flex:1;font-size:0.85rem">Export All Data</button>
                 <button class="submit-btn secondary" onclick="exportData(true)" style="flex:1;font-size:0.85rem">Export Tasks Only (no history)</button>
             </div>
+            <button class="submit-btn secondary" onclick="resetAllMomentum()" style="margin-top:8px;font-size:0.85rem;background:#dc2626">Reset All Momentum</button>
         </div>
     </div>
 
@@ -1655,6 +1656,18 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+        }
+
+        function resetAllMomentum() {
+            if (!confirm('Reset momentum scores for all habits? This cannot be undone.')) return;
+            const habits = loadHabits();
+            habits.forEach(h => {
+                h.momentumScore = 0;
+                h.lastScoreUpdate = null;
+            });
+            saveHabits(habits);
+            updateDisplay();
+            closeSettings();
         }
 
         // Subtask functions for new habit creation
