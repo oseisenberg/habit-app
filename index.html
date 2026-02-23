@@ -1274,6 +1274,19 @@
             // Re-render open panels to update subtask states for new day
             if (selectedHabitId) renderDetails();
             if (subtaskPopupHabitId) renderSubtaskPopup();
+            updateBadge();
+        }
+
+        function updateBadge() {
+            if (!('setAppBadge' in navigator)) return;
+            const habits = loadHabits();
+            const { now: nowHabits } = categorizeHabits(habits);
+            const count = nowHabits.filter(h => !h.isReminder).length;
+            if (count > 0) {
+                navigator.setAppBadge(count).catch(() => {});
+            } else {
+                navigator.clearAppBadge().catch(() => {});
+            }
         }
 
         // ========================================
