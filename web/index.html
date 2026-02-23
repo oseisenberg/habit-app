@@ -2948,9 +2948,10 @@
 
             const icon = habit.icon || '📌';
             const freq = habit.frequency;
+            const isDaily = freq.type === FREQ.POINTS_PER_DAY;
             const isWeekly = freq.type === FREQ.POINTS_PER_WEEK;
-            const target = isWeekly ? (freq.pointsPerWeek || 12) : (freq.pointsPerMonth || 30);
-            const period = isWeekly ? PERIOD.WEEK : PERIOD.MONTH;
+            const target = isDaily ? (freq.pointsPerDay || 4) : isWeekly ? (freq.pointsPerWeek || 12) : (freq.pointsPerMonth || 30);
+            const period = isDaily ? PERIOD.DAY : isWeekly ? PERIOD.WEEK : PERIOD.MONTH;
 
             document.getElementById('pointsPopup').innerHTML = `
                 <div class="points-popup-header">
