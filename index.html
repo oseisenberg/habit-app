@@ -353,6 +353,9 @@
         .settings-value { display: flex; align-items: center; gap: 6px; }
         .settings-input { width: 56px; padding: 8px; border: 1px solid #2a2a3e; border-radius: 8px; background: #0f0f1a; color: #fff; text-align: center; font-size: 0.85rem; }
 
+        @supports (padding-top: env(safe-area-inset-top)) {
+            body { padding-top: env(safe-area-inset-top); }
+        }
         @supports (padding-bottom: env(safe-area-inset-bottom)) {
             body { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
             .fab { bottom: calc(20px + env(safe-area-inset-bottom)); }
