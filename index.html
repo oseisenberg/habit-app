@@ -1359,6 +1359,12 @@
             }
         }
 
+        function hapticFeedback() {
+            if ('vibrate' in navigator) {
+                navigator.vibrate(10);
+            }
+        }
+
         // ========================================
         // DATA ACCESS HELPERS
         // ========================================
@@ -2434,6 +2440,7 @@
                 habit.completions = habit.completions.filter(c => c !== existing);
             } else {
                 habit.completions.push({ date: today, period, timestamp: Date.now() });
+                hapticFeedback();
                 // Reset momentum to neutral for reminders when completed
                 if (habit.isReminder || freqType === FREQ.REMINDER) {
                     habit.momentumScore = 0;
@@ -2917,6 +2924,7 @@
                 habit.completions = habit.completions.filter(c => c !== existing);
             } else {
                 habit.completions.push({ date: today, period, timestamp: Date.now() });
+                hapticFeedback();
             }
             saveHabits(habits);
             renderHabits();
@@ -2967,6 +2975,7 @@
                 habit.completions = habit.completions.filter(c => c.date !== today);
             } else {
                 subtask.completedPeriods[periodKey] = Date.now();
+                hapticFeedback();
                 // Auto-complete main habit when all subtasks are done
                 const allCompleted = habit.subtasks.every(s => s.completedPeriods && s.completedPeriods[periodKey]);
                 const today = getTodayString();
@@ -3072,6 +3081,7 @@
             habit.completions.push({ date: today, timestamp: Date.now() });
             habit.momentumScore = (habit.momentumScore || 0) + 15;
             habit.lastScoreUpdate = today;
+            hapticFeedback();
 
             saveHabits(habits);
             closeSubtaskPopup();
@@ -3097,6 +3107,7 @@
                 habit.completions = habit.completions.filter(c => c.date !== today);
             } else {
                 subtask.completedPeriods[periodKey] = Date.now();
+                hapticFeedback();
             }
 
             saveHabits(habits);
@@ -3149,6 +3160,7 @@
 
             const today = getTodayString();
             habit.completions.push({ date: today, timestamp: Date.now(), points });
+            hapticFeedback();
 
             // Boost momentum based on points
             boostMomentumScore(habit, points);
