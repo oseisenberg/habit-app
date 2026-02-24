@@ -3555,8 +3555,7 @@
             if (noResults) noResults.style.display = 'none';
             grid.innerHTML = filtered.map(habit => {
                 const icon = habit.icon || '📌';
-                const largeClass = habit.isLarge ? 'large' : '';
-                return `<div class="habit-icon-wrapper ${largeClass}">
+                return `<div class="habit-icon-wrapper">
                     <div class="habit-icon" onclick="openDetailsFromAllHabits(${habit.id})">
                         <div class="habit-ring" style="--progress: 0%; background: #2a2a3e;">
                             <span class="habit-emoji">${icon}</span>
