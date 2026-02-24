@@ -658,7 +658,8 @@
             <button class="debug-btn" style="background:#7c3aed;color:white" onclick="restoreData()">Restore</button>
         </div>
         <div class="debug-controls" style="margin-top:8px;">
-            <button class="debug-btn" style="background:#f59e0b;color:white" onclick="debugTestNotification()">🔔 Test Notification</button>
+            <button class="debug-btn" style="background:#f59e0b;color:white" onclick="debugTestNotification()">🔔 Test Notif</button>
+            <button class="debug-btn" style="background:#dc2626;color:white" onclick="debugTestMomentumAlert()">📉 Momentum</button>
         </div>
     </div>
 
@@ -1223,6 +1224,14 @@
             }
             sendNotification('Test Notification', 'Notifications are working!', 'debug-test');
         }
+        async function debugTestMomentumAlert() {
+            const permission = await requestNotificationPermission();
+            if (permission !== 'granted') {
+                alert('Notification permission denied. Please enable notifications in your browser settings.');
+                return;
+            }
+            showMomentumAlert();
+        }
         function updateDebugDisplay() {
             const s = getSettings();
             const realHour = new Date().getHours();
@@ -1543,6 +1552,15 @@
                 notificationTimers.push(timer);
             }
 
+            // Schedule momentum alert at 6pm
+            const momentumTime = new Date(today);
+            momentumTime.setHours(18, 0, 0, 0);
+            if (momentumTime > now) {
+                const delay = momentumTime - now;
+                const timer = setTimeout(() => showMomentumAlert(), delay);
+                notificationTimers.push(timer);
+            }
+
             // Schedule weekly summary for Sunday at 10am
             if (settings.weeklySummaryEnabled) {
                 const sunday = new Date(today);
@@ -1560,7 +1578,7 @@
             const habits = loadHabits();
             const todayStr = getTodayString();
 
-            // Count incomplete habits for this period
+            // Check for incomplete habits for this period
             const incompleteHabits = habits.filter(h => {
                 if (h.timeOfDay && h.timeOfDay !== period) return false;
                 if (h.isReminder) return false;
@@ -1569,10 +1587,30 @@
 
             if (incompleteHabits.length === 0) return;
 
-            const title = period === 'morning' ? 'Morning Routine' : 'Evening Routine';
-            const body = `${incompleteHabits.length} habit${incompleteHabits.length > 1 ? 's' : ''} waiting`;
+            const title = period === 'morning' ? 'Morning Routine' : 'Bedtime Routine';
+            const body = period === 'morning' ? 'Morning habits waiting' : 'Bedtime habits waiting';
 
             sendNotification(title, body, `habit-${period}`);
+        }
+
+        function showMomentumAlert() {
+            const habits = loadHabits();
+
+            // Find habits with low momentum (below 0)
+            const strugglingHabits = habits.filter(h => {
+                if (h.isReminder) return false;
+                const score = h.momentumScore || 0;
+                return score < 0;
+            });
+
+            if (strugglingHabits.length === 0) return;
+
+            // Build notification with habit icons
+            const icons = strugglingHabits.map(h => h.icon).join(' ');
+            const title = 'Momentum Alert';
+            const body = `${icons} losing momentum`;
+
+            sendNotification(title, body, 'momentum-alert');
         }
 
         function showWeeklySummary() {
