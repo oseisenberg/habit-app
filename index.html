@@ -477,6 +477,24 @@
         }
         .snooze-cancel:hover { color: #fff; border-color: #888; }
 
+        /* Undo toast */
+        .undo-toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: #1a1a2e; border: 1px solid #3a3a4e; border-radius: 12px;
+            padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4); z-index: 10000;
+            opacity: 0; transition: opacity 0.2s, transform 0.2s;
+            pointer-events: none;
+        }
+        .undo-toast.visible { opacity: 1; pointer-events: auto; }
+        .undo-toast-text { color: #fff; font-size: 0.9rem; }
+        .undo-toast-btn {
+            background: #667eea; border: none; border-radius: 6px;
+            color: #fff; padding: 6px 12px; font-size: 0.85rem; cursor: pointer;
+            font-weight: 500;
+        }
+        .undo-toast-btn:active { transform: scale(0.95); }
+
         /* Emoji picker popup */
         .emoji-popup-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -704,6 +722,12 @@
         </div>
     </div>
 
+    <!-- Undo Toast -->
+    <div class="undo-toast" id="undoToast">
+        <span class="undo-toast-text" id="undoToastText">Habit completed</span>
+        <button class="undo-toast-btn" onclick="undoLastCompletion()">Undo</button>
+    </div>
+
     <script>
         // ========================================
         // CONSTANTS
@@ -773,6 +797,13 @@
         let emojiPopupMode = null; // 'new' or habit id for edit
         let editModeHabitId = null; // Track which habit is being edited for emoji exclusion
         let newHabitSubtasks = []; // Subtasks for new habit creation
+
+        // Habits cache for performance
+        let habitsCache = null;
+
+        // Undo state
+        let lastCompletion = null; // { habitId, date, period, timestamp, type: 'complete'|'subtask' }
+        let undoTimeout = null;
 
         // Unified form state - used by both Create and Edit modes
         let formMode = 'create'; // 'create' or 'edit'
@@ -1424,11 +1455,69 @@
         }
 
         function loadHabits() {
+            if (habitsCache) return habitsCache;
             const h = localStorage.getItem('habits_v3');
-            if (h) return JSON.parse(h);
-            return [];
+            habitsCache = h ? JSON.parse(h) : [];
+            return habitsCache;
         }
-        function saveHabits(h) { localStorage.setItem('habits_v3', JSON.stringify(h)); }
+        function saveHabits(h) {
+            habitsCache = h; // Update cache
+            localStorage.setItem('habits_v3', JSON.stringify(h));
+        }
+        function invalidateHabitsCache() { habitsCache = null; }
+
+        // Undo toast functionality
+        function showUndoToast(habitName) {
+            const toast = document.getElementById('undoToast');
+            const text = document.getElementById('undoToastText');
+            text.textContent = `${habitName} completed`;
+            toast.classList.add('visible');
+
+            // Clear existing timeout
+            if (undoTimeout) clearTimeout(undoTimeout);
+
+            // Auto-hide after 5 seconds
+            undoTimeout = setTimeout(() => {
+                hideUndoToast();
+            }, 5000);
+        }
+
+        function hideUndoToast() {
+            const toast = document.getElementById('undoToast');
+            toast.classList.remove('visible');
+            if (undoTimeout) {
+                clearTimeout(undoTimeout);
+                undoTimeout = null;
+            }
+        }
+
+        function undoLastCompletion() {
+            if (!lastCompletion) return;
+
+            const habits = loadHabits();
+            const habit = habits.find(h => h.id === lastCompletion.habitId);
+            if (!habit) {
+                hideUndoToast();
+                return;
+            }
+
+            // Remove the completion
+            if (lastCompletion.type === 'complete') {
+                habit.completions = habit.completions.filter(c =>
+                    !(c.date === lastCompletion.date && c.timestamp === lastCompletion.timestamp)
+                );
+            } else if (lastCompletion.type === 'subtask' && lastCompletion.subtaskId) {
+                const subtask = habit.subtasks?.find(s => s.id === lastCompletion.subtaskId);
+                if (subtask && subtask.completedPeriods) {
+                    delete subtask.completedPeriods[lastCompletion.periodKey];
+                }
+            }
+
+            saveHabits(habits);
+            lastCompletion = null;
+            hideUndoToast();
+            renderHabits();
+        }
 
         // Only initialize with default habits if no habits exist
         if (!localStorage.getItem('habits_v3')) {
@@ -1929,11 +2018,12 @@
             const description = document.getElementById('habitDesc')?.value.trim() || '';
             const habits = loadHabits();
             const freqType = getFrequencyType();
-            const timesVal = parseInt(document.getElementById('timesPerPeriod')?.value) || DEFAULTS.TIMES_PER_PERIOD;
-            const pointsVal = parseInt(document.getElementById('pointsPerPeriod')?.value) || DEFAULTS.POINTS_PER_PERIOD;
-            const pointsTargetVal = parseInt(document.getElementById('pointsTarget')?.value) || DEFAULTS.POINTS_TARGET;
-            const reminderDaysVal = parseInt(document.getElementById('reminderDays')?.value) || DEFAULTS.REMINDER_DAYS;
-            const everyXVal = parseInt(document.getElementById('everyXPeriod')?.value) || DEFAULTS.EVERY_X_DAYS;
+            // Validate frequency values (minimum 1)
+            const timesVal = Math.max(1, parseInt(document.getElementById('timesPerPeriod')?.value) || DEFAULTS.TIMES_PER_PERIOD);
+            const pointsVal = Math.max(1, parseInt(document.getElementById('pointsPerPeriod')?.value) || DEFAULTS.POINTS_PER_PERIOD);
+            const pointsTargetVal = Math.max(1, parseInt(document.getElementById('pointsTarget')?.value) || DEFAULTS.POINTS_TARGET);
+            const reminderDaysVal = Math.max(1, parseInt(document.getElementById('reminderDays')?.value) || DEFAULTS.REMINDER_DAYS);
+            const everyXVal = Math.max(1, parseInt(document.getElementById('everyXPeriod')?.value) || DEFAULTS.EVERY_X_DAYS);
             habits.push({
                 id: Date.now(), name, description,
                 icon: formState.icon,
@@ -1997,6 +2087,16 @@
             document.getElementById('snoozePopup').innerHTML = `
                 <div class="snooze-popup-content">
                     <div class="snooze-popup-title">Snooze Task</div>
+                    <div class="snooze-options" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 8px;">
+                        <button class="snooze-option" onclick="snoozeUntilTonight()" style="background:#1a1a3e">
+                            <span class="snooze-option-icon">🌙</span>
+                            <span>Tonight</span>
+                        </button>
+                        <button class="snooze-option" onclick="snoozeUntilMorning()" style="background:#1a1a3e">
+                            <span class="snooze-option-icon">🌅</span>
+                            <span>Tomorrow AM</span>
+                        </button>
+                    </div>
                     <div class="snooze-options">
                         <button class="snooze-option" onclick="snoozeHabit(1)">
                             <span class="snooze-option-icon">☀️</span>
@@ -2061,6 +2161,35 @@
             const habit = habits.find(h => h.id === snoozePopupHabitId);
             if (habit) {
                 habit.snoozedUntil = dateInput.value;
+                saveHabits(habits);
+                closeSnoozePopup();
+                closeDetails();
+                renderHabits();
+            }
+        }
+
+        function snoozeUntilTonight() {
+            const habits = loadHabits();
+            const habit = habits.find(h => h.id === snoozePopupHabitId);
+            if (habit) {
+                habit.snoozedUntil = 'night'; // Special value for "until tonight"
+                saveHabits(habits);
+                closeSnoozePopup();
+                closeDetails();
+                renderHabits();
+            }
+        }
+
+        function snoozeUntilMorning() {
+            const habits = loadHabits();
+            const habit = habits.find(h => h.id === snoozePopupHabitId);
+            if (habit) {
+                // If it's currently night, snooze until tomorrow morning
+                // If it's currently morning, snooze until tomorrow morning
+                const tomorrow = new Date(getTodayString());
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                habit.snoozedUntil = toDateString(tomorrow);
+                habit.snoozedUntilPeriod = 'morning'; // Mark that it should appear in morning
                 saveHabits(habits);
                 closeSnoozePopup();
                 closeDetails();
@@ -2439,9 +2568,14 @@
             const existing = habit.completions.find(c => c.date === today && (freqType !== FREQ.TWICE_DAILY || c.period === period));
             if (existing) {
                 habit.completions = habit.completions.filter(c => c !== existing);
+                hideUndoToast(); // Hide toast if uncompleting
             } else {
-                habit.completions.push({ date: today, period, timestamp: Date.now() });
+                const timestamp = Date.now();
+                habit.completions.push({ date: today, period, timestamp });
                 hapticFeedback();
+                // Track for undo
+                lastCompletion = { habitId: id, date: today, period, timestamp, type: 'complete' };
+                showUndoToast(habit.name);
                 // Reset momentum to neutral for reminders when completed
                 if (habit.isReminder || freqType === FREQ.REMINDER) {
                     habit.momentumScore = 0;
@@ -2676,6 +2810,9 @@
 
         function renderHabits() {
             const habits = loadHabits(), container = document.getElementById('habitsContainer');
+            // Preserve scroll position
+            const scrollY = window.scrollY;
+
             if (!habits.length) {
                 container.innerHTML = '<div class="habits-section"><div class="empty-state"><div class="empty-state-icon">✨</div><div>No habits yet</div></div></div>';
                 return;
@@ -2735,6 +2872,9 @@
 
             if (!html) html = '<div class="habits-section"><div class="empty-state"><div class="empty-state-icon">✓</div><div>All done!</div></div></div>';
             container.innerHTML = html;
+
+            // Restore scroll position
+            requestAnimationFrame(() => window.scrollTo(0, scrollY));
         }
 
         // Helper: render a collapsible section (Optional, Later, Done)
@@ -3278,32 +3418,32 @@
             habit.frequency.type = finalFreqType;
             habit.usePoints = formState.isPointsMode;
 
-            // Save frequency-specific values
+            // Save frequency-specific values (validate minimum 1)
             if (finalFreqType === FREQ.TIMES_PER_DAY || finalFreqType === FREQ.TIMES_PER_WEEK || finalFreqType === FREQ.TIMES_PER_MONTH) {
                 const input = document.getElementById('editTimesPerPeriod');
-                const val = parseInt(input?.value) || DEFAULTS.TIMES_PER_PERIOD;
+                const val = Math.max(1, parseInt(input?.value) || DEFAULTS.TIMES_PER_PERIOD);
                 habit.frequency.timesPerDay = val;
                 habit.frequency.timesPerWeek = val;
                 habit.frequency.timesPerMonth = val;
             }
             if (finalFreqType === FREQ.EVERY_X_DAYS) {
                 const input = document.getElementById('editEveryXPeriod');
-                const val = parseInt(input?.value) || DEFAULTS.EVERY_X_DAYS;
+                const val = Math.max(1, parseInt(input?.value) || DEFAULTS.EVERY_X_DAYS);
                 habit.frequency.everyXDays = formState.afterPeriod === PERIOD.DAY ? val : null;
                 habit.frequency.everyXWeeks = formState.afterPeriod === PERIOD.WEEK ? val : null;
                 habit.frequency.everyXMonths = formState.afterPeriod === PERIOD.MONTH ? val : null;
                 if (formState.isPointsMode) {
                     const ptsInput = document.getElementById('editPointsTarget');
-                    habit.frequency.pointsTarget = parseInt(ptsInput?.value) || DEFAULTS.POINTS_TARGET;
+                    habit.frequency.pointsTarget = Math.max(1, parseInt(ptsInput?.value) || DEFAULTS.POINTS_TARGET);
                 }
             }
             if (finalFreqType === FREQ.REMINDER) {
                 const input = document.getElementById('editReminderDays');
-                habit.frequency.reminderDays = parseInt(input?.value) || DEFAULTS.REMINDER_DAYS;
+                habit.frequency.reminderDays = Math.max(1, parseInt(input?.value) || DEFAULTS.REMINDER_DAYS);
             }
             if (finalFreqType === FREQ.POINTS_PER_DAY || finalFreqType === FREQ.POINTS_PER_WEEK || finalFreqType === FREQ.POINTS_PER_MONTH) {
                 const input = document.getElementById('editPointsPerPeriod');
-                const val = parseInt(input?.value) || DEFAULTS.POINTS_PER_PERIOD;
+                const val = Math.max(1, parseInt(input?.value) || DEFAULTS.POINTS_PER_PERIOD);
                 habit.frequency.pointsPerDay = val;
                 habit.frequency.pointsPerWeek = val;
                 habit.frequency.pointsPerMonth = val;
