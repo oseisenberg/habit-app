@@ -24,6 +24,7 @@
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
         h1 { color: #fff; font-size: 1.1rem; font-weight: 600; }
         .settings-btn { background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
+        #debugToggle.active { background: rgba(220, 38, 38, 0.3); border-radius: 8px; }
         .date-header { color: #666; font-size: 0.75rem; margin-bottom: 6px; }
         .time-note { color: #f59e0b; font-size: 0.65rem; margin-bottom: 6px; }
 
@@ -512,8 +513,11 @@
         <div class="header">
             <h1>Habits</h1>
             <div style="display:flex;gap:4px">
+                <button class="settings-btn debug-only" onclick="debugTestNotification()" style="display:none">🔔</button>
+                <button class="settings-btn debug-only" onclick="debugTestMomentumAlert()" style="display:none">📉</button>
                 <button class="settings-btn" onclick="openAllHabits()">📋</button>
                 <button class="settings-btn" onclick="openSettings()">⚙️</button>
+                <button class="settings-btn" id="debugToggle" onclick="toggleDebug()">🐛</button>
             </div>
         </div>
         <p class="date-header" id="currentDate"></p>
@@ -640,7 +644,6 @@
     </div>
 
     <!-- Debug -->
-    <button class="debug-toggle" id="debugToggle" onclick="toggleDebug()">🐛</button>
     <div class="debug-panel" id="debugPanel">
         <div class="debug-row"><span class="debug-label">Real:</span><span class="debug-value"><span id="debugRealDate"></span> <span id="debugRealPeriod" style="color:#888"></span></span></div>
         <div class="debug-row"><span class="debug-label">Sim:</span><span class="debug-value"><span id="debugSimDate"></span> <span id="debugSimPeriod" style="color:#888"></span></span></div>
@@ -656,8 +659,6 @@
         <div class="debug-controls" style="margin-top:8px;">
             <button class="debug-btn" style="background:#059669;color:white" onclick="loadTestData()">Test Data</button>
             <button class="debug-btn" style="background:#7c3aed;color:white" onclick="restoreData()">Restore</button>
-            <button class="debug-btn" style="background:#f59e0b;color:white" onclick="debugTestNotification()">🔔</button>
-            <button class="debug-btn" style="background:#dc2626;color:white" onclick="debugTestMomentumAlert()">📉</button>
         </div>
     </div>
 
@@ -1166,6 +1167,11 @@
             if (wasActive) {
                 collapsedSections = {};
             }
+            // Show/hide debug-only buttons in header
+            const isActive = debugPanel.classList.contains('active');
+            document.querySelectorAll('.debug-only').forEach(btn => {
+                btn.style.display = isActive ? '' : 'none';
+            });
             updateDebugDisplay();
             renderHabits(); // Re-render to expand/collapse sections based on debug mode
         }
