@@ -1301,10 +1301,10 @@
                 return;
             }
             // Send all notification types with slight delays (ignore quiet hours for testing)
-            sendNotification('Morning Routine', 'Morning habits waiting', 'debug-morning', true);
-            setTimeout(() => sendNotification('Bedtime Routine', 'Bedtime habits waiting', 'debug-night', true), 500);
-            setTimeout(() => sendNotification('Momentum Alert', '🏋️ 🧘 losing momentum', 'debug-momentum', true), 1000);
-            setTimeout(() => sendNotification('Weekly Summary', '3/5 weekly goals on track', 'debug-weekly', true), 1500);
+            sendNotification('Habits', 'Morning time', 'debug-morning', true);
+            setTimeout(() => sendNotification('Habits', 'Bedtime', 'debug-night', true), 500);
+            setTimeout(() => sendNotification('Habits', '🏋️ 🧘 need attention', 'debug-momentum', true), 1000);
+            setTimeout(() => sendNotification('Habits', '3/5 weekly on track', 'debug-weekly', true), 1500);
         }
         function updateDebugDisplay() {
             const s = getSettings();
@@ -1749,8 +1749,8 @@
 
             if (incompleteHabits.length === 0) return;
 
-            const title = period === 'morning' ? 'Morning Routine' : 'Bedtime Routine';
-            const body = period === 'morning' ? 'Morning habits waiting' : 'Bedtime habits waiting';
+            const title = 'Habits';
+            const body = period === 'morning' ? 'Morning time' : 'Bedtime';
 
             sendNotification(title, body, `habit-${period}`);
         }
@@ -1771,10 +1771,8 @@
 
             // Build notification with habit icons
             const icons = strugglingHabits.map(h => h.icon).join(' ');
-            const title = 'Momentum Alert';
-            const body = `${icons} losing momentum`;
 
-            sendNotification(title, body, 'momentum-alert');
+            sendNotification('Habits', `${icons} need attention`, 'momentum-alert');
         }
 
         function showWeeklySummary() {
@@ -1791,10 +1789,7 @@
                 if (progress.current >= progress.target) onTrack++;
             });
 
-            const title = 'Weekly Summary';
-            const body = `${onTrack}/${weeklyHabits.length} weekly goals on track`;
-
-            sendNotification(title, body, 'weekly-summary');
+            sendNotification('Habits', `${onTrack}/${weeklyHabits.length} weekly on track`, 'weekly-summary');
         }
 
         function getWeeklyProgress(habit) {
