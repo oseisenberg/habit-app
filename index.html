@@ -591,6 +591,19 @@
                         <span style="color:#666">:00</span>
                     </div>
                 </div>
+                <div class="settings-row">
+                    <span class="settings-label">Momentum alert</span>
+                    <div class="settings-value">
+                        <input type="number" class="settings-input" id="momentumAlertTime" min="0" max="23" value="18">
+                        <span style="color:#666">:00</span>
+                    </div>
+                </div>
+                <div class="settings-row">
+                    <span class="settings-label">Alert threshold</span>
+                    <div class="settings-value">
+                        <input type="number" class="settings-input" id="momentumAlertThreshold" min="-100" max="0" value="-20">
+                    </div>
+                </div>
                 <div class="settings-row" style="border-bottom:none;">
                     <span class="settings-label">Weekly summary (Sun)</span>
                     <label class="toggle-switch">
@@ -1151,6 +1164,8 @@
                 notificationsEnabled: true,
                 morningReminderTime: 5,
                 nightReminderTime: 18,
+                momentumAlertTime: 18,
+                momentumAlertThreshold: -20,
                 weeklySummaryEnabled: false
             };
             return s ? { ...defaults, ...JSON.parse(s) } : defaults;
@@ -1440,6 +1455,8 @@
             document.getElementById('notificationsEnabled').checked = s.notificationsEnabled;
             document.getElementById('morningReminderTime').value = s.morningReminderTime;
             document.getElementById('nightReminderTime').value = s.nightReminderTime;
+            document.getElementById('momentumAlertTime').value = s.momentumAlertTime;
+            document.getElementById('momentumAlertThreshold').value = s.momentumAlertThreshold;
             document.getElementById('weeklySummaryEnabled').checked = s.weeklySummaryEnabled;
             document.getElementById('notificationSettings').style.display = s.notificationsEnabled ? 'block' : 'none';
             updateInstallPromptVisibility();
@@ -1454,6 +1471,8 @@
                 notificationsEnabled: document.getElementById('notificationsEnabled').checked,
                 morningReminderTime: parseInt(document.getElementById('morningReminderTime').value) || 5,
                 nightReminderTime: parseInt(document.getElementById('nightReminderTime').value) || 18,
+                momentumAlertTime: parseInt(document.getElementById('momentumAlertTime').value) || 18,
+                momentumAlertThreshold: parseInt(document.getElementById('momentumAlertThreshold').value) || -20,
                 weeklySummaryEnabled: document.getElementById('weeklySummaryEnabled').checked
             };
             localStorage.setItem('habit_settings', JSON.stringify(settings));
@@ -1553,9 +1572,9 @@
                 notificationTimers.push(timer);
             }
 
-            // Schedule momentum alert at 6pm
+            // Schedule momentum alert
             const momentumTime = new Date(today);
-            momentumTime.setHours(18, 0, 0, 0);
+            momentumTime.setHours(settings.momentumAlertTime, 0, 0, 0);
             if (momentumTime > now) {
                 const delay = momentumTime - now;
                 const timer = setTimeout(() => showMomentumAlert(), delay);
@@ -1596,12 +1615,14 @@
 
         function showMomentumAlert() {
             const habits = loadHabits();
+            const settings = getSettings();
+            const threshold = settings.momentumAlertThreshold || -20;
 
-            // Find habits with low momentum (below 0)
+            // Find habits with low momentum (below threshold)
             const strugglingHabits = habits.filter(h => {
                 if (h.isReminder) return false;
                 const score = h.momentumScore || 0;
-                return score < 0;
+                return score < threshold;
             });
 
             if (strugglingHabits.length === 0) return;
