@@ -1303,8 +1303,8 @@
             // Send all notification types with slight delays (ignore quiet hours for testing)
             sendNotification('🌅 Morning', '', 'debug-morning', true);
             setTimeout(() => sendNotification('🌙 Bedtime', '', 'debug-night', true), 500);
-            setTimeout(() => sendNotification('Momentum 🏋️ 🧘', '', 'debug-momentum', true), 1000);
-            setTimeout(() => sendNotification('📊 3/5 weekly', '', 'debug-weekly', true), 1500);
+            setTimeout(() => sendNotification('Momentum Alert 🏋️ 🧘', '', 'debug-momentum', true), 1000);
+            setTimeout(() => sendNotification('📊 3/5 weekly goals', '', 'debug-weekly', true), 1500);
         }
         function updateDebugDisplay() {
             const s = getSettings();
@@ -1767,7 +1767,7 @@
             if (strugglingHabits.length === 0) return;
 
             const icons = strugglingHabits.map(h => h.icon).join(' ');
-            sendNotification(`Momentum ${icons}`, '', 'momentum-alert');
+            sendNotification(`Momentum Alert ${icons}`, '', 'momentum-alert');
         }
 
         function showWeeklySummary() {
@@ -1784,7 +1784,7 @@
                 if (progress.current >= progress.target) onTrack++;
             });
 
-            sendNotification(`📊 ${onTrack}/${weeklyHabits.length} weekly`, '', 'weekly-summary');
+            sendNotification(`📊 ${onTrack}/${weeklyHabits.length} weekly goals`, '', 'weekly-summary');
         }
 
         function getWeeklyProgress(habit) {
