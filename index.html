@@ -3709,6 +3709,14 @@
         if (getSettings().notificationsEnabled) {
             scheduleNotifications();
         }
+
+        // Update badge when app becomes visible and periodically
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                updateBadge();
+            }
+        });
+        setInterval(updateBadge, 60000); // Update badge every minute
     </script>
 </body>
 </html>
