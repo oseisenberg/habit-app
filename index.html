@@ -1361,8 +1361,10 @@
         }
         function saveHabits(h) { localStorage.setItem('habits_v3', JSON.stringify(h)); }
 
-        // Always initialize with default habits on app load
-        saveHabits(getDefaultHabits());
+        // Only initialize with default habits if no habits exist
+        if (!localStorage.getItem('habits_v3')) {
+            saveHabits(getDefaultHabits());
+        }
 
         // Get a single habit by ID (returns habit object or undefined)
         function getHabitById(id) {
