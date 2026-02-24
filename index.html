@@ -592,16 +592,48 @@
                     </div>
                 </div>
                 <div class="settings-row">
-                    <span class="settings-label">Momentum alert</span>
-                    <div class="settings-value">
-                        <input type="number" class="settings-input" id="momentumAlertTime" min="0" max="23" value="18">
-                        <span style="color:#666">:00</span>
+                    <span class="settings-label">Momentum alerts</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="momentumAlertEnabled" onchange="toggleMomentumSettings()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div id="momentumAlertSettings" style="display:none;">
+                    <div class="settings-row">
+                        <span class="settings-label" style="padding-left:12px">Alert time</span>
+                        <div class="settings-value">
+                            <input type="number" class="settings-input" id="momentumAlertTime" min="0" max="23" value="18">
+                            <span style="color:#666">:00</span>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label" style="padding-left:12px">Threshold</span>
+                        <div class="settings-value">
+                            <input type="number" class="settings-input" id="momentumAlertThreshold" min="-100" max="0" value="-20">
+                        </div>
                     </div>
                 </div>
                 <div class="settings-row">
-                    <span class="settings-label">Alert threshold</span>
-                    <div class="settings-value">
-                        <input type="number" class="settings-input" id="momentumAlertThreshold" min="-100" max="0" value="-20">
+                    <span class="settings-label">Quiet hours</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="quietHoursEnabled" onchange="toggleQuietHoursSettings()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div id="quietHoursSettings" style="display:none;">
+                    <div class="settings-row">
+                        <span class="settings-label" style="padding-left:12px">From</span>
+                        <div class="settings-value">
+                            <input type="number" class="settings-input" id="quietHoursStart" min="0" max="23" value="22">
+                            <span style="color:#666">:00</span>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label" style="padding-left:12px">Until</span>
+                        <div class="settings-value">
+                            <input type="number" class="settings-input" id="quietHoursEnd" min="0" max="23" value="7">
+                            <span style="color:#666">:00</span>
+                        </div>
                     </div>
                 </div>
                 <div class="settings-row" style="border-bottom:none;">
@@ -672,8 +704,7 @@
             <button class="debug-btn" style="background:#7c3aed;color:white" onclick="restoreData()">Restore</button>
         </div>
         <div class="debug-controls" style="margin-top:8px;">
-            <button class="debug-btn" style="background:#f59e0b;color:white" onclick="debugTestNotification()">🔔 Test Notif</button>
-            <button class="debug-btn" style="background:#dc2626;color:white" onclick="debugTestMomentumAlert()">📉 Momentum</button>
+            <button class="debug-btn" style="background:#f59e0b;color:white" onclick="debugTestAllNotifications()">🔔 Test Notifications</button>
         </div>
     </div>
 
@@ -1164,8 +1195,12 @@
                 notificationsEnabled: true,
                 morningReminderTime: 5,
                 nightReminderTime: 18,
+                momentumAlertEnabled: true,
                 momentumAlertTime: 18,
                 momentumAlertThreshold: -20,
+                quietHoursEnabled: false,
+                quietHoursStart: 22,
+                quietHoursEnd: 7,
                 weeklySummaryEnabled: false
             };
             return s ? { ...defaults, ...JSON.parse(s) } : defaults;
@@ -1232,21 +1267,17 @@
             updateDebugDisplay();
             updateDisplay();
         }
-        async function debugTestNotification() {
+        async function debugTestAllNotifications() {
             const permission = await requestNotificationPermission();
             if (permission !== 'granted') {
                 alert('Notification permission denied. Please enable notifications in your browser settings.');
                 return;
             }
-            sendNotification('Test Notification', 'Notifications are working!', 'debug-test');
-        }
-        async function debugTestMomentumAlert() {
-            const permission = await requestNotificationPermission();
-            if (permission !== 'granted') {
-                alert('Notification permission denied. Please enable notifications in your browser settings.');
-                return;
-            }
-            showMomentumAlert();
+            // Send all notification types with slight delays (ignore quiet hours for testing)
+            sendNotification('Morning Routine', 'Morning habits waiting', 'debug-morning', true);
+            setTimeout(() => sendNotification('Bedtime Routine', 'Bedtime habits waiting', 'debug-night', true), 500);
+            setTimeout(() => sendNotification('Momentum Alert', '🏋️ 🧘 losing momentum', 'debug-momentum', true), 1000);
+            setTimeout(() => sendNotification('Weekly Summary', '3/5 weekly goals on track', 'debug-weekly', true), 1500);
         }
         function updateDebugDisplay() {
             const s = getSettings();
@@ -1455,14 +1486,28 @@
             document.getElementById('notificationsEnabled').checked = s.notificationsEnabled;
             document.getElementById('morningReminderTime').value = s.morningReminderTime;
             document.getElementById('nightReminderTime').value = s.nightReminderTime;
+            document.getElementById('momentumAlertEnabled').checked = s.momentumAlertEnabled;
             document.getElementById('momentumAlertTime').value = s.momentumAlertTime;
             document.getElementById('momentumAlertThreshold').value = s.momentumAlertThreshold;
+            document.getElementById('quietHoursEnabled').checked = s.quietHoursEnabled;
+            document.getElementById('quietHoursStart').value = s.quietHoursStart;
+            document.getElementById('quietHoursEnd').value = s.quietHoursEnd;
             document.getElementById('weeklySummaryEnabled').checked = s.weeklySummaryEnabled;
             document.getElementById('notificationSettings').style.display = s.notificationsEnabled ? 'block' : 'none';
+            document.getElementById('momentumAlertSettings').style.display = s.momentumAlertEnabled ? 'block' : 'none';
+            document.getElementById('quietHoursSettings').style.display = s.quietHoursEnabled ? 'block' : 'none';
             updateInstallPromptVisibility();
             document.getElementById('settingsOverlay').classList.add('active');
         }
         function closeSettings() { document.getElementById('settingsOverlay').classList.remove('active'); }
+        function toggleMomentumSettings() {
+            const enabled = document.getElementById('momentumAlertEnabled').checked;
+            document.getElementById('momentumAlertSettings').style.display = enabled ? 'block' : 'none';
+        }
+        function toggleQuietHoursSettings() {
+            const enabled = document.getElementById('quietHoursEnabled').checked;
+            document.getElementById('quietHoursSettings').style.display = enabled ? 'block' : 'none';
+        }
         function saveSettings() {
             const settings = {
                 morningStart: parseInt(document.getElementById('morningStart').value) || 5,
@@ -1471,8 +1516,12 @@
                 notificationsEnabled: document.getElementById('notificationsEnabled').checked,
                 morningReminderTime: parseInt(document.getElementById('morningReminderTime').value) || 5,
                 nightReminderTime: parseInt(document.getElementById('nightReminderTime').value) || 18,
+                momentumAlertEnabled: document.getElementById('momentumAlertEnabled').checked,
                 momentumAlertTime: parseInt(document.getElementById('momentumAlertTime').value) || 18,
                 momentumAlertThreshold: parseInt(document.getElementById('momentumAlertThreshold').value) || -20,
+                quietHoursEnabled: document.getElementById('quietHoursEnabled').checked,
+                quietHoursStart: parseInt(document.getElementById('quietHoursStart').value) || 22,
+                quietHoursEnd: parseInt(document.getElementById('quietHoursEnd').value) || 7,
                 weeklySummaryEnabled: document.getElementById('weeklySummaryEnabled').checked
             };
             localStorage.setItem('habit_settings', JSON.stringify(settings));
@@ -1573,12 +1622,14 @@
             }
 
             // Schedule momentum alert
-            const momentumTime = new Date(today);
-            momentumTime.setHours(settings.momentumAlertTime, 0, 0, 0);
-            if (momentumTime > now) {
-                const delay = momentumTime - now;
-                const timer = setTimeout(() => showMomentumAlert(), delay);
-                notificationTimers.push(timer);
+            if (settings.momentumAlertEnabled) {
+                const momentumTime = new Date(today);
+                momentumTime.setHours(settings.momentumAlertTime, 0, 0, 0);
+                if (momentumTime > now) {
+                    const delay = momentumTime - now;
+                    const timer = setTimeout(() => showMomentumAlert(), delay);
+                    notificationTimers.push(timer);
+                }
             }
 
             // Schedule weekly summary for Sunday at 10am
@@ -1675,7 +1726,21 @@
             return { current, target };
         }
 
-        function sendNotification(title, body, tag) {
+        function isQuietHours() {
+            const settings = getSettings();
+            if (!settings.quietHoursEnabled) return false;
+            const hour = new Date().getHours();
+            const start = settings.quietHoursStart;
+            const end = settings.quietHoursEnd;
+            // Handle overnight quiet hours (e.g., 22:00 to 07:00)
+            if (start > end) {
+                return hour >= start || hour < end;
+            }
+            return hour >= start && hour < end;
+        }
+
+        function sendNotification(title, body, tag, ignoreQuietHours = false) {
+            if (!ignoreQuietHours && isQuietHours()) return;
             if (swRegistration) {
                 // Use service worker for notification
                 swRegistration.active.postMessage({
