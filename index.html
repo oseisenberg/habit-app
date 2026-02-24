@@ -1301,10 +1301,10 @@
                 return;
             }
             // Send all notification types with slight delays (ignore quiet hours for testing)
-            sendNotification('Habits', 'Morning time', 'debug-morning', true);
-            setTimeout(() => sendNotification('Habits', 'Bedtime', 'debug-night', true), 500);
-            setTimeout(() => sendNotification('Habits', '🏋️ 🧘 need attention', 'debug-momentum', true), 1000);
-            setTimeout(() => sendNotification('Habits', '3/5 weekly on track', 'debug-weekly', true), 1500);
+            sendNotification('🌅 Morning', '', 'debug-morning', true);
+            setTimeout(() => sendNotification('🌙 Bedtime', '', 'debug-night', true), 500);
+            setTimeout(() => sendNotification('Momentum 🏋️ 🧘', '', 'debug-momentum', true), 1000);
+            setTimeout(() => sendNotification('📊 3/5 weekly', '', 'debug-weekly', true), 1500);
         }
         function updateDebugDisplay() {
             const s = getSettings();
@@ -1749,10 +1749,7 @@
 
             if (incompleteHabits.length === 0) return;
 
-            const title = 'Habits';
-            const body = period === 'morning' ? 'Morning time' : 'Bedtime';
-
-            sendNotification(title, body, `habit-${period}`);
+            sendNotification(period === 'morning' ? '🌅 Morning' : '🌙 Bedtime', '', `habit-${period}`);
         }
 
         function showMomentumAlert() {
@@ -1769,10 +1766,8 @@
 
             if (strugglingHabits.length === 0) return;
 
-            // Build notification with habit icons
             const icons = strugglingHabits.map(h => h.icon).join(' ');
-
-            sendNotification('Habits', `${icons} need attention`, 'momentum-alert');
+            sendNotification(`Momentum ${icons}`, '', 'momentum-alert');
         }
 
         function showWeeklySummary() {
@@ -1789,7 +1784,7 @@
                 if (progress.current >= progress.target) onTrack++;
             });
 
-            sendNotification('Habits', `${onTrack}/${weeklyHabits.length} weekly on track`, 'weekly-summary');
+            sendNotification(`📊 ${onTrack}/${weeklyHabits.length} weekly`, '', 'weekly-summary');
         }
 
         function getWeeklyProgress(habit) {
