@@ -1290,7 +1290,7 @@
             const hour = debugHourOverride !== null ? debugHourOverride : simDate.getHours();
             if (hour < s.morningStart) {
                 const prev = new Date(simDate); prev.setDate(prev.getDate() - 1);
-                document.getElementById('timeNote').textContent = `Before ${s.morningStart}am — counts as ${formatDate(prev)}`;
+                document.getElementById('timeNote').textContent = `Before ${s.morningStart}am — counts as yesterday`;
             } else {
                 document.getElementById('timeNote').textContent = '';
             }
