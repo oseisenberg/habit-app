@@ -2863,12 +2863,13 @@
                 }
             });
 
-            // Sub-categorize Now section by time
-            const morning = now.filter(h => h.timeOfDay === PERIOD.MORNING || (h.frequency.type === FREQ.TWICE_DAILY && timeOfDay === PERIOD.MORNING));
-            const bedtime = now.filter(h => h.timeOfDay === PERIOD.NIGHT || (h.frequency.type === FREQ.TWICE_DAILY && timeOfDay === PERIOD.NIGHT));
-            const anytime = now.filter(h => !h.timeOfDay && h.frequency.type !== FREQ.TWICE_DAILY);
+            // Sub-categorize Now section by time (exclude reminders from time-based sections)
+            const morning = now.filter(h => !h.isReminder && (h.timeOfDay === PERIOD.MORNING || (h.frequency.type === FREQ.TWICE_DAILY && timeOfDay === PERIOD.MORNING)));
+            const bedtime = now.filter(h => !h.isReminder && (h.timeOfDay === PERIOD.NIGHT || (h.frequency.type === FREQ.TWICE_DAILY && timeOfDay === PERIOD.NIGHT)));
+            const anytime = now.filter(h => !h.isReminder && !h.timeOfDay && h.frequency.type !== FREQ.TWICE_DAILY);
+            const reminders = now.filter(h => h.isReminder);
 
-            return { now, optional, later, done, morning, bedtime, anytime, timeOfDay };
+            return { now, optional, later, done, morning, bedtime, anytime, reminders, timeOfDay };
         }
 
         function renderHabits() {
@@ -2882,7 +2883,7 @@
             }
 
             const { now: nowHabits, optional: optionalHabits, later: laterHabits, done: completedHabits,
-                    morning: morningSpecific, bedtime: bedtimeSpecific, anytime: anytimeHabits, timeOfDay } = categorizeHabits(habits);
+                    morning: morningSpecific, bedtime: bedtimeSpecific, anytime: anytimeHabits, reminders: reminderHabits, timeOfDay } = categorizeHabits(habits);
 
             // Helper: render a sub-section with header and habits grid (large tasks sorted first)
             const subSection = (habits, icon, title) => {
@@ -2904,6 +2905,7 @@
                     nowContent += subSection(bedtimeSpecific, '🌙', 'Bedtime');
                     nowContent += subSection(anytimeHabits, '☀️', 'Anytime');
                 }
+                nowContent += subSection(reminderHabits, '🔔', 'Reminders');
 
                 html += `<div class="habits-section">
                     <div class="section-header">
