@@ -1384,7 +1384,7 @@
             if (!('setAppBadge' in navigator)) return;
             const habits = loadHabits();
             const { now: nowHabits } = categorizeHabits(habits);
-            const count = nowHabits.filter(h => !h.isReminder).length;
+            const count = nowHabits.length;
             if (count > 0) {
                 navigator.setAppBadge(count).catch(() => {});
             } else {
