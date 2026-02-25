@@ -3706,12 +3706,19 @@
 
         function getHabitStatusOrder(habit) {
             // Returns a number for sorting: lower = show first
-            // 0 = Ready, 1 = Optional, 2 = Later, 3 = Done/Missed
+            // 0 = Ready, 1 = Optional, 2 = Later/Snoozed, 3 = Done/Missed
             if (isCompletedToday(habit)) return 3;
             if (isOptional(habit)) return 1;
             if (canDoNow(habit)) return 0;
-            if (isForLater(habit)) return 2;
+            if (isForLater(habit) || habit.snoozedUntil) return 2;
             return 3; // Default to done/missed
+        }
+
+        function getSnoozeDate(habit) {
+            // Returns sortable date string for snoozed habits, or empty string
+            if (!habit.snoozedUntil) return '';
+            if (habit.snoozedUntil === 'night') return getTodayString(); // Tonight = today
+            return habit.snoozedUntil;
         }
 
         function renderAllHabitsGrid() {
@@ -3720,16 +3727,16 @@
             const noResults = document.getElementById('allHabitsNoResults');
             if (!grid) return;
 
-            // Filter and sort by status, then by name
+            // Filter and sort by status, then by snooze date, then by name
             let filtered = habits;
             if (allHabitsSearchQuery) {
                 filtered = habits
                     .map(h => ({ habit: h, ...fuzzyMatch(h.name, allHabitsSearchQuery) }))
                     .filter(h => h.match)
-                    .sort((a, b) => getHabitStatusOrder(a.habit) - getHabitStatusOrder(b.habit) || a.habit.name.localeCompare(b.habit.name))
+                    .sort((a, b) => getHabitStatusOrder(a.habit) - getHabitStatusOrder(b.habit) || getSnoozeDate(a.habit).localeCompare(getSnoozeDate(b.habit)) || a.habit.name.localeCompare(b.habit.name))
                     .map(h => h.habit);
             } else {
-                filtered = [...habits].sort((a, b) => getHabitStatusOrder(a) - getHabitStatusOrder(b) || a.name.localeCompare(b.name));
+                filtered = [...habits].sort((a, b) => getHabitStatusOrder(a) - getHabitStatusOrder(b) || getSnoozeDate(a).localeCompare(getSnoozeDate(b)) || a.name.localeCompare(b.name));
             }
 
             if (!filtered.length) {
