@@ -1686,6 +1686,25 @@
             notificationTimers = [];
         }
 
+        // Check if notification should be shown now (on app open)
+        function checkNotificationOnOpen() {
+            const settings = getSettings();
+            if (!settings.notificationsEnabled) return;
+            if (Notification.permission !== 'granted') return;
+
+            const now = new Date();
+            const hour = now.getHours();
+
+            // Check if we're in morning window (between morning reminder and night start)
+            if (hour >= settings.morningReminderTime && hour < settings.nightStart) {
+                showHabitNotification('morning');
+            }
+            // Check if we're in night window (after night reminder)
+            else if (hour >= settings.nightReminderTime) {
+                showHabitNotification('night');
+            }
+        }
+
         function scheduleNotifications() {
             clearNotificationTimers();
 
@@ -3975,12 +3994,15 @@
         registerServiceWorker();
         if (getSettings().notificationsEnabled) {
             scheduleNotifications();
+            // Check if notification should show now (in case app wasn't open at scheduled time)
+            setTimeout(checkNotificationOnOpen, 2000); // Delay to let service worker register
         }
 
-        // Update badge when app becomes visible and periodically
+        // Update badge and check notifications when app becomes visible
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
                 updateBadge();
+                scheduleNotifications(); // Reschedule in case day changed
             }
         });
         setInterval(updateBadge, 60000); // Update badge every minute
