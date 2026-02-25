@@ -1908,9 +1908,10 @@
         function resetAllMomentum() {
             if (!confirm('Reset momentum scores for all habits? This cannot be undone.')) return;
             const habits = loadHabits();
+            const today = getTodayString();
             habits.forEach(h => {
                 h.momentumScore = 0;
-                h.lastScoreUpdate = null;
+                h.lastScoreUpdate = today; // Set to today to prevent recalculation
             });
             saveHabits(habits);
             updateDisplay();
