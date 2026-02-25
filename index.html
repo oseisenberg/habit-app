@@ -2096,6 +2096,21 @@
             }
         }
 
+        // Won't Do: Skip today but momentum penalty still applies (unlike snooze which pauses momentum)
+        function wontDoHabit() {
+            if (!snoozePopupHabitId) return;
+            const habits = loadHabits();
+            const habit = habits.find(h => h.id === snoozePopupHabitId);
+            const today = getTodayString();
+            if (habit && !habit.skippedDates.includes(today)) {
+                habit.skippedDates.push(today);
+                saveHabits(habits);
+            }
+            closeSnoozePopup();
+            closeDetails();
+            renderHabits();
+        }
+
         let snoozePopupHabitId = null;
 
         function openSnoozePopup(id) {
@@ -2151,6 +2166,7 @@
                             <button onclick="snoozeToDate()">Set</button>
                         </div>
                     </div>
+                    <button class="snooze-cancel" style="background:#dc2626;border-color:#dc2626;color:#fff;margin-top:16px" onclick="wontDoHabit()">Won't Do Today</button>
                     <button class="snooze-cancel" onclick="closeSnoozePopup()">Cancel</button>
                 </div>`;
             document.getElementById('snoozePopupOverlay').classList.add('active');
@@ -2165,9 +2181,14 @@
             const habits = loadHabits();
             const habit = habits.find(h => h.id === snoozePopupHabitId);
             if (habit) {
-                const snoozeUntil = new Date(getTodayString());
+                const today = getTodayString();
+                const snoozeUntil = new Date(today);
                 snoozeUntil.setDate(snoozeUntil.getDate() + days);
-                habit.snoozedUntil = toDateString(snoozeUntil);
+                const untilStr = toDateString(snoozeUntil);
+                habit.snoozedUntil = untilStr;
+                // Track snooze history for momentum pausing
+                if (!habit.snoozeHistory) habit.snoozeHistory = [];
+                habit.snoozeHistory.push({ from: today, until: untilStr });
                 saveHabits(habits);
                 closeSnoozePopup();
                 closeDetails();
@@ -2181,7 +2202,11 @@
             const habits = loadHabits();
             const habit = habits.find(h => h.id === snoozePopupHabitId);
             if (habit) {
+                const today = getTodayString();
                 habit.snoozedUntil = dateInput.value;
+                // Track snooze history for momentum pausing
+                if (!habit.snoozeHistory) habit.snoozeHistory = [];
+                habit.snoozeHistory.push({ from: today, until: dateInput.value });
                 saveHabits(habits);
                 closeSnoozePopup();
                 closeDetails();
@@ -2205,12 +2230,17 @@
             const habits = loadHabits();
             const habit = habits.find(h => h.id === snoozePopupHabitId);
             if (habit) {
+                const today = getTodayString();
                 // If it's currently night, snooze until tomorrow morning
                 // If it's currently morning, snooze until tomorrow morning
-                const tomorrow = new Date(getTodayString());
+                const tomorrow = new Date(today);
                 tomorrow.setDate(tomorrow.getDate() + 1);
-                habit.snoozedUntil = toDateString(tomorrow);
+                const untilStr = toDateString(tomorrow);
+                habit.snoozedUntil = untilStr;
                 habit.snoozedUntilPeriod = 'morning'; // Mark that it should appear in morning
+                // Track snooze history for momentum pausing
+                if (!habit.snoozeHistory) habit.snoozeHistory = [];
+                habit.snoozeHistory.push({ from: today, until: untilStr });
                 saveHabits(habits);
                 closeSnoozePopup();
                 closeDetails();
@@ -2366,6 +2396,12 @@
         }
         function daysBetween(d1, d2) { return Math.floor((new Date(d2) - new Date(d1)) / 86400000); }
 
+        // Check if a date was snoozed (for pausing momentum during snooze)
+        function wasDateSnoozed(habit, dateStr) {
+            if (!habit.snoozeHistory || !habit.snoozeHistory.length) return false;
+            return habit.snoozeHistory.some(range => dateStr >= range.from && dateStr < range.until);
+        }
+
         // ========================================
         // MOMENTUM SCORING
         // ========================================
@@ -2430,6 +2466,9 @@
 
                 // Skip dates before habit was created
                 if (createdAt && checkDateStr < createdAt) continue;
+
+                // Skip dates when habit was snoozed (momentum pauses during snooze)
+                if (wasDateSnoozed(habit, checkDateStr)) continue;
 
                 const wasDue = wasHabitDueOnDate(habit, checkDateStr);
                 let wasCompleted = completionDates.has(checkDateStr);
