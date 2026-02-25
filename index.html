@@ -4002,10 +4002,27 @@
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
                 updateBadge();
+                updateDisplay(); // Refresh in case time period changed
                 scheduleNotifications(); // Reschedule in case day changed
             }
         });
-        setInterval(updateBadge, 60000); // Update badge every minute
+
+        // Track current period to detect changes
+        let lastPeriod = getTimeOfDayNow();
+        let lastDate = getTodayString();
+
+        // Check every minute if period or date changed
+        setInterval(() => {
+            updateBadge();
+            const currentPeriod = getTimeOfDayNow();
+            const currentDate = getTodayString();
+            if (currentPeriod !== lastPeriod || currentDate !== lastDate) {
+                lastPeriod = currentPeriod;
+                lastDate = currentDate;
+                updateDisplay();
+                scheduleNotifications();
+            }
+        }, 60000);
     </script>
 </body>
 </html>
