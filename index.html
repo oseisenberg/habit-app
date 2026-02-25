@@ -2898,8 +2898,8 @@
                     nowContent += subSection(morningSpecific, '🌅', 'Morning');
                     nowContent += subSection(anytimeHabits, '☀️', 'Anytime');
                 } else if (timeOfDay === PERIOD.NIGHT) {
-                    nowContent += subSection(anytimeHabits, '☀️', 'Anytime');
                     nowContent += subSection(bedtimeSpecific, '🌙', 'Bedtime');
+                    nowContent += subSection(anytimeHabits, '☀️', 'Anytime');
                 }
 
                 html += `<div class="habits-section">
@@ -3702,7 +3702,7 @@
                             ${completeButton || ''}
                             <button class="submit-btn${completeButton ? ' secondary' : ''}" style="flex:1" onclick="toggleEditMode()">Edit</button>
                             ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id})">Snooze</button>` : ''}
-                            ${canSnooze ? `<button class="submit-btn secondary" style="flex:1;background:#dc2626;border-color:#dc2626" onclick="ignoreHabit(${habit.id})">Ignore</button>` : ''}
+                            ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="ignoreHabit(${habit.id})">Ignore</button>` : ''}
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
                         </div>
                         <div style="display:flex;gap:6px">
