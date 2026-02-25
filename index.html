@@ -2779,13 +2779,10 @@
             // For other habits: if fully completed, not for later
             if (status.completed) return false;
 
-            // Night habits during non-night = later
+            // Night habits during non-night = tonight
             if (habit.timeOfDay === PERIOD.NIGHT && timeOfDay !== PERIOD.NIGHT) return true;
-            // Snoozed habits go to Later
-            if (habit.snoozedUntil) {
-                if (habit.snoozedUntil === PERIOD.NIGHT && timeOfDay !== PERIOD.NIGHT) return true;
-                if (habit.snoozedUntil !== PERIOD.NIGHT && habit.snoozedUntil > today) return true;
-            }
+            // Only snoozed until tonight goes here (future snoozes are hidden entirely)
+            if (habit.snoozedUntil === PERIOD.NIGHT && timeOfDay !== PERIOD.NIGHT) return true;
             return false;
         }
 
@@ -2927,7 +2924,7 @@
 
             // Collapsible sections using helper
             html += renderSection(optionalHabits, 'optional', '⭐', 'Optional', false, { inactive: true });
-            html += renderSection(laterHabits, 'later', '🕐', 'Later', true, { inactive: true, isLater: true });
+            html += renderSection(laterHabits, 'later', '🌙', 'Tonight', true, { inactive: true, isLater: true });
             html += renderSection(completedHabits, 'completed', '✓', 'Finished', true, { inactive: true, isCompleted: true });
 
             if (!html) html = '<div class="habits-section"><div class="empty-state"><div class="empty-state-icon">✓</div><div>All done!</div></div></div>';
