@@ -1407,7 +1407,7 @@
             return [
                 { id: 2, name: 'Shower', icon: '🚿', timeOfDay: 'night', frequency: { type: 'everyXDays', everyXDays: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, momentumScore: 0, lastScoreUpdate: today, usePoints: false, allowOptional: false, isReminder: false, isLarge: false },
                 { id: 36, name: 'Brush teeth', icon: '🦷', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, momentumScore: 0, lastScoreUpdate: today, usePoints: false, allowOptional: false, isReminder: false },
-                { id: 3, name: 'Exercise', icon: '🏋️‍♂️', timeOfDay: null, frequency: { type: 'timesPerWeek', timesPerWeek: 3 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, momentumScore: 0, lastScoreUpdate: today, usePoints: false, allowOptional: false, isReminder: false, isLarge: true },
+                { id: 3, name: 'Exercise', icon: '🏋️‍♂️', timeOfDay: null, frequency: { type: 'pointsPerWeek', pointsPerWeek: 8 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, momentumScore: 0, lastScoreUpdate: today, usePoints: true, allowOptional: true, isReminder: false, isLarge: true },
                 { id: 37, name: 'Social Events', icon: '🎉', timeOfDay: null, frequency: { type: 'timesPerWeek', timesPerWeek: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, momentumScore: 0, lastScoreUpdate: today, usePoints: false, allowOptional: false, isReminder: false, isLarge: true },
                 { id: 4, name: 'Zoryve', icon: '🫧', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, momentumScore: 0, lastScoreUpdate: today, usePoints: false, allowOptional: false, isReminder: false },
                 { id: 8, name: 'Shave', icon: '🪒', timeOfDay: null, frequency: { type: 'everyXDays', everyXDays: 2 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, momentumScore: 0, lastScoreUpdate: today, usePoints: false, allowOptional: false, isReminder: false },
@@ -2096,11 +2096,12 @@
             }
         }
 
-        // Won't Do: Skip today but momentum penalty still applies (unlike snooze which pauses momentum)
-        function wontDoHabit() {
-            if (!snoozePopupHabitId) return;
+        // Ignore: Skip today but momentum penalty still applies (unlike snooze which pauses momentum)
+        function ignoreHabit(id) {
+            const habitId = id || snoozePopupHabitId;
+            if (!habitId) return;
             const habits = loadHabits();
-            const habit = habits.find(h => h.id === snoozePopupHabitId);
+            const habit = habits.find(h => h.id === habitId);
             const today = getTodayString();
             if (habit && !habit.skippedDates.includes(today)) {
                 habit.skippedDates.push(today);
@@ -2166,7 +2167,6 @@
                             <button onclick="snoozeToDate()">Set</button>
                         </div>
                     </div>
-                    <button class="snooze-cancel" style="background:#dc2626;border-color:#dc2626;color:#fff;margin-top:16px" onclick="wontDoHabit()">Won't Do Today</button>
                     <button class="snooze-cancel" onclick="closeSnoozePopup()">Cancel</button>
                 </div>`;
             document.getElementById('snoozePopupOverlay').classList.add('active');
@@ -3702,6 +3702,7 @@
                             ${completeButton || ''}
                             <button class="submit-btn${completeButton ? ' secondary' : ''}" style="flex:1" onclick="toggleEditMode()">Edit</button>
                             ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id})">Snooze</button>` : ''}
+                            ${canSnooze ? `<button class="submit-btn secondary" style="flex:1;background:#dc2626;border-color:#dc2626" onclick="ignoreHabit(${habit.id})">Ignore</button>` : ''}
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
                         </div>
                         <div style="display:flex;gap:6px">
