@@ -1702,6 +1702,9 @@
             notificationTimers = [];
         }
 
+        // Track last notification to prevent duplicates
+        let lastNotificationKey = localStorage.getItem('lastNotificationKey') || '';
+
         // Check if notification should be shown now (on app open)
         function checkNotificationOnOpen() {
             const settings = getSettings();
@@ -1710,14 +1713,25 @@
 
             const now = new Date();
             const hour = now.getHours();
+            const today = getTodayString();
 
             // Check if we're in morning window (between morning reminder and night start)
             if (hour >= settings.morningReminderTime && hour < settings.nightStart) {
-                showHabitNotification('morning');
+                const key = `${today}-morning`;
+                if (lastNotificationKey !== key) {
+                    lastNotificationKey = key;
+                    localStorage.setItem('lastNotificationKey', key);
+                    showHabitNotification('morning');
+                }
             }
             // Check if we're in night window (after night reminder)
             else if (hour >= settings.nightReminderTime) {
-                showHabitNotification('night');
+                const key = `${today}-night`;
+                if (lastNotificationKey !== key) {
+                    lastNotificationKey = key;
+                    localStorage.setItem('lastNotificationKey', key);
+                    showHabitNotification('night');
+                }
             }
         }
 
@@ -4081,6 +4095,7 @@
                 updateBadge();
                 updateDisplay(); // Refresh in case time period changed
                 scheduleNotifications(); // Reschedule in case day changed
+                checkNotificationOnOpen(); // Check if notification should show now
             }
         });
 
