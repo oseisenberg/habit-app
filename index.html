@@ -470,6 +470,8 @@
         }
         .snooze-option:hover { background: #1a1a2e; border-color: #667eea; }
         .snooze-option:active { transform: scale(0.95); }
+        .skip-cycle-btn { background: #22c55e !important; border-color: #16a34a !important; }
+        .skip-cycle-btn:hover { background: #16a34a !important; border-color: #15803d !important; }
         .snooze-option-icon { font-size: 1.4rem; }
         .snooze-custom { margin-top: 12px; }
         .snooze-custom-label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
@@ -2247,7 +2249,7 @@
             document.getElementById('snoozePopup').innerHTML = `
                 <div class="snooze-popup-content">
                     <div class="snooze-popup-title">Snooze Task</div>
-                    <button class="snooze-option" onclick="snoozeHabit(${cycleDays})" style="width:100%;margin-bottom:12px;background:#1a4a3e;border:1px solid #2a6a4e">
+                    <button class="snooze-option skip-cycle-btn" onclick="snoozeHabit(${cycleDays})" style="width:100%;margin-bottom:12px">
                         <span class="snooze-option-icon">⏭️</span>
                         <span>Skip cycle (${cycleLabel})</span>
                     </button>
