@@ -2208,16 +2208,49 @@
 
         let snoozePopupHabitId = null;
 
+        function getHabitCycleDays(habit) {
+            const freq = habit.frequency;
+            const freqType = freq.type;
+            if (freqType === FREQ.DAILY || freqType === FREQ.TWICE_DAILY || freqType === FREQ.TIMES_PER_DAY || freqType === FREQ.POINTS_PER_DAY) return 1;
+            if (freqType === FREQ.REMINDER) return freq.reminderDays || DEFAULTS.REMINDER_DAYS;
+            if (freqType === FREQ.TIMES_PER_WEEK) return Math.round(7 / (freq.timesPerWeek || DEFAULTS.TIMES_PER_PERIOD));
+            if (freqType === FREQ.TIMES_PER_MONTH) return Math.round(30 / (freq.timesPerMonth || DEFAULTS.TIMES_PER_PERIOD));
+            if (freqType === FREQ.POINTS_PER_WEEK) return Math.round(7 / (freq.pointsPerWeek || DEFAULTS.POINTS_PER_PERIOD));
+            if (freqType === FREQ.POINTS_PER_MONTH) return Math.round(30 / (freq.pointsPerMonth || DEFAULTS.POINTS_PER_PERIOD));
+            if (freqType === FREQ.EVERY_X_DAYS) {
+                if (freq.everyXWeeks) return freq.everyXWeeks * 7;
+                if (freq.everyXMonths) return freq.everyXMonths * 30;
+                return freq.everyXDays || DEFAULTS.EVERY_X_DAYS;
+            }
+            return 1;
+        }
+
+        function formatCycleDays(days) {
+            if (days === 1) return '1 day';
+            if (days < 7) return `${days} days`;
+            if (days === 7) return '1 week';
+            if (days < 30 && days % 7 === 0) return `${days / 7} weeks`;
+            if (days === 30) return '1 month';
+            return `${days} days`;
+        }
+
         function openSnoozePopup(id) {
             snoozePopupHabitId = id;
+            const habit = loadHabits().find(h => h.id === id);
+            const cycleDays = habit ? getHabitCycleDays(habit) : 1;
+            const cycleLabel = formatCycleDays(cycleDays);
+
             // Calculate date labels
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
-            const tomorrowLabel = tomorrow.toLocaleDateString('en-US', { weekday: 'short' });
 
             document.getElementById('snoozePopup').innerHTML = `
                 <div class="snooze-popup-content">
                     <div class="snooze-popup-title">Snooze Task</div>
+                    <button class="snooze-option" onclick="snoozeHabit(${cycleDays})" style="width:100%;margin-bottom:12px;background:#1a4a3e;border:1px solid #2a6a4e">
+                        <span class="snooze-option-icon">⏭️</span>
+                        <span>Skip cycle (${cycleLabel})</span>
+                    </button>
                     <div class="snooze-options" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 8px;">
                         <button class="snooze-option" onclick="snoozeUntilTonight()" style="background:#1a1a3e">
                             <span class="snooze-option-icon">🌙</span>
