@@ -1,9 +1,9 @@
 // Service Worker for Habit Tracker PWA
-const CACHE_NAME = 'habit-tracker-v8';
+const CACHE_NAME = 'habit-tracker-v9';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json'
+  './',
+  './index.html',
+  './manifest.json'
 ];
 
 // Install event - cache essential files
@@ -69,8 +69,6 @@ self.addEventListener('message', event => {
     self.registration.showNotification(title, {
       body,
       tag,
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
       data,
       requireInteraction: false
     });

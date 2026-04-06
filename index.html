@@ -1934,7 +1934,7 @@
         async function registerServiceWorker() {
             if ('serviceWorker' in navigator) {
                 try {
-                    swRegistration = await navigator.serviceWorker.register('/sw.js');
+                    swRegistration = await navigator.serviceWorker.register('./sw.js');
                     // Wait for service worker to be ready
                     await navigator.serviceWorker.ready;
                     console.log('Service worker ready');
