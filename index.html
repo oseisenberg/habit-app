@@ -1900,11 +1900,19 @@
         }
 
         function sendNotification(title, body, tag, ignoreQuietHours = false) {
-            if (!ignoreQuietHours && isQuietHours()) return;
-            if ('Notification' in window && Notification.permission !== 'granted') return;
+            console.log('[Notif] sendNotification:', title, 'quietHours:', isQuietHours(), 'permission:', Notification.permission);
+            if (!ignoreQuietHours && isQuietHours()) {
+                console.log('[Notif] Blocked by quiet hours');
+                return;
+            }
+            if ('Notification' in window && Notification.permission !== 'granted') {
+                console.log('[Notif] Permission not granted');
+                return;
+            }
 
             // Try service worker first (works when app is in background)
             if (swRegistration && swRegistration.active) {
+                console.log('[Notif] Sending via SW');
                 swRegistration.active.postMessage({
                     type: 'SHOW_NOTIFICATION',
                     title,
@@ -1913,9 +1921,10 @@
                     data: { url: '/' }
                 });
             } else if (swRegistration && swRegistration.waiting) {
-                // SW is waiting, use showNotification directly
+                console.log('[Notif] Sending via SW.showNotification');
                 swRegistration.showNotification(title, { body, tag, data: { url: '/' } });
             } else if ('Notification' in window && Notification.permission === 'granted') {
+                console.log('[Notif] Sending via Notification API');
                 // Fallback to regular notification
                 new Notification(title, { body, tag });
             }
@@ -4248,12 +4257,12 @@
         updateDisplay();
 
         // Initialize PWA and notifications
-        registerServiceWorker().then(() => {
-            if (getSettings().notificationsEnabled) {
-                scheduleNotifications();
-                checkNotificationOnOpen();
-            }
-        });
+        registerServiceWorker();
+        // Run notification check immediately (doesn't need SW)
+        if (getSettings().notificationsEnabled) {
+            scheduleNotifications();
+            checkNotificationOnOpen();
+        }
 
         // Update badge and check notifications when app becomes visible
         document.addEventListener('visibilitychange', () => {
