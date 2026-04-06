@@ -2206,22 +2206,6 @@
             }
         }
 
-        // Ignore: Skip today but momentum penalty still applies (unlike snooze which pauses momentum)
-        function ignoreHabit(id) {
-            const habitId = id || snoozePopupHabitId;
-            if (!habitId) return;
-            const habits = loadHabits();
-            const habit = habits.find(h => h.id === habitId);
-            const today = getTodayString();
-            if (habit && !habit.skippedDates.includes(today)) {
-                habit.skippedDates.push(today);
-                saveHabits(habits);
-            }
-            closeSnoozePopup();
-            closeDetails();
-            renderHabits();
-        }
-
         let snoozePopupHabitId = null;
 
         function openSnoozePopup(id) {
@@ -2277,6 +2261,10 @@
                             <button onclick="snoozeToDate()">Set</button>
                         </div>
                     </div>
+                    <label style="display:flex;align-items:center;gap:8px;margin:12px 0;font-size:0.85rem;color:#888;cursor:pointer">
+                        <input type="checkbox" id="snoozePauseMomentum" checked style="width:18px;height:18px">
+                        <span>Pause momentum during snooze</span>
+                    </label>
                     <button class="snooze-cancel" onclick="closeSnoozePopup()">Cancel</button>
                 </div>`;
             document.getElementById('snoozePopupOverlay').classList.add('active');
@@ -2296,9 +2284,12 @@
                 snoozeUntil.setDate(snoozeUntil.getDate() + days);
                 const untilStr = toDateString(snoozeUntil);
                 habit.snoozedUntil = untilStr;
-                // Track snooze history for momentum pausing
-                if (!habit.snoozeHistory) habit.snoozeHistory = [];
-                habit.snoozeHistory.push({ from: today, until: untilStr });
+                // Track snooze history for momentum pausing (only if checkbox is checked)
+                const pauseMomentum = document.getElementById('snoozePauseMomentum')?.checked;
+                if (pauseMomentum) {
+                    if (!habit.snoozeHistory) habit.snoozeHistory = [];
+                    habit.snoozeHistory.push({ from: today, until: untilStr });
+                }
                 saveHabits(habits);
                 closeSnoozePopup();
                 closeDetails();
@@ -2314,9 +2305,12 @@
             if (habit) {
                 const today = getTodayString();
                 habit.snoozedUntil = dateInput.value;
-                // Track snooze history for momentum pausing
-                if (!habit.snoozeHistory) habit.snoozeHistory = [];
-                habit.snoozeHistory.push({ from: today, until: dateInput.value });
+                // Track snooze history for momentum pausing (only if checkbox is checked)
+                const pauseMomentum = document.getElementById('snoozePauseMomentum')?.checked;
+                if (pauseMomentum) {
+                    if (!habit.snoozeHistory) habit.snoozeHistory = [];
+                    habit.snoozeHistory.push({ from: today, until: dateInput.value });
+                }
                 saveHabits(habits);
                 closeSnoozePopup();
                 closeDetails();
@@ -2348,9 +2342,12 @@
                 const untilStr = toDateString(tomorrow);
                 habit.snoozedUntil = untilStr;
                 habit.snoozedUntilPeriod = 'morning'; // Mark that it should appear in morning
-                // Track snooze history for momentum pausing
-                if (!habit.snoozeHistory) habit.snoozeHistory = [];
-                habit.snoozeHistory.push({ from: today, until: untilStr });
+                // Track snooze history for momentum pausing (only if checkbox is checked)
+                const pauseMomentum = document.getElementById('snoozePauseMomentum')?.checked;
+                if (pauseMomentum) {
+                    if (!habit.snoozeHistory) habit.snoozeHistory = [];
+                    habit.snoozeHistory.push({ from: today, until: untilStr });
+                }
                 saveHabits(habits);
                 closeSnoozePopup();
                 closeDetails();
@@ -3824,7 +3821,6 @@
                             ${completeButton || ''}
                             <button class="submit-btn${completeButton ? ' secondary' : ''}" style="flex:1" onclick="toggleEditMode()">Edit</button>
                             ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id})">Snooze</button>` : ''}
-                            ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="ignoreHabit(${habit.id})">Ignore</button>` : ''}
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
                         </div>
                         <div style="display:flex;gap:6px">
