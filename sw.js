@@ -1,5 +1,5 @@
 // Service Worker for Habit Tracker PWA
-const CACHE_NAME = 'habit-tracker-v5';
+const CACHE_NAME = 'habit-tracker-v6';
 const urlsToCache = [
   '/',
   '/index.html',

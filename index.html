@@ -1310,6 +1310,10 @@
                 alert('Notification permission denied. Please enable notifications in your browser settings.');
                 return;
             }
+            // Ensure service worker is ready
+            if ('serviceWorker' in navigator) {
+                await navigator.serviceWorker.ready;
+            }
             // Send all notification types with slight delays (ignore quiet hours for testing)
             sendNotification('🌅 Morning', '', 'debug-morning', true);
             setTimeout(() => sendNotification('🌙 Bedtime', '', 'debug-night', true), 500);
@@ -1874,8 +1878,10 @@
 
         function sendNotification(title, body, tag, ignoreQuietHours = false) {
             if (!ignoreQuietHours && isQuietHours()) return;
-            if (swRegistration) {
-                // Use service worker for notification
+            if ('Notification' in window && Notification.permission !== 'granted') return;
+
+            // Try service worker first (works when app is in background)
+            if (swRegistration && swRegistration.active) {
                 swRegistration.active.postMessage({
                     type: 'SHOW_NOTIFICATION',
                     title,
@@ -1883,6 +1889,9 @@
                     tag,
                     data: { url: '/' }
                 });
+            } else if (swRegistration && swRegistration.waiting) {
+                // SW is waiting, use showNotification directly
+                swRegistration.showNotification(title, { body, tag, data: { url: '/' } });
             } else if ('Notification' in window && Notification.permission === 'granted') {
                 // Fallback to regular notification
                 new Notification(title, { body, tag });
@@ -1894,7 +1903,9 @@
             if ('serviceWorker' in navigator) {
                 try {
                     swRegistration = await navigator.serviceWorker.register('/sw.js');
-                    console.log('Service worker registered');
+                    // Wait for service worker to be ready
+                    await navigator.serviceWorker.ready;
+                    console.log('Service worker ready');
                 } catch (err) {
                     console.log('Service worker registration failed:', err);
                 }
@@ -4214,12 +4225,12 @@
         updateDisplay();
 
         // Initialize PWA and notifications
-        registerServiceWorker();
-        if (getSettings().notificationsEnabled) {
-            scheduleNotifications();
-            // Check if notification should show now (in case app wasn't open at scheduled time)
-            setTimeout(checkNotificationOnOpen, 2000); // Delay to let service worker register
-        }
+        registerServiceWorker().then(() => {
+            if (getSettings().notificationsEnabled) {
+                scheduleNotifications();
+                checkNotificationOnOpen();
+            }
+        });
 
         // Update badge and check notifications when app becomes visible
         document.addEventListener('visibilitychange', () => {
