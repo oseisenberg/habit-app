@@ -3301,7 +3301,11 @@
         function getSubtaskPeriodKey(habit) {
             const today = getTodayString();
             const freq = habit.frequency.type;
-            if (freq === FREQ.DAILY || freq === FREQ.TWICE_DAILY) return today;
+            if (freq === FREQ.TWICE_DAILY) {
+                const timeOfDay = getTimeOfDayNow();
+                return `${today}_${timeOfDay}`;
+            }
+            if (freq === FREQ.DAILY) return today;
             if (freq === FREQ.TIMES_PER_WEEK) return getWeekStart(today);
             if (freq === FREQ.TIMES_PER_MONTH) return getMonthStart(today);
             if (freq === FREQ.EVERY_X_DAYS) return today; // Reset daily for everyXDays
@@ -3332,21 +3336,31 @@
             if (!subtask.completedPeriods) subtask.completedPeriods = {};
 
             const wasCompleted = subtask.completedPeriods[periodKey];
+            const today = getTodayString();
+            const isTwiceDaily = habit.frequency.type === FREQ.TWICE_DAILY;
+            const currentPeriod = getTimeOfDayNow() === PERIOD.MORNING ? PERIOD.MORNING : PERIOD.NIGHT;
+
             if (wasCompleted) {
                 delete subtask.completedPeriods[periodKey];
-                // When unchecking a subtask, remove today's completion entry since habit is no longer fully done
-                const today = getTodayString();
-                habit.completions = habit.completions.filter(c => c.date !== today);
+                // When unchecking a subtask, remove completion entry for current period
+                if (isTwiceDaily) {
+                    habit.completions = habit.completions.filter(c => !(c.date === today && c.period === currentPeriod));
+                } else {
+                    habit.completions = habit.completions.filter(c => c.date !== today);
+                }
             } else {
                 subtask.completedPeriods[periodKey] = Date.now();
                 hapticFeedback();
                 // Auto-complete main habit when all subtasks are done
                 const allCompleted = habit.subtasks.every(s => s.completedPeriods && s.completedPeriods[periodKey]);
-                const today = getTodayString();
-                const alreadyCompleted = habit.completions.some(c => c.date === today);
+                const alreadyCompleted = isTwiceDaily
+                    ? habit.completions.some(c => c.date === today && c.period === currentPeriod)
+                    : habit.completions.some(c => c.date === today);
 
                 if (allCompleted && !alreadyCompleted) {
-                    habit.completions.push({ date: today, timestamp: Date.now() });
+                    const completion = { date: today, timestamp: Date.now() };
+                    if (isTwiceDaily) completion.period = currentPeriod;
+                    habit.completions.push(completion);
                     habit.momentumScore = (habit.momentumScore || 0) + 15;
                     habit.lastScoreUpdate = today;
                 }
@@ -3441,8 +3455,12 @@
                 });
             }
 
-            // Complete the habit itself
-            habit.completions.push({ date: today, timestamp: Date.now() });
+            // Complete the habit itself (include period for twiceDaily)
+            const completion = { date: today, timestamp: Date.now() };
+            if (habit.frequency.type === FREQ.TWICE_DAILY) {
+                completion.period = getTimeOfDayNow() === PERIOD.MORNING ? PERIOD.MORNING : PERIOD.NIGHT;
+            }
+            habit.completions.push(completion);
             habit.momentumScore = (habit.momentumScore || 0) + 15;
             habit.lastScoreUpdate = today;
             hapticFeedback();
@@ -3464,11 +3482,18 @@
             if (!subtask.completedPeriods) subtask.completedPeriods = {};
 
             const wasCompleted = subtask.completedPeriods[periodKey];
+            const today = getTodayString();
+            const isTwiceDaily = habit.frequency.type === FREQ.TWICE_DAILY;
+            const currentPeriod = getTimeOfDayNow() === PERIOD.MORNING ? PERIOD.MORNING : PERIOD.NIGHT;
+
             if (wasCompleted) {
                 delete subtask.completedPeriods[periodKey];
-                // When unchecking a subtask, remove today's completion entry since habit is no longer fully done
-                const today = getTodayString();
-                habit.completions = habit.completions.filter(c => c.date !== today);
+                // When unchecking a subtask, remove completion entry for current period
+                if (isTwiceDaily) {
+                    habit.completions = habit.completions.filter(c => !(c.date === today && c.period === currentPeriod));
+                } else {
+                    habit.completions = habit.completions.filter(c => c.date !== today);
+                }
             } else {
                 subtask.completedPeriods[periodKey] = Date.now();
                 hapticFeedback();
