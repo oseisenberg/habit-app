@@ -1714,30 +1714,41 @@
         // Check if notification should be shown now (on app open)
         function checkNotificationOnOpen() {
             const settings = getSettings();
+            console.log('[Notif] checkNotificationOnOpen - enabled:', settings.notificationsEnabled, 'permission:', Notification.permission);
             if (!settings.notificationsEnabled) return;
             if (Notification.permission !== 'granted') return;
 
             const now = new Date();
             const hour = now.getHours();
             const today = getTodayString();
+            console.log('[Notif] hour:', hour, 'morningReminder:', settings.morningReminderTime, 'nightReminder:', settings.nightReminderTime, 'nightStart:', settings.nightStart);
+            console.log('[Notif] lastKey:', lastNotificationKey);
 
             // Check if we're in morning window (between morning reminder and night start)
             if (hour >= settings.morningReminderTime && hour < settings.nightStart) {
                 const key = `${today}-morning`;
+                console.log('[Notif] In morning window, key:', key);
                 if (lastNotificationKey !== key) {
                     lastNotificationKey = key;
                     localStorage.setItem('lastNotificationKey', key);
                     showHabitNotification('morning');
+                } else {
+                    console.log('[Notif] Skipping - already notified');
                 }
             }
             // Check if we're in night window (after night reminder)
             else if (hour >= settings.nightReminderTime) {
                 const key = `${today}-night`;
+                console.log('[Notif] In night window, key:', key);
                 if (lastNotificationKey !== key) {
                     lastNotificationKey = key;
                     localStorage.setItem('lastNotificationKey', key);
                     showHabitNotification('night');
+                } else {
+                    console.log('[Notif] Skipping - already notified');
                 }
+            } else {
+                console.log('[Notif] Not in any notification window');
             }
         }
 
@@ -1745,6 +1756,7 @@
             clearNotificationTimers();
 
             const settings = getSettings();
+            console.log('[Notif] scheduleNotifications - enabled:', settings.notificationsEnabled);
             if (!settings.notificationsEnabled) return;
 
             const now = new Date();
@@ -1755,8 +1767,11 @@
             morningTime.setHours(settings.morningReminderTime, 0, 0, 0);
             if (morningTime > now) {
                 const delay = morningTime - now;
+                console.log('[Notif] Scheduling morning in', Math.round(delay/60000), 'min');
                 const timer = setTimeout(() => showHabitNotification('morning'), delay);
                 notificationTimers.push(timer);
+            } else {
+                console.log('[Notif] Morning time already passed');
             }
 
             // Schedule night reminder
@@ -1764,8 +1779,11 @@
             nightTime.setHours(settings.nightReminderTime, 0, 0, 0);
             if (nightTime > now) {
                 const delay = nightTime - now;
+                console.log('[Notif] Scheduling night in', Math.round(delay/60000), 'min');
                 const timer = setTimeout(() => showHabitNotification('night'), delay);
                 notificationTimers.push(timer);
+            } else {
+                console.log('[Notif] Night time already passed');
             }
 
             // Schedule momentum alert
@@ -1793,6 +1811,7 @@
         }
 
         function showHabitNotification(period) {
+            console.log('[Notif] showHabitNotification called for:', period);
             const habits = loadHabits().filter(h => !h.archived);
             const todayStr = getTodayString();
 
@@ -1803,7 +1822,11 @@
                 return !isHabitComplete(h, todayStr, period);
             });
 
-            if (incompleteHabits.length === 0) return;
+            console.log('[Notif] Incomplete habits:', incompleteHabits.length);
+            if (incompleteHabits.length === 0) {
+                console.log('[Notif] Skipping - all habits complete');
+                return;
+            }
 
             sendNotification(period === 'morning' ? '🌅 Morning' : '🌙 Bedtime', '', `habit-${period}`);
         }
