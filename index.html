@@ -2827,16 +2827,17 @@
             return habits;
         }
 
-        // Categorize habits into sections (Now, Optional, Later, Done) - each habit in ONE section only
+        // Categorize habits into sections (Now, Optional, Reminders, Later, Done) - each habit in ONE section only
         function categorizeHabits(habits) {
             const timeOfDay = getTimeOfDayNow();
             const sorted = sortHabits(habits);
-            const now = [], optional = [], later = [], done = [];
+            const now = [], optional = [], later = [], done = [], reminders = [];
 
             sorted.forEach(h => {
                 const status = getCompletionStatus(h);
+                const isReminder = h.isReminder || h.frequency.type === FREQ.REMINDER;
 
-                // Twice daily: special handling
+                // Twice daily: special handling (reminders can't be twice daily)
                 if (h.frequency.type === FREQ.TWICE_DAILY) {
                     if (status.morningDone && status.nightDone) {
                         done.push(h); // Both done → Done
@@ -2867,6 +2868,16 @@
                     return;
                 }
 
+                // Reminders go to their own section (unless completed today)
+                if (isReminder) {
+                    if (isCompletedToday(h)) {
+                        done.push(h);
+                    } else {
+                        reminders.push(h);
+                    }
+                    return;
+                }
+
                 // Regular habits: one section only
                 // Check isOptional first for daily/everyXDays with Allow Extra (they go to Optional after completion)
                 if (isOptional(h)) {
@@ -2880,12 +2891,12 @@
                 }
             });
 
-            // Sub-categorize Now section by time
+            // Sub-categorize Now section by time (reminders excluded since they have their own section)
             const morning = now.filter(h => h.timeOfDay === PERIOD.MORNING || (h.frequency.type === FREQ.TWICE_DAILY && timeOfDay === PERIOD.MORNING));
             const bedtime = now.filter(h => h.timeOfDay === PERIOD.NIGHT || (h.frequency.type === FREQ.TWICE_DAILY && timeOfDay === PERIOD.NIGHT));
             const anytime = now.filter(h => !h.timeOfDay && h.frequency.type !== FREQ.TWICE_DAILY);
 
-            return { now, optional, later, done, morning, bedtime, anytime, timeOfDay };
+            return { now, optional, later, done, reminders, morning, bedtime, anytime, timeOfDay };
         }
 
         function renderHabits() {
@@ -2898,7 +2909,7 @@
                 return;
             }
 
-            const { now: nowHabits, optional: optionalHabits, later: laterHabits, done: completedHabits,
+            const { now: nowHabits, optional: optionalHabits, later: laterHabits, done: completedHabits, reminders: reminderHabits,
                     morning: morningSpecific, bedtime: bedtimeSpecific, anytime: anytimeHabits, timeOfDay } = categorizeHabits(habits);
 
             // Helper: render a sub-section with header and habits grid (large tasks sorted first)
@@ -2947,6 +2958,7 @@
 
             // Collapsible sections using helper
             html += renderSection(optionalHabits, 'optional', '⭐', 'Optional', false, { inactive: true });
+            html += renderSection(reminderHabits, 'reminders', '🔔', 'Reminders', false, { inactive: true });
             html += renderSection(laterHabits, 'later', '🌙', 'Tonight', true, { inactive: true, isLater: true });
             html += renderSection(completedHabits, 'completed', '✓', 'Finished', true, { inactive: true, isCompleted: true });
 
