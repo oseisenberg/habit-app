@@ -25,7 +25,6 @@
         h1 { color: #fff; font-size: 1.1rem; font-weight: 600; }
         .settings-btn { background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
         #debugToggle.active { background: rgba(220, 38, 38, 0.3); border-radius: 8px; }
-        .date-header { color: #666; font-size: 0.75rem; margin-bottom: 6px; }
         .time-note { color: #f59e0b; font-size: 0.65rem; margin-bottom: 6px; }
 
         /* Icon Grid Layout */
@@ -540,7 +539,6 @@
                 <button class="settings-btn" id="debugToggle" onclick="toggleDebug()">🐛</button>
             </div>
         </div>
-        <p class="date-header" id="currentDate"></p>
         <p class="time-note" id="timeNote"></p>
         <div id="habitsContainer"></div>
     </div>
@@ -1370,8 +1368,6 @@
         function updateDisplay() {
             const simDate = getSimulatedDate();
             const s = getSettings();
-            document.getElementById('currentDate').innerHTML = formatDate(simDate) +
-                (debugDayOffset !== 0 || debugHourOverride !== null ? `<span class="debug-offset">${debugDayOffset >= 0 ? '+' : ''}${debugDayOffset}d</span>` : '');
             const hour = debugHourOverride !== null ? debugHourOverride : simDate.getHours();
             if (hour < s.morningStart) {
                 const prev = new Date(simDate); prev.setDate(prev.getDate() - 1);
