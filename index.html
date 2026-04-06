@@ -1936,6 +1936,7 @@
             habits.forEach(h => {
                 h.momentumScore = 0;
                 h.lastScoreUpdate = today; // Set to today to prevent recalculation
+                h.momentumResetDate = today; // For reminders: use this as reference point for neglect calculation
             });
             saveHabits(habits);
             updateDisplay();
@@ -2623,8 +2624,10 @@
             const habits = loadHabits();
             const habit = habits.find(h => h.id === id);
             if (habit) {
+                const today = getTodayString();
                 habit.momentumScore = 0;
-                habit.lastScoreUpdate = getTodayString();
+                habit.lastScoreUpdate = today;
+                habit.momentumResetDate = today; // For reminders: use this as reference point for neglect calculation
                 saveHabits(habits);
                 renderDetails();
                 renderHabits();
@@ -2991,7 +2994,11 @@
             if (isReminder) {
                 // For reminders: show dots based on days since last completion, scaled by expected frequency
                 const lastCompletion = getLastCompletionDate(habit);
-                if (lastCompletion) {
+                // Use momentum reset date as reference if it's more recent than last completion
+                const resetDate = habit.momentumResetDate;
+                const referenceDate = (lastCompletion && resetDate) ? (lastCompletion > resetDate ? lastCompletion : resetDate) :
+                                      (lastCompletion || resetDate);
+                if (referenceDate) {
                     const freq = habit.frequency;
                     // Calculate expected cycle days for this reminder
                     let expectedCycle = 7; // default
@@ -3000,7 +3007,7 @@
                     else if (freq.everyXMonths) expectedCycle = freq.everyXMonths * 30;
                     else if (freq.everyXDays) expectedCycle = freq.everyXDays;
 
-                    const daysSince = daysBetween(lastCompletion, getTodayString());
+                    const daysSince = daysBetween(referenceDate, getTodayString());
                     // Scale thresholds based on expected cycle (dots appear as you approach/pass due date)
                     if (daysSince >= expectedCycle * 1.75) neglectLevel = 3;      // Significantly overdue
                     else if (daysSince >= expectedCycle) neglectLevel = 2;        // Overdue
