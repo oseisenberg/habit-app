@@ -1484,10 +1484,10 @@
         function invalidateHabitsCache() { habitsCache = null; }
 
         // Undo toast functionality
-        function showUndoToast(habitName) {
+        function showUndoToast() {
             const toast = document.getElementById('undoToast');
             const text = document.getElementById('undoToastText');
-            text.textContent = `${habitName} completed`;
+            text.textContent = 'Completed';
             toast.classList.add('visible');
 
             // Clear existing timeout
@@ -2664,7 +2664,7 @@
                 hapticFeedback();
                 // Track for undo
                 lastCompletion = { habitId: id, date: today, period, timestamp, type: 'complete' };
-                showUndoToast(habit.name);
+                showUndoToast();
                 // Reset momentum to neutral for reminders when completed
                 if (habit.isReminder || freqType === FREQ.REMINDER) {
                     habit.momentumScore = 0;
