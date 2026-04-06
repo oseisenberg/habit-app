@@ -672,7 +672,11 @@
             <button class="submit-btn" onclick="saveSettings()">Save Settings</button>
             <div style="display:flex;gap:8px;margin-top:8px">
                 <button class="submit-btn secondary" onclick="exportData()" style="flex:1;font-size:0.85rem">Export All Data</button>
-                <button class="submit-btn secondary" onclick="exportData(true)" style="flex:1;font-size:0.85rem">Export Tasks Only (no history)</button>
+                <button class="submit-btn secondary" onclick="exportData(true)" style="flex:1;font-size:0.85rem">Export Tasks Only</button>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+                <button class="submit-btn secondary" onclick="triggerImport()" style="flex:1;font-size:0.85rem">Import Data</button>
+                <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(event)">
             </div>
             <div style="display:flex;gap:8px;margin-top:8px">
                 <button class="submit-btn secondary" onclick="resetAllMomentum()" style="flex:1;font-size:0.85rem;background:#dc2626">Reset All Momentum</button>
@@ -1935,6 +1939,63 @@
             URL.revokeObjectURL(url);
         }
 
+        function triggerImport() {
+            document.getElementById('importFileInput').click();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+
+                    // Validate the data structure
+                    if (!data.habits || !Array.isArray(data.habits)) {
+                        alert('Invalid file format: missing habits array');
+                        return;
+                    }
+
+                    const mergeOrReplace = confirm(
+                        'Import options:\n\n' +
+                        'OK = Replace all data (current data will be lost)\n' +
+                        'Cancel = Merge with existing data (add new tasks, keep current ones)'
+                    );
+
+                    if (mergeOrReplace) {
+                        // Replace all data
+                        if (!confirm('This will replace ALL your current data. Are you sure?')) return;
+                        saveHabits(data.habits);
+                        if (data.settings) {
+                            localStorage.setItem('habit_settings', JSON.stringify(data.settings));
+                        }
+                    } else {
+                        // Merge: add imported habits with new IDs to avoid conflicts
+                        const currentHabits = loadHabits();
+                        const maxId = Math.max(0, ...currentHabits.map(h => h.id));
+                        const newHabits = data.habits.map((h, i) => ({
+                            ...h,
+                            id: maxId + i + 1
+                        }));
+                        saveHabits([...currentHabits, ...newHabits]);
+                    }
+
+                    invalidateHabitsCache();
+                    updateDisplay();
+                    closeSettings();
+                    alert('Import successful!');
+                } catch (err) {
+                    alert('Failed to import: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+
+            // Reset the input so the same file can be imported again
+            event.target.value = '';
+        }
+
         function resetAllMomentum() {
             if (!confirm('Reset momentum scores for all habits? This cannot be undone.')) return;
             const habits = loadHabits();
@@ -2916,7 +2977,7 @@
             // Helper: render a sub-section with header and habits grid (large tasks sorted first)
             const subSection = (habits, icon, title) => {
                 if (!habits.length) return '';
-                const sorted = [...habits].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0) || (a.isReminder ? 1 : 0) - (b.isReminder ? 1 : 0));
+                const sorted = [...habits].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0));
                 return `<div class="sub-header"><span class="sub-header-icon">${icon}</span>${title}</div>
                    <div class="habits-grid">${sorted.map(h => renderHabitIcon(h)).join('')}</div>`;
             };
@@ -3743,7 +3804,7 @@
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
                         </div>
                         <div style="display:flex;gap:6px">
-                            ${!isReminder && canFreshStart ? `<button class="submit-btn secondary" style="flex:1" onclick="freshStartHabit(${habit.id})">Fresh Start</button>` : ''}
+                            ${canFreshStart ? `<button class="submit-btn secondary" style="flex:1" onclick="freshStartHabit(${habit.id})">Fresh Start</button>` : ''}
                             <button class="submit-btn danger" style="flex:1" onclick="deleteHabit(${habit.id})">Delete</button>
                         </div>
                     </div>`;
