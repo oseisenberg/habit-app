@@ -1386,7 +1386,7 @@
 
         function updateBadge() {
             if (!('setAppBadge' in navigator)) return;
-            const habits = loadHabits();
+            const habits = loadHabits().filter(h => !h.archived);
             const { now: nowHabits } = categorizeHabits(habits);
             const count = nowHabits.length;
             if (count > 0) {
@@ -1791,7 +1791,7 @@
         }
 
         function showHabitNotification(period) {
-            const habits = loadHabits();
+            const habits = loadHabits().filter(h => !h.archived);
             const todayStr = getTodayString();
 
             // Check for incomplete habits for this period
@@ -1807,7 +1807,7 @@
         }
 
         function showMomentumAlert() {
-            const habits = loadHabits();
+            const habits = loadHabits().filter(h => !h.archived);
             const settings = getSettings();
             const threshold = settings.momentumAlertThreshold || -20;
 
@@ -2168,6 +2168,28 @@
                 saveHabits(loadHabits().filter(h => h.id !== id));
                 closeDetails();
                 renderHabits();
+            }
+        }
+
+        function archiveHabit(id) {
+            const habits = loadHabits();
+            const habit = habits.find(h => h.id === id);
+            if (habit) {
+                habit.archived = true;
+                saveHabits(habits);
+                closeDetails();
+                renderHabits();
+            }
+        }
+
+        function unarchiveHabit(id) {
+            const habits = loadHabits();
+            const habit = habits.find(h => h.id === id);
+            if (habit) {
+                habit.archived = false;
+                saveHabits(habits);
+                renderDetails();
+                renderAllHabitsGrid();
             }
         }
 
@@ -2962,7 +2984,9 @@
         }
 
         function renderHabits() {
-            const habits = loadHabits(), container = document.getElementById('habitsContainer');
+            const allHabits = loadHabits(), container = document.getElementById('habitsContainer');
+            // Filter out archived habits for main view
+            const habits = allHabits.filter(h => !h.archived);
             // Preserve scroll position
             const scrollY = window.scrollY;
 
@@ -3805,6 +3829,9 @@
                         </div>
                         <div style="display:flex;gap:6px">
                             ${canFreshStart ? `<button class="submit-btn secondary" style="flex:1" onclick="freshStartHabit(${habit.id})">Fresh Start</button>` : ''}
+                            ${habit.archived
+                                ? `<button class="submit-btn secondary" style="flex:1" onclick="unarchiveHabit(${habit.id})">Unarchive</button>`
+                                : `<button class="submit-btn secondary" style="flex:1" onclick="archiveHabit(${habit.id})">Archive</button>`}
                             <button class="submit-btn danger" style="flex:1" onclick="deleteHabit(${habit.id})">Delete</button>
                         </div>
                     </div>`;
@@ -3896,13 +3923,18 @@
 
             if (noResults) noResults.style.display = 'none';
 
-            // Split into Now (ready/optional) and Other sections
-            const nowHabits = filtered.filter(h => canDoNow(h) || isOptional(h));
-            const otherHabits = filtered.filter(h => !canDoNow(h) && !isOptional(h));
+            // Separate archived habits
+            const activeHabits = filtered.filter(h => !h.archived);
+            const archivedHabits = filtered.filter(h => h.archived);
+
+            // Split active into Now (ready/optional) and Other sections
+            const nowHabits = activeHabits.filter(h => canDoNow(h) || isOptional(h));
+            const otherHabits = activeHabits.filter(h => !canDoNow(h) && !isOptional(h));
 
             const renderHabitItem = (habit) => {
                 const icon = habit.icon || '📌';
-                return `<div class="habit-icon-wrapper">
+                const opacity = habit.archived ? 'opacity: 0.5;' : '';
+                return `<div class="habit-icon-wrapper" style="${opacity}">
                     <div class="habit-icon" onclick="openDetailsFromAllHabits(${habit.id})">
                         <div class="habit-ring" style="--progress: 0%; background: #2a2a3e;">
                             <span class="habit-emoji">${icon}</span>
@@ -3920,6 +3952,10 @@
             if (otherHabits.length) {
                 html += `<div class="all-habits-section-header" style="margin-top:16px">Other</div>`;
                 html += `<div class="habits-grid">${otherHabits.map(renderHabitItem).join('')}</div>`;
+            }
+            if (archivedHabits.length) {
+                html += `<div class="all-habits-section-header" style="margin-top:16px;color:#666">Archived</div>`;
+                html += `<div class="habits-grid">${archivedHabits.map(renderHabitItem).join('')}</div>`;
             }
             grid.innerHTML = html;
         }
