@@ -1902,11 +1902,17 @@
         function exportData(noHistory = false) {
             let habits = loadHabits();
             if (noHistory) {
+                const today = getTodayString();
                 habits = habits.map(h => ({
                     ...h,
                     completions: [],
                     skippedDates: [],
                     snoozedUntil: null,
+                    snoozeHistory: [],
+                    momentumScore: 0,
+                    lastScoreUpdate: today,
+                    momentumResetDate: undefined,
+                    createdAt: today,
                     subtasks: h.subtasks?.map(s => ({ ...s, completedPeriods: {} })) || []
                 }));
             }
