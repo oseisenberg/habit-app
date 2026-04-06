@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0f0f1a">
     <link rel="manifest" href="manifest.json">
@@ -1717,41 +1717,30 @@
         // Check if notification should be shown now (on app open)
         function checkNotificationOnOpen() {
             const settings = getSettings();
-            console.log('[Notif] checkNotificationOnOpen - enabled:', settings.notificationsEnabled, 'permission:', Notification.permission);
             if (!settings.notificationsEnabled) return;
             if (Notification.permission !== 'granted') return;
 
             const now = new Date();
             const hour = now.getHours();
             const today = getTodayString();
-            console.log('[Notif] hour:', hour, 'morningReminder:', settings.morningReminderTime, 'nightReminder:', settings.nightReminderTime, 'nightStart:', settings.nightStart);
-            console.log('[Notif] lastKey:', lastNotificationKey);
 
             // Check if we're in morning window (between morning reminder and night start)
             if (hour >= settings.morningReminderTime && hour < settings.nightStart) {
                 const key = `${today}-morning`;
-                console.log('[Notif] In morning window, key:', key);
                 if (lastNotificationKey !== key) {
                     lastNotificationKey = key;
                     localStorage.setItem('lastNotificationKey', key);
                     showHabitNotification('morning');
-                } else {
-                    console.log('[Notif] Skipping - already notified');
                 }
             }
             // Check if we're in night window (after night reminder)
             else if (hour >= settings.nightReminderTime) {
                 const key = `${today}-night`;
-                console.log('[Notif] In night window, key:', key);
                 if (lastNotificationKey !== key) {
                     lastNotificationKey = key;
                     localStorage.setItem('lastNotificationKey', key);
                     showHabitNotification('night');
-                } else {
-                    console.log('[Notif] Skipping - already notified');
                 }
-            } else {
-                console.log('[Notif] Not in any notification window');
             }
         }
 
@@ -1759,7 +1748,6 @@
             clearNotificationTimers();
 
             const settings = getSettings();
-            console.log('[Notif] scheduleNotifications - enabled:', settings.notificationsEnabled);
             if (!settings.notificationsEnabled) return;
 
             const now = new Date();
@@ -1770,11 +1758,8 @@
             morningTime.setHours(settings.morningReminderTime, 0, 0, 0);
             if (morningTime > now) {
                 const delay = morningTime - now;
-                console.log('[Notif] Scheduling morning in', Math.round(delay/60000), 'min');
                 const timer = setTimeout(() => showHabitNotification('morning'), delay);
                 notificationTimers.push(timer);
-            } else {
-                console.log('[Notif] Morning time already passed');
             }
 
             // Schedule night reminder
@@ -1782,11 +1767,8 @@
             nightTime.setHours(settings.nightReminderTime, 0, 0, 0);
             if (nightTime > now) {
                 const delay = nightTime - now;
-                console.log('[Notif] Scheduling night in', Math.round(delay/60000), 'min');
                 const timer = setTimeout(() => showHabitNotification('night'), delay);
                 notificationTimers.push(timer);
-            } else {
-                console.log('[Notif] Night time already passed');
             }
 
             // Schedule momentum alert
@@ -1814,7 +1796,6 @@
         }
 
         function showHabitNotification(period) {
-            console.log('[Notif] showHabitNotification called for:', period);
             const habits = loadHabits().filter(h => !h.archived);
             const todayStr = getTodayString();
 
@@ -1825,11 +1806,7 @@
                 return !isHabitComplete(h, todayStr, period);
             });
 
-            console.log('[Notif] Incomplete habits:', incompleteHabits.length);
-            if (incompleteHabits.length === 0) {
-                console.log('[Notif] Skipping - all habits complete');
-                return;
-            }
+            if (incompleteHabits.length === 0) return;
 
             sendNotification(period === 'morning' ? '🌅 Morning' : '🌙 Bedtime', '', `habit-${period}`);
         }
@@ -1903,19 +1880,11 @@
         }
 
         function sendNotification(title, body, tag, ignoreQuietHours = false) {
-            console.log('[Notif] sendNotification:', title, 'quietHours:', isQuietHours(), 'permission:', Notification.permission);
-            if (!ignoreQuietHours && isQuietHours()) {
-                console.log('[Notif] Blocked by quiet hours');
-                return;
-            }
-            if ('Notification' in window && Notification.permission !== 'granted') {
-                console.log('[Notif] Permission not granted');
-                return;
-            }
+            if (!ignoreQuietHours && isQuietHours()) return;
+            if ('Notification' in window && Notification.permission !== 'granted') return;
 
             // Try service worker first (works when app is in background)
             if (swRegistration && swRegistration.active) {
-                console.log('[Notif] Sending via SW');
                 swRegistration.active.postMessage({
                     type: 'SHOW_NOTIFICATION',
                     title,
@@ -1924,11 +1893,8 @@
                     data: { url: '/' }
                 });
             } else if (swRegistration && swRegistration.waiting) {
-                console.log('[Notif] Sending via SW.showNotification');
                 swRegistration.showNotification(title, { body, tag, data: { url: '/' } });
             } else if ('Notification' in window && Notification.permission === 'granted') {
-                console.log('[Notif] Sending via Notification API');
-                // Fallback to regular notification
                 new Notification(title, { body, tag });
             }
         }
@@ -1938,11 +1904,9 @@
             if ('serviceWorker' in navigator) {
                 try {
                     swRegistration = await navigator.serviceWorker.register('./sw.js');
-                    // Wait for service worker to be ready
                     await navigator.serviceWorker.ready;
-                    console.log('Service worker ready');
                 } catch (err) {
-                    console.log('Service worker registration failed:', err);
+                    // Service worker registration failed
                 }
             }
         }
@@ -2317,7 +2281,10 @@
                     </div>
                     <div class="snooze-section">
                         <div class="snooze-section-label">Pick date</div>
-                        <input type="date" id="snoozeCustomDate" class="snooze-date-input" min="${toDateString(tomorrow)}" onchange="snoozeToDate()">
+                        <div style="display:flex;gap:8px">
+                            <input type="date" id="snoozeCustomDate" class="snooze-date-input" min="${toDateString(tomorrow)}" style="flex:1">
+                            <button class="snooze-option" onclick="snoozeToDate()" style="width:auto;padding:12px 16px">Apply</button>
+                        </div>
                     </div>
                     <label class="snooze-momentum-label">
                         <input type="checkbox" id="snoozePauseMomentum" checked>
@@ -3378,7 +3345,7 @@
         }
 
         function addSubtask(habitId) {
-            const input = document.getElementById('newSubtaskInput');
+            const input = document.getElementById('editSubtaskInput');
             const name = input?.value.trim();
             if (!name) return;
 
