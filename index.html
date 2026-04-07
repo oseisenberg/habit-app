@@ -838,7 +838,10 @@
             pointsPeriod: PERIOD.WEEK,           // 'day', 'week' or 'month' for points
             afterPeriod: PERIOD.DAY,             // 'day', 'week' or 'month' for after completion
             isLarge: false,                      // show as large (2 columns) in grid
-            isNegative: false                    // negative habit (track avoiding)
+            isNegative: false,                   // negative habit (track avoiding)
+            everyXValue: null,                   // number value for "every X days/weeks/months"
+            timesValue: null,                    // number value for "X times per period"
+            pointsValue: null                    // number value for "X points per period"
         };
 
         // ========================================
@@ -862,6 +865,9 @@
             formState.afterPeriod = PERIOD.DAY;
             formState.isLarge = false;
             formState.isNegative = false;
+            formState.everyXValue = null;
+            formState.timesValue = null;
+            formState.pointsValue = null;
         }
 
         // Initialize form state from habit (for edit mode)
@@ -901,6 +907,11 @@
             else formState.afterPeriod = PERIOD.DAY;
 
             formState.isNegative = habit.isNegative || false;
+
+            // Initialize number values from habit
+            formState.everyXValue = habit.frequency.everyXDays || habit.frequency.everyXWeeks || habit.frequency.everyXMonths || null;
+            formState.timesValue = habit.frequency.timesPerDay || habit.frequency.timesPerWeek || habit.frequency.timesPerMonth || null;
+            formState.pointsValue = habit.frequency.pointsPerDay || habit.frequency.pointsPerWeek || habit.frequency.pointsPerMonth || null;
         }
 
         // Get current form state (for compatibility with renderHabitForm)
@@ -924,7 +935,7 @@
             const idPrefix = isEdit ? 'edit' : '';
             let freqInputsHtml = '';
             if (state.frequency === FREQ.EVERY_X_DAYS) {
-                const afterVal = habit?.frequency?.everyXDays || habit?.frequency?.everyXWeeks || habit?.frequency?.everyXMonths || DEFAULTS.EVERY_X_DAYS;
+                const afterVal = state.everyXValue ?? habit?.frequency?.everyXDays ?? habit?.frequency?.everyXWeeks ?? habit?.frequency?.everyXMonths ?? DEFAULTS.EVERY_X_DAYS;
                 freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'E' : 'e'}veryXPeriod" value="${afterVal}" min="1">
                     <div class="period-toggle">
                         <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.DAY}')">day</button>
@@ -933,7 +944,7 @@
                     </div><span style="color:#888">after</span>`;
             } else if (state.frequency === FREQ.TIMES_PER_PERIOD) {
                 if (state.isPointsMode) {
-                    const ptsVal = habit?.frequency?.pointsPerDay || habit?.frequency?.pointsPerWeek || habit?.frequency?.pointsPerMonth || DEFAULTS.POINTS_PER_PERIOD;
+                    const ptsVal = state.pointsValue ?? habit?.frequency?.pointsPerDay ?? habit?.frequency?.pointsPerWeek ?? habit?.frequency?.pointsPerMonth ?? DEFAULTS.POINTS_PER_PERIOD;
                     freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'P' : 'p'}ointsPerPeriod" value="${ptsVal}" min="1"><span style="color:#888">pts /</span>
                         <div class="period-toggle">
                             <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.DAY}')">day</button>
@@ -941,7 +952,7 @@
                             <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.MONTH ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.MONTH}')">mo</button>
                         </div>`;
                 } else {
-                    const timesVal = habit?.frequency?.timesPerDay || habit?.frequency?.timesPerWeek || habit?.frequency?.timesPerMonth || DEFAULTS.TIMES_PER_PERIOD;
+                    const timesVal = state.timesValue ?? habit?.frequency?.timesPerDay ?? habit?.frequency?.timesPerWeek ?? habit?.frequency?.timesPerMonth ?? DEFAULTS.TIMES_PER_PERIOD;
                     freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'T' : 't'}imesPerPeriod" value="${timesVal}" min="1" max="31">
                         <div class="period-toggle">
                             <button type="button" class="period-toggle-btn ${state.timesPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('times', '${PERIOD.DAY}')">day</button>
@@ -1093,6 +1104,15 @@
             if (descInput) {
                 formState.description = descInput.value;
             }
+
+            // Save number input values before re-rendering
+            const isEdit = formMode === 'edit';
+            const everyXInput = document.getElementById(isEdit ? 'editEveryXPeriod' : 'everyXPeriod');
+            const timesInput = document.getElementById(isEdit ? 'editTimesPerPeriod' : 'timesPerPeriod');
+            const pointsInput = document.getElementById(isEdit ? 'editPointsPerPeriod' : 'pointsPerPeriod');
+            if (everyXInput) formState.everyXValue = parseInt(everyXInput.value) || null;
+            if (timesInput) formState.timesValue = parseInt(timesInput.value) || null;
+            if (pointsInput) formState.pointsValue = parseInt(pointsInput.value) || null;
 
             if (formMode === 'create') {
                 document.getElementById('createModal').innerHTML = renderHabitForm();
@@ -1393,7 +1413,8 @@
             if (!('setAppBadge' in navigator)) return;
             const habits = loadHabits().filter(h => !h.archived);
             const { now: nowHabits } = categorizeHabits(habits);
-            const count = nowHabits.length;
+            // Exclude reminders from badge count
+            const count = nowHabits.filter(h => !h.isReminder && h.frequency.type !== FREQ.REMINDER).length;
             if (count > 0) {
                 navigator.setAppBadge(count).catch(() => {});
             } else {
@@ -2322,7 +2343,9 @@
             const habit = habits.find(h => h.id === snoozePopupHabitId);
             if (habit) {
                 const today = getTodayString();
-                const snoozeUntil = new Date(today);
+                // Parse date string in local timezone (not UTC)
+                const [year, month, day] = today.split('-').map(Number);
+                const snoozeUntil = new Date(year, month - 1, day);
                 snoozeUntil.setDate(snoozeUntil.getDate() + days);
                 const untilStr = toDateString(snoozeUntil);
                 habit.snoozedUntil = untilStr;
@@ -2379,7 +2402,9 @@
                 const today = getTodayString();
                 // If it's currently night, snooze until tomorrow morning
                 // If it's currently morning, snooze until tomorrow morning
-                const tomorrow = new Date(today);
+                // Parse date string in local timezone (not UTC)
+                const [year, month, day] = today.split('-').map(Number);
+                const tomorrow = new Date(year, month - 1, day);
                 tomorrow.setDate(tomorrow.getDate() + 1);
                 const untilStr = toDateString(tomorrow);
                 habit.snoozedUntil = untilStr;
