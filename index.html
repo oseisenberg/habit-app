@@ -57,7 +57,7 @@
             background: #1a1a2e; border-radius: 50%;
         }
         .habit-ring.completed { background: #4ade80; }
-        .habit-ring.completed::before { background: #4ade80; }
+        .habit-ring.completed::before { background: #1a1a2e; }
         .habit-ring.partial { background: conic-gradient(#4ade80 var(--progress), #2a2a3e var(--progress)); }
         .habit-ring.missed { background: rgba(220, 38, 38, 0.15); } /* Muted red for missed tasks (not completed today) */
         .habit-ring.negative { background: linear-gradient(135deg, #2a2a3e 0%, #3d2a2a 100%); border: 2px solid #5c3030; }
@@ -102,6 +102,9 @@
             background: linear-gradient(to bottom, transparent 4px, #555 4px, #555 calc(100% - 4px), transparent calc(100% - 4px));
             z-index: 0;
         }
+        .habit-ring.split.completed { background: #4ade80; }
+        .habit-ring.split.completed::before { background: #1a1a2e; }
+        .habit-ring.split.completed .half-fill.filled { background: transparent; }
 
         /* Prominent section containers */
         .habits-section { background: #1a1a2e; border-radius: 12px; margin-bottom: 8px; overflow: hidden; }
@@ -233,7 +236,8 @@
         .frequency-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #444; flex-shrink: 0; }
         .frequency-option.selected .frequency-dot { border-color: #667eea; background: #667eea; }
         .frequency-label { color: #ccc; font-size: 0.85rem; }
-        .frequency-input { width: 54px; padding: 8px; border: 1px solid #2a2a3e; border-radius: 8px; text-align: center; font-size: 0.95rem; background: #1a1a2e; color: #fff; }
+        .frequency-input { width: 54px; padding: 8px; border: 1px solid #2a2a3e; border-radius: 8px; text-align: center; font-size: 1rem; background: #1a1a2e; color: #fff; -moz-appearance: textfield; touch-action: manipulation; }
+        .frequency-input::-webkit-outer-spin-button, .frequency-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         .period-toggle { display: inline-flex; border: 1px solid #2a2a3e; border-radius: 8px; overflow: hidden; margin-left: auto; }
         .period-toggle-btn { padding: 8px 12px; font-size: 0.85rem; color: #666; cursor: pointer; border: none; background: #0a0a14; }
         .period-toggle-btn.active { background: #667eea; color: white; }
@@ -353,7 +357,8 @@
         .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #2a2a3e; }
         .settings-label { color: #ccc; font-size: 0.85rem; }
         .settings-value { display: flex; align-items: center; gap: 6px; }
-        .settings-input { width: 56px; padding: 8px; border: 1px solid #2a2a3e; border-radius: 8px; background: #0f0f1a; color: #fff; text-align: center; font-size: 0.85rem; }
+        .settings-input { width: 56px; padding: 8px; border: 1px solid #2a2a3e; border-radius: 8px; background: #0f0f1a; color: #fff; text-align: center; font-size: 1rem; -moz-appearance: textfield; touch-action: manipulation; }
+        .settings-input::-webkit-outer-spin-button, .settings-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
         @supports (padding-top: env(safe-area-inset-top)) {
             body { padding-top: env(safe-area-inset-top); }
@@ -1837,7 +1842,7 @@
             const incompleteHabits = habits.filter(h => {
                 if (h.timeOfDay && h.timeOfDay !== period) return false;
                 if (h.isReminder) return false;
-                return !isHabitComplete(h, todayStr, period);
+                return !isCompletedForPeriod(h, todayStr, period);
             });
 
             if (incompleteHabits.length === 0) return;
@@ -1915,20 +1920,27 @@
 
         function sendNotification(title, body, tag, ignoreQuietHours = false) {
             if (!ignoreQuietHours && isQuietHours()) return;
-            if ('Notification' in window && Notification.permission !== 'granted') return;
+            if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
             // Try service worker first (works when app is in background)
-            if (swRegistration && swRegistration.active) {
-                swRegistration.active.postMessage({
-                    type: 'SHOW_NOTIFICATION',
-                    title,
-                    body,
-                    tag,
-                    data: { url: '/' }
+            if (swRegistration) {
+                if (swRegistration.active) {
+                    swRegistration.active.postMessage({
+                        type: 'SHOW_NOTIFICATION',
+                        title,
+                        body,
+                        tag,
+                        data: { url: '/' }
+                    });
+                    return;
+                }
+                // Fallback to showNotification on the registration itself
+                swRegistration.showNotification(title, { body, tag, data: { url: '/' } }).catch(() => {
+                    // If that fails, use basic Notification
+                    new Notification(title, { body, tag });
                 });
-            } else if (swRegistration && swRegistration.waiting) {
-                swRegistration.showNotification(title, { body, tag, data: { url: '/' } });
-            } else if ('Notification' in window && Notification.permission === 'granted') {
+            } else {
+                // No service worker, use basic Notification API
                 new Notification(title, { body, tag });
             }
         }
@@ -2315,10 +2327,7 @@
                     </div>
                     <div class="snooze-section">
                         <div class="snooze-section-label">Pick date</div>
-                        <div style="display:flex;gap:8px">
-                            <input type="date" id="snoozeCustomDate" class="snooze-date-input" min="${toDateString(tomorrow)}" style="flex:1">
-                            <button class="snooze-option" onclick="snoozeToDate()" style="width:auto;padding:12px 16px">Apply</button>
-                        </div>
+                        <input type="date" id="snoozeCustomDate" class="snooze-date-input" min="${toDateString(tomorrow)}" onchange="snoozeToDate()" style="width:100%">
                     </div>
                     <label class="snooze-momentum-label">
                         <input type="checkbox" id="snoozePauseMomentum" checked>
@@ -2787,6 +2796,56 @@
             }
         }
 
+        function resetHabitMomentum(id) {
+            const habits = loadHabits();
+            const habit = habits.find(h => h.id === id);
+            if (habit) {
+                const today = getTodayString();
+                habit.momentumScore = 0;
+                habit.lastScoreUpdate = today;
+                habit.momentumResetDate = today;
+                saveHabits(habits);
+                renderDetails();
+                renderHabits();
+            }
+        }
+
+        function undoHabitCompletion(id) {
+            const habits = loadHabits();
+            const habit = habits.find(h => h.id === id);
+            if (!habit) return;
+
+            const today = getTodayString();
+            const isTwiceDaily = habit.frequency.type === FREQ.TWICE_DAILY;
+
+            // Remove today's completions
+            if (isTwiceDaily) {
+                // For twice daily, remove the most recent completion from today
+                const todayCompletions = habit.completions.filter(c => c.date === today);
+                if (todayCompletions.length > 0) {
+                    const lastCompletion = todayCompletions[todayCompletions.length - 1];
+                    habit.completions = habit.completions.filter(c => c !== lastCompletion);
+                }
+            } else {
+                // For regular habits, remove all completions from today
+                habit.completions = habit.completions.filter(c => c.date !== today);
+            }
+
+            // Also reset subtask completions for today
+            if (habit.subtasks) {
+                const periodKey = getSubtaskPeriodKey(habit);
+                habit.subtasks.forEach(s => {
+                    if (s.completedPeriods) {
+                        delete s.completedPeriods[periodKey];
+                    }
+                });
+            }
+
+            saveHabits(habits);
+            renderDetails();
+            renderHabits();
+        }
+
         function completeHabit(id, period = null) {
             const habits = loadHabits(), habit = habits.find(h => h.id === id), today = getTodayString();
             if (!habit) return;
@@ -2809,6 +2868,11 @@
                 const timestamp = Date.now();
                 habit.completions.push({ date: today, period, timestamp });
                 hapticFeedback();
+                // Clear snooze when completed so habit follows normal cycle
+                if (habit.snoozedUntil) {
+                    habit.snoozedUntil = null;
+                    delete habit.snoozedUntilPeriod;
+                }
                 // Track for undo
                 lastCompletion = { habitId: id, date: today, period, timestamp, type: 'complete' };
                 showUndoToast();
@@ -2855,9 +2919,18 @@
             const today = getTodayString();
             const timeOfDay = getTimeOfDayNow();
             if (habit.skippedDates?.includes(today)) return false;
+
+            // Track if snooze just expired (snoozedUntil is today or in the past)
+            let snoozeExpiredToday = false;
             if (habit.snoozedUntil) {
                 if (habit.snoozedUntil === PERIOD.NIGHT && timeOfDay !== PERIOD.NIGHT) return false;
                 if (habit.snoozedUntil !== PERIOD.NIGHT && habit.snoozedUntil > today) return false;
+                // Check snoozedUntilPeriod - if snoozed until morning, don't show at night
+                if (habit.snoozedUntil === today && habit.snoozedUntilPeriod === PERIOD.MORNING && timeOfDay === PERIOD.NIGHT) return false;
+                // Snooze expired - habit should show regardless of natural frequency
+                if (habit.snoozedUntil !== PERIOD.NIGHT && habit.snoozedUntil <= today) {
+                    snoozeExpiredToday = true;
+                }
             }
 
             const status = getCompletionStatus(habit);
@@ -2879,7 +2952,8 @@
             } else if (status.completed) {
                 return false;
             }
-            if (!isDueToday(habit)) return false;
+            // If snooze expired today, show habit regardless of natural due date
+            if (!snoozeExpiredToday && !isDueToday(habit)) return false;
             if (habit.timeOfDay === PERIOD.NIGHT && timeOfDay !== PERIOD.NIGHT) return false;
             return true;
         }
@@ -3529,6 +3603,39 @@
             renderHabits();
         }
 
+        function toggleSubtaskFromDetails(habitId, subtaskId) {
+            const habits = loadHabits();
+            const habit = habits.find(h => h.id === habitId);
+            if (!habit || !habit.subtasks) return;
+
+            const subtask = habit.subtasks.find(s => s.id === subtaskId);
+            if (!subtask) return;
+
+            const periodKey = getSubtaskPeriodKey(habit);
+            if (!subtask.completedPeriods) subtask.completedPeriods = {};
+
+            const wasCompleted = subtask.completedPeriods[periodKey];
+            const today = getTodayString();
+            const isTwiceDaily = habit.frequency.type === FREQ.TWICE_DAILY;
+            const currentPeriod = getTimeOfDayNow() === PERIOD.MORNING ? PERIOD.MORNING : PERIOD.NIGHT;
+
+            if (wasCompleted) {
+                delete subtask.completedPeriods[periodKey];
+                if (isTwiceDaily) {
+                    habit.completions = habit.completions.filter(c => !(c.date === today && c.period === currentPeriod));
+                } else {
+                    habit.completions = habit.completions.filter(c => c.date !== today);
+                }
+            } else {
+                subtask.completedPeriods[periodKey] = Date.now();
+                hapticFeedback();
+            }
+
+            saveHabits(habits);
+            renderDetails();
+            renderHabits();
+        }
+
         // Points popup functions
         let pointsPopupHabitId = null;
 
@@ -3875,6 +3982,7 @@
                 const status = getCompletionStatus(habit);
 
                 let completeButton = '';
+                let undoButton = '';
                 if (!completedToday) {
                     if (isPointsBased) {
                         completeButton = `<button class="submit-btn" style="flex:1;background:#4ade80" onclick="closeDetails();openPointsPopup(${habit.id})">Complete</button>`;
@@ -3886,6 +3994,9 @@
                     } else {
                         completeButton = `<button class="submit-btn" style="flex:1;background:#4ade80" onclick="completeHabitFromDetails(${habit.id})">Complete</button>`;
                     }
+                } else {
+                    // Show undo button for completed tasks
+                    undoButton = `<button class="submit-btn secondary" style="flex:1" onclick="undoHabitCompletion(${habit.id})">Undo</button>`;
                 }
 
                 document.getElementById('detailsModal').innerHTML = `
@@ -3898,6 +4009,7 @@
                     ${!isReminder ? `<div class="momentum-display">
                         <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
                         <div class="momentum-label">Momentum${recoveryText}</div>
+                        ${rawScore !== 0 ? `<button style="margin-top:8px;padding:4px 12px;background:#2a2a3e;border:1px solid #444;border-radius:6px;color:#888;font-size:0.7rem;cursor:pointer" onclick="resetHabitMomentum(${habit.id})">Reset to 0</button>` : ''}
                     </div>` : ''}
                     <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" style="color:${statusColor}">${habitStatus}</span></div>
                     <div class="detail-row"><span class="detail-label">Time</span><span class="detail-value">${timeLabel}</span></div>
@@ -3908,10 +4020,23 @@
                         <div class="stat-box"><div class="stat-number">${rate}%</div><div class="stat-label">Rate</div></div>
                         <div class="stat-box"><div class="stat-number">${avgInterval}</div><div class="stat-label">Avg Gap</div></div>
                     </div>` : ''}
+                    ${habit.subtasks && habit.subtasks.length > 0 ? `
+                    <div class="subtask-list" style="margin:10px 0">
+                        <div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Subtasks</div>
+                        <div class="subtasks-scroll-container">
+                            ${habit.subtasks.map(s => {
+                                const completed = isSubtaskCompleted(habit, s.id);
+                                return `<div class="subtask-item" onclick="toggleSubtaskFromDetails(${habit.id}, ${s.id})">
+                                    <div class="subtask-checkbox ${completed ? 'checked' : ''}"></div>
+                                    <span class="subtask-name ${completed ? 'completed' : ''}">${escapeHtml(s.name)}</span>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </div>` : ''}
                     <div class="action-buttons">
                         <div style="display:flex;gap:6px">
-                            ${completeButton || ''}
-                            <button class="submit-btn${completeButton ? ' secondary' : ''}" style="flex:1" onclick="toggleEditMode()">Edit</button>
+                            ${completeButton || undoButton || ''}
+                            <button class="submit-btn${completeButton || undoButton ? ' secondary' : ''}" style="flex:1" onclick="toggleEditMode()">Edit</button>
                             ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id})">Snooze</button>` : ''}
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
                         </div>
