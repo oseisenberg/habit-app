@@ -1252,7 +1252,6 @@
         }
 
         function getSettings() {
-            const s = localStorage.getItem('habit_settings');
             const defaults = {
                 morningStart: 5,
                 nightStart: 18,
@@ -1268,7 +1267,13 @@
                 quietHoursEnd: 7,
                 weeklySummaryEnabled: false
             };
-            return s ? { ...defaults, ...JSON.parse(s) } : defaults;
+            try {
+                const s = localStorage.getItem('habit_settings');
+                return s ? { ...defaults, ...JSON.parse(s) } : defaults;
+            } catch (e) {
+                console.error('Failed to load settings:', e);
+                return defaults;
+            }
         }
 
         // ========================================
@@ -1521,13 +1526,29 @@
 
         function loadHabits() {
             if (habitsCache) return habitsCache;
-            const h = localStorage.getItem('habits_v3');
-            habitsCache = h ? JSON.parse(h) : [];
+            try {
+                const h = localStorage.getItem('habits_v3');
+                habitsCache = h ? JSON.parse(h) : [];
+            } catch (e) {
+                console.error('Failed to load habits:', e);
+                habitsCache = [];
+                // Show error to user on next tick to avoid blocking
+                setTimeout(() => alert('Failed to load habits. Data may be corrupted. Your habits have been reset.'), 0);
+            }
             return habitsCache;
         }
         function saveHabits(h) {
             habitsCache = h; // Update cache
-            localStorage.setItem('habits_v3', JSON.stringify(h));
+            try {
+                localStorage.setItem('habits_v3', JSON.stringify(h));
+            } catch (e) {
+                console.error('Failed to save habits:', e);
+                if (e.name === 'QuotaExceededError') {
+                    alert('Storage is full. Unable to save habits. Try clearing some browser data.');
+                } else {
+                    alert('Failed to save habits. Changes may not persist.');
+                }
+            }
         }
         function invalidateHabitsCache() { habitsCache = null; }
 
@@ -1680,7 +1701,12 @@
                 quietHoursEnd: parseInt(document.getElementById('quietHoursEnd').value) || 7,
                 weeklySummaryEnabled: document.getElementById('weeklySummaryEnabled').checked
             };
-            localStorage.setItem('habit_settings', JSON.stringify(settings));
+            try {
+                localStorage.setItem('habit_settings', JSON.stringify(settings));
+            } catch (e) {
+                console.error('Failed to save settings:', e);
+                alert('Failed to save settings. Changes may not persist.');
+            }
             if (settings.notificationsEnabled) {
                 scheduleNotifications();
             }
