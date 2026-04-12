@@ -393,7 +393,7 @@
         }
         .emoji-option:active { transform: scale(0.95); }
         .emoji-option.selected { border-color: #667eea; background: rgba(102, 126, 234, 0.3); }
-        .emoji-option.used { opacity: 0.25; cursor: not-allowed; }
+        .emoji-option.used { opacity: 0.35; cursor: pointer; }
 
         /* Details header with large icon */
         .details-icon-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 12px; }
@@ -713,6 +713,11 @@
         <div class="points-popup" id="snoozePopup"></div>
     </div>
 
+    <!-- Description Confirmation Popup -->
+    <div class="points-popup-overlay" id="confirmDescPopupOverlay" onclick="handleOverlayClick(event, 'confirmDescPopupOverlay', closeConfirmDescPopup)">
+        <div class="points-popup" id="confirmDescPopup"></div>
+    </div>
+
     <!-- All Habits View -->
     <div class="modal-overlay" id="allHabitsOverlay" onclick="handleOverlayClick(event, 'allHabitsOverlay', closeAllHabits)">
         <div class="modal" id="allHabitsModal"></div>
@@ -844,6 +849,7 @@
             afterPeriod: PERIOD.DAY,             // 'day', 'week' or 'month' for after completion
             isLarge: false,                      // show as large (2 columns) in grid
             isNegative: false,                   // negative habit (track avoiding)
+            confirmDescription: false,           // show description popup before completing
             everyXValue: null,                   // number value for "every X days/weeks/months"
             timesValue: null,                    // number value for "X times per period"
             pointsValue: null                    // number value for "X points per period"
@@ -870,6 +876,7 @@
             formState.afterPeriod = PERIOD.DAY;
             formState.isLarge = false;
             formState.isNegative = false;
+            formState.confirmDescription = false;
             formState.everyXValue = null;
             formState.timesValue = null;
             formState.pointsValue = null;
@@ -912,6 +919,7 @@
             else formState.afterPeriod = PERIOD.DAY;
 
             formState.isNegative = habit.isNegative || false;
+            formState.confirmDescription = habit.confirmDescription || false;
 
             // Initialize number values from habit
             formState.everyXValue = habit.frequency.everyXDays || habit.frequency.everyXWeeks || habit.frequency.everyXMonths || null;
@@ -1067,6 +1075,10 @@
                             <span class="option-pill-check">✓</span>
                             <span>Negative</span>
                         </label>
+                        <label class="option-pill ${state.confirmDescription ? 'active' : ''}" id="${isEdit ? 'editConfirmDescPill' : 'confirmDescPill'}" onclick="toggleFormConfirmDescription()" style="${state.confirmDescription ? 'border-color:#f59e0b;background:rgba(245,158,11,0.15)' : ''}">
+                            <span class="option-pill-check">✓</span>
+                            <span>Confirm</span>
+                        </label>
                     </div>
                 </div>
                 ${state.showDescription ? `<div class="form-group">
@@ -1183,6 +1195,11 @@
             rerenderForm();
         }
 
+        function toggleFormConfirmDescription() {
+            formState.confirmDescription = !formState.confirmDescription;
+            rerenderForm();
+        }
+
         function toggleFormSubtasks() {
             formState.showSubtasks = !formState.showSubtasks;
             rerenderForm();
@@ -1235,7 +1252,7 @@
                             const isUsed = usedIcons.has(e);
                             const isSelected = e === formState.icon;
                             return `<div class="emoji-option ${isSelected ? 'selected' : ''} ${isUsed ? 'used' : ''}"
-                                onclick="${isUsed ? '' : `selectEmojiFromPopup('${e}')`}">${e}</div>`;
+                                onclick="selectEmojiFromPopup('${e}')">${e}</div>`;
                         }).join('')}
                     </div>
                 </div>`;
@@ -2257,6 +2274,7 @@
                 allowOptional: formState.allowOptional,
                 isLarge: formState.isLarge,
                 isNegative: formState.isNegative,
+                confirmDescription: formState.confirmDescription,
                 completions: [], skippedDates: [], snoozedUntil: null, subtasks: [...newHabitSubtasks], createdAt: getTodayString()
             });
             saveHabits(habits);
@@ -2893,7 +2911,67 @@
             renderHabits();
         }
 
+        // Description confirmation popup
+        let confirmDescHabitId = null;
+        let confirmDescPeriod = null;
+
+        function openConfirmDescPopup(id, period = null) {
+            const habit = loadHabits().find(h => h.id === id);
+            if (!habit) return;
+            confirmDescHabitId = id;
+            confirmDescPeriod = period;
+
+            const popup = document.getElementById('confirmDescPopup');
+            popup.innerHTML = `
+                <div class="points-popup-header">
+                    <span style="font-size:1.5rem">${habit.icon || '📌'}</span>
+                    <span>${escapeHtml(habit.name)}</span>
+                </div>
+                <div style="padding:16px;color:#ccc;font-size:0.95rem;line-height:1.5;white-space:pre-wrap">${escapeHtml(habit.description || 'No description')}</div>
+                <div style="padding:0 16px 16px;display:flex;gap:8px">
+                    <button class="submit-btn secondary" onclick="closeConfirmDescPopup()" style="flex:1">Cancel</button>
+                    <button class="submit-btn" onclick="confirmAndCompleteHabit()" style="flex:1">Complete</button>
+                </div>
+            `;
+            document.getElementById('confirmDescPopupOverlay').classList.add('active');
+        }
+
+        function closeConfirmDescPopup() {
+            document.getElementById('confirmDescPopupOverlay').classList.remove('active');
+            confirmDescHabitId = null;
+            confirmDescPeriod = null;
+        }
+
+        function confirmAndCompleteHabit() {
+            const id = confirmDescHabitId;
+            const period = confirmDescPeriod;
+            closeConfirmDescPopup();
+            doCompleteHabit(id, period);
+        }
+
         function completeHabit(id, period = null) {
+            const habits = loadHabits(), habit = habits.find(h => h.id === id), today = getTodayString();
+            if (!habit) return;
+
+            // If habit has subtasks, show popup instead of completing directly
+            if (habit.subtasks && habit.subtasks.length > 0) {
+                openSubtaskPopup(id);
+                return;
+            }
+
+            // If habit requires description confirmation and is not already completed, show popup
+            const freqType = habit.frequency.type;
+            const checkPeriod = (freqType === FREQ.TWICE_DAILY && !period) ? (getTimeOfDayNow() === PERIOD.MORNING ? PERIOD.MORNING : PERIOD.NIGHT) : period;
+            const existing = habit.completions.find(c => c.date === today && (freqType !== FREQ.TWICE_DAILY || c.period === checkPeriod));
+            if (habit.confirmDescription && habit.description && !existing) {
+                openConfirmDescPopup(id, period);
+                return;
+            }
+
+            doCompleteHabit(id, period);
+        }
+
+        function doCompleteHabit(id, period = null) {
             const habits = loadHabits(), habit = habits.find(h => h.id === id), today = getTodayString();
             if (!habit) return;
 
@@ -3886,12 +3964,17 @@
             // Save negative habit flag
             habit.isNegative = formState.isNegative;
 
+            // Save confirm description flag
+            habit.confirmDescription = formState.confirmDescription;
+
             saveHabits(habits);
             editMode = false;
             formMode = 'create';
             resetFormState();
-            renderDetails();
             renderHabits();
+            // Return to home after editing (close details, don't go back to All Habits)
+            detailsOpenedFromAllHabits = false;
+            closeDetails();
         }
 
         function renderDetails() {
@@ -4312,7 +4395,7 @@
             }
         }
 
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetails(); closeSettings(); closeSubtaskPopup(); closePointsPopup(); closeEmojiPopup(); closeSnoozePopup(); closeAllHabits(); } });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetails(); closeSettings(); closeSubtaskPopup(); closePointsPopup(); closeEmojiPopup(); closeSnoozePopup(); closeConfirmDescPopup(); closeAllHabits(); } });
 
         // Long press support for touch devices (equivalent to right-click)
         let longPressTimer = null;
