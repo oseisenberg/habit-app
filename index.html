@@ -2746,8 +2746,8 @@
                     const isNegativeHabit = habit.isNegative;
                     if (wasCompleted) {
                         if (isNegativeHabit) {
-                            // Negative habit: completing (doing bad thing) = penalty
-                            const basePenalty = score < 0 ? Math.max(8, 20 + score * 0.15) : 20;
+                            // Negative habit: completing (doing bad thing) = penalty with acceleration
+                            const basePenalty = score < 0 ? Math.min(35, 20 - score * 0.15) : 20;
                             const penalty = basePenalty * frequencyScale;
                             score = Math.max(-100, score - penalty);
                         } else {
@@ -2761,8 +2761,8 @@
                             const reward = 5 * frequencyScale;
                             score = Math.min(100, score + reward);
                         } else {
-                            // Positive habit: missing = penalty (increased for faster decline)
-                            const basePenalty = score < 0 ? Math.max(8, 20 + score * 0.15) : 20;
+                            // Positive habit: missing = penalty with acceleration (worse when already negative)
+                            const basePenalty = score < 0 ? Math.min(35, 20 - score * 0.15) : 20;
                             const isReminder = habit.isReminder || freqType === FREQ.REMINDER;
                             const penalty = (isReminder ? basePenalty * 0.5 : basePenalty) * frequencyScale;
                             score = Math.max(-100, score - penalty);
