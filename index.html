@@ -3017,7 +3017,7 @@
                     <span style="font-size:1.5rem">${habit.icon || '📌'}</span>
                     <span>${escapeHtml(habit.name)}</span>
                 </div>
-                <div style="padding:16px;color:#ccc;font-size:0.95rem;line-height:1.5;white-space:pre-wrap">${escapeHtml(habit.description || 'No description')}</div>
+                <div style="padding:16px;color:#ccc;font-size:0.95rem;line-height:1.5">${formatDescription(habit.description || 'No description')}</div>
                 <div style="padding:0 16px 16px;display:flex;gap:8px">
                     <button class="submit-btn secondary" onclick="closeConfirmDescPopup()" style="flex:1">Cancel</button>
                     <button class="submit-btn" onclick="confirmAndCompleteHabit()" style="flex:1">Complete</button>
@@ -3036,7 +3036,7 @@
             const id = confirmDescHabitId;
             const period = confirmDescPeriod;
             closeConfirmDescPopup();
-            doCompleteHabit(id, period);
+            doCompleteHabit(id, period, true);
         }
 
         function completeHabit(id, period = null) {
@@ -3061,12 +3061,12 @@
             doCompleteHabit(id, period);
         }
 
-        function doCompleteHabit(id, period = null) {
+        function doCompleteHabit(id, period = null, skipSubtaskCheck = false) {
             const habits = loadHabits(), habit = habits.find(h => h.id === id), today = getTodayString();
             if (!habit) return;
 
             // If habit has subtasks, show popup instead of completing directly
-            if (habit.subtasks && habit.subtasks.length > 0) {
+            if (!skipSubtaskCheck && habit.subtasks && habit.subtasks.length > 0) {
                 openSubtaskPopup(id);
                 return;
             }
@@ -3790,6 +3790,8 @@
 
             const today = getTodayString();
             const periodKey = getSubtaskPeriodKey(habit);
+            const isTwiceDaily = habit.frequency.type === FREQ.TWICE_DAILY;
+            const currentPeriod = getTimeOfDayNow() === PERIOD.MORNING ? PERIOD.MORNING : PERIOD.NIGHT;
 
             // Complete all subtasks
             if (habit.subtasks) {
@@ -3799,10 +3801,19 @@
                 });
             }
 
+            // Show confirm description popup if applicable
+            if (habit.confirmDescription && habit.description) {
+                saveHabits(habits);
+                closeSubtaskPopup();
+                openConfirmDescPopup(habitId, isTwiceDaily ? currentPeriod : null);
+                renderHabits();
+                return;
+            }
+
             // Complete the habit itself (include period for twiceDaily)
             const completion = { date: today, timestamp: Date.now() };
-            if (habit.frequency.type === FREQ.TWICE_DAILY) {
-                completion.period = getTimeOfDayNow() === PERIOD.MORNING ? PERIOD.MORNING : PERIOD.NIGHT;
+            if (isTwiceDaily) {
+                completion.period = currentPeriod;
             }
             habit.completions.push(completion);
             habit.momentumScore = (habit.momentumScore || 0) + 15;
@@ -3841,6 +3852,28 @@
             } else {
                 subtask.completedPeriods[periodKey] = Date.now();
                 hapticFeedback();
+
+                // Auto-complete habit when all subtasks done
+                const allCompleted = habit.subtasks.every(s => s.completedPeriods && s.completedPeriods[periodKey]);
+                const alreadyCompleted = isTwiceDaily
+                    ? habit.completions.some(c => c.date === today && c.period === currentPeriod)
+                    : habit.completions.some(c => c.date === today);
+
+                if (allCompleted && !alreadyCompleted) {
+                    // Show confirm description popup if applicable
+                    if (habit.confirmDescription && habit.description) {
+                        saveHabits(habits);
+                        closeSubtaskPopup();
+                        openConfirmDescPopup(habitId, isTwiceDaily ? currentPeriod : null);
+                        renderHabits();
+                        return;
+                    }
+                    const completion = { date: today, timestamp: Date.now() };
+                    if (isTwiceDaily) completion.period = currentPeriod;
+                    habit.completions.push(completion);
+                    habit.momentumScore = (habit.momentumScore || 0) + 15;
+                    habit.lastScoreUpdate = today;
+                }
             }
 
             saveHabits(habits);
@@ -4263,7 +4296,7 @@
                     <div class="details-icon-header">
                         <div class="details-large-icon">${icon}</div>
                         <div class="details-habit-name">${escapeHtml(habit.name)}</div>
-                        ${habit.description ? `<div style="color:#888;font-size:0.85rem;margin-top:4px">${escapeHtml(habit.description)}</div>` : ''}
+                        ${habit.description ? `<div style="color:#888;font-size:0.85rem;margin-top:4px">${formatDescription(habit.description)}</div>` : ''}
                     </div>
                     ${!isReminder ? `<div class="momentum-display">
                         <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
@@ -4477,6 +4510,17 @@
         // ========================================
 
         function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+        // Format description text as bullet points (each line becomes a bullet)
+        function formatDescription(text) {
+            if (!text) return '';
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            if (lines.length === 0) return '';
+            if (lines.length === 1) return `<div style="display:flex;gap:6px;align-items:flex-start"><span style="color:#666;flex-shrink:0">•</span><span>${escapeHtml(lines[0])}</span></div>`;
+            return lines.map(line =>
+                `<div style="display:flex;gap:6px;align-items:flex-start;padding:1px 0"><span style="color:#666;flex-shrink:0">•</span><span>${escapeHtml(line)}</span></div>`
+            ).join('');
+        }
 
         let savedDataBeforeTest = null;
 
