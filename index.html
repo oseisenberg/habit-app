@@ -1934,13 +1934,18 @@
             // Check for incomplete habits for this period
             const incompleteHabits = habits.filter(h => {
                 if (h.timeOfDay && h.timeOfDay !== period) return false;
-                if (h.isReminder) return false;
+                if (h.isReminder || h.frequency.type === FREQ.REMINDER) return false;
                 return !isCompletedForPeriod(h, todayStr, period);
             });
 
             if (incompleteHabits.length === 0) return;
 
-            sendNotification(period === 'morning' ? '🌅 Morning' : '🌙 Bedtime', '', `habit-${period}`);
+            const title = period === 'morning' ? '🌅 Morning Habits' : '🌙 Bedtime Habits';
+            const names = incompleteHabits.slice(0, 5).map(h => `${h.icon || '📌'} ${h.name}`).join(', ');
+            const body = incompleteHabits.length > 5
+                ? `${names} +${incompleteHabits.length - 5} more`
+                : names;
+            sendNotification(title, body, `habit-${period}`);
         }
 
         function showMomentumAlert() {
@@ -1950,15 +1955,19 @@
 
             // Find habits with low momentum (below threshold)
             const strugglingHabits = habits.filter(h => {
-                if (h.isReminder) return false;
+                if (h.isReminder || h.frequency.type === FREQ.REMINDER) return false;
                 const score = h.momentumScore || 0;
                 return score < threshold;
             });
 
             if (strugglingHabits.length === 0) return;
 
-            const icons = strugglingHabits.map(h => h.icon).join(' ');
-            sendNotification(`Momentum Alert ${icons}`, '', 'momentum-alert');
+            const icons = strugglingHabits.slice(0, 5).map(h => h.icon || '📌').join(' ');
+            const names = strugglingHabits.slice(0, 3).map(h => h.name).join(', ');
+            const body = strugglingHabits.length > 3
+                ? `${names} +${strugglingHabits.length - 3} more need attention`
+                : `${names} need${strugglingHabits.length === 1 ? 's' : ''} attention`;
+            sendNotification(`Momentum Alert ${icons}`, body, 'momentum-alert');
         }
 
         function showWeeklySummary() {
@@ -2769,7 +2778,7 @@
                     if (wasCompleted) {
                         if (isNegativeHabit) {
                             // Negative habit: completing (doing bad thing) = penalty with acceleration
-                            const basePenalty = score < 0 ? Math.min(35, 20 - score * 0.15) : 20;
+                            const basePenalty = score < 0 ? Math.min(45, 25 - score * 0.2) : 25;
                             const penalty = basePenalty * frequencyScale;
                             score = Math.max(-100, score - penalty);
                         } else {
@@ -2784,7 +2793,7 @@
                             score = Math.min(100, score + reward);
                         } else {
                             // Positive habit: missing = penalty with acceleration (worse when already negative)
-                            const basePenalty = score < 0 ? Math.min(35, 20 - score * 0.15) : 20;
+                            const basePenalty = score < 0 ? Math.min(45, 25 - score * 0.2) : 25;
                             const isReminder = habit.isReminder || freqType === FREQ.REMINDER;
                             const penalty = (isReminder ? basePenalty * 0.5 : basePenalty) * frequencyScale;
                             score = Math.max(-100, score - penalty);
@@ -2792,7 +2801,7 @@
                     }
                 }
 
-                score = score * 0.95; // Daily decay (5% instead of 3%)
+                score = score * 0.93; // Daily decay (7% - faster decline toward zero)
             }
 
             return { raw: Math.round(score), display: getDisplayScore(score) };
@@ -2891,6 +2900,30 @@
                 habit.momentumScore = 0;
                 habit.lastScoreUpdate = today;
                 habit.momentumResetDate = today; // For reminders: use this as reference point for neglect calculation
+                saveHabits(habits);
+                renderDetails();
+                renderHabits();
+            }
+        }
+
+        function resetHabitStats(id) {
+            if (!confirm('Reset all stats for this habit? This clears all completion history, subtask progress, and momentum.')) return;
+            const habits = loadHabits();
+            const habit = habits.find(h => h.id === id);
+            if (habit) {
+                const today = getTodayString();
+                habit.completions = [];
+                habit.momentumScore = 0;
+                habit.lastScoreUpdate = today;
+                habit.momentumResetDate = today;
+                habit.skippedDates = [];
+                habit.snoozedUntil = null;
+                delete habit.snoozedUntilPeriod;
+                habit.snoozeHistory = [];
+                delete habit.autoCompletedToday;
+                if (habit.subtasks) {
+                    habit.subtasks.forEach(s => { s.completedPeriods = {}; });
+                }
                 saveHabits(habits);
                 renderDetails();
                 renderHabits();
@@ -3071,7 +3104,8 @@
                 if (habit.autoCompletes) {
                     const linkedHabit = habits.find(h => h.name.toLowerCase() === habit.autoCompletes.toLowerCase() && h.id !== id);
                     if (linkedHabit && !linkedHabit.completions.find(c => c.date === today)) {
-                        linkedHabit.completions.push({ date: today, period: null, timestamp: Date.now() });
+                        linkedHabit.completions.push({ date: today, period: null, timestamp: Date.now(), autoCompleted: true });
+                        linkedHabit.autoCompletedToday = today; // Hide from view for the day
                         // Clear snooze on linked habit too
                         if (linkedHabit.snoozedUntil) {
                             linkedHabit.snoozedUntil = null;
@@ -3263,6 +3297,9 @@
                     if (h.snoozedUntil === PERIOD.NIGHT && timeOfDay !== PERIOD.NIGHT) return;
                     if (h.snoozedUntil !== PERIOD.NIGHT && h.snoozedUntil > today) return;
                 }
+
+                // Hide habits that were auto-completed today by another habit
+                if (h.autoCompletedToday === today) return;
 
                 // Twice daily: special handling
                 if (h.frequency.type === FREQ.TWICE_DAILY) {
@@ -3580,6 +3617,13 @@
         function completeTwiceDaily(id) {
             const habits = loadHabits(), habit = habits.find(h => h.id === id), today = getTodayString();
             if (!habit) return;
+
+            // If habit has subtasks, show popup instead of completing directly
+            if (habit.subtasks && habit.subtasks.length > 0) {
+                openSubtaskPopup(id);
+                return;
+            }
+
             const timeOfDay = getTimeOfDayNow();
             const period = timeOfDay === PERIOD.NIGHT ? PERIOD.NIGHT : PERIOD.MORNING;
 
@@ -4257,7 +4301,8 @@
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
                         </div>
                         <div style="display:flex;gap:6px">
-                            ${canFreshStart ? `<button class="submit-btn secondary" style="flex:1" onclick="freshStartHabit(${habit.id})">Fresh Start</button>` : ''}
+                            <button class="submit-btn secondary" style="flex:1" onclick="freshStartHabit(${habit.id})">Fresh Start</button>
+                            ${total > 0 ? `<button class="submit-btn secondary" style="flex:1" onclick="resetHabitStats(${habit.id})">Reset Stats</button>` : ''}
                             ${habit.archived
                                 ? `<button class="submit-btn secondary" style="flex:1" onclick="unarchiveHabit(${habit.id})">Unarchive</button>`
                                 : `<button class="submit-btn secondary" style="flex:1" onclick="archiveHabit(${habit.id})">Archive</button>`}
