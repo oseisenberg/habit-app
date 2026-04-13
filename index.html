@@ -1138,11 +1138,27 @@
             if (timesInput) formState.timesValue = parseInt(timesInput.value) || null;
             if (pointsInput) formState.pointsValue = parseInt(pointsInput.value) || null;
 
+            // Remember focused element to restore after re-render
+            const focusedId = document.activeElement?.id;
+            const focusedSelStart = document.activeElement?.selectionStart;
+            const focusedSelEnd = document.activeElement?.selectionEnd;
+
             if (formMode === 'create') {
                 document.getElementById('createModal').innerHTML = renderHabitForm();
             } else {
                 const habit = loadHabits().find(h => h.id === formHabitId);
                 document.getElementById('detailsModal').innerHTML = renderHabitForm(habit);
+            }
+
+            // Restore focus to the same input after re-render
+            if (focusedId) {
+                const el = document.getElementById(focusedId);
+                if (el) {
+                    el.focus();
+                    if (typeof focusedSelStart === 'number' && el.setSelectionRange) {
+                        try { el.setSelectionRange(focusedSelStart, focusedSelEnd); } catch(e) {}
+                    }
+                }
             }
         }
 
@@ -2218,14 +2234,15 @@
                 }
             } else if (mode === 'edit' && habitId) {
                 // Reorder existing habit's subtasks
-                const habit = habits.find(h => h.id === habitId);
+                const allHabits = loadHabits();
+                const habit = allHabits.find(h => h.id === habitId);
                 if (habit && habit.subtasks) {
                     const fromIndex = habit.subtasks.findIndex(s => s.id === draggedSubtaskId);
                     const toIndex = habit.subtasks.findIndex(s => s.id === targetId);
                     if (fromIndex !== -1 && toIndex !== -1) {
                         const [moved] = habit.subtasks.splice(fromIndex, 1);
                         habit.subtasks.splice(toIndex, 0, moved);
-                        saveHabits(habits);
+                        saveHabits(allHabits);
                         rerenderForm();
                     }
                 }
@@ -2930,6 +2947,27 @@
             renderHabits();
         }
 
+        function moveCompletionToToday(id) {
+            const habits = loadHabits();
+            const habit = habits.find(h => h.id === id);
+            if (!habit || habit.completions.length === 0) return;
+
+            const today = getTodayString();
+            // Find the most recent completion that is NOT today
+            const pastCompletions = habit.completions.filter(c => c.date !== today);
+            if (pastCompletions.length === 0) return;
+
+            // Sort by date descending, move the most recent one to today
+            pastCompletions.sort((a, b) => b.date.localeCompare(a.date));
+            const mostRecent = pastCompletions[0];
+            mostRecent.date = today;
+            mostRecent.timestamp = Date.now();
+
+            saveHabits(habits);
+            renderDetails();
+            renderHabits();
+        }
+
         // Description confirmation popup
         let confirmDescHabitId = null;
         let confirmDescPeriod = null;
@@ -3218,6 +3256,13 @@
 
             sorted.forEach(h => {
                 const status = getCompletionStatus(h);
+                const today = getTodayString();
+
+                // Check snooze status first — snoozed habits don't show in any section
+                if (h.snoozedUntil) {
+                    if (h.snoozedUntil === PERIOD.NIGHT && timeOfDay !== PERIOD.NIGHT) return;
+                    if (h.snoozedUntil !== PERIOD.NIGHT && h.snoozedUntil > today) return;
+                }
 
                 // Twice daily: special handling
                 if (h.frequency.type === FREQ.TWICE_DAILY) {
@@ -3242,7 +3287,6 @@
 
                 // Morning habits missed at night → Done (nothing more to do today)
                 // But don't mark as missed if created today (habit is new)
-                const today = getTodayString();
                 const hasCompletionEntry = h.completions.some(c => c.date === today);
                 const createdToday = h.createdAt === today;
                 if (h.timeOfDay === PERIOD.MORNING && timeOfDay === PERIOD.NIGHT && !isCompletedToday(h) && !hasCompletionEntry && !createdToday) {
@@ -4148,6 +4192,7 @@
 
                 let completeButton = '';
                 let undoButton = '';
+                let moveToTodayButton = '';
                 if (!completedToday) {
                     if (isPointsBased) {
                         completeButton = `<button class="submit-btn" style="flex:1;background:#4ade80" onclick="closeDetails();openPointsPopup(${habit.id})">Complete</button>`;
@@ -4158,6 +4203,11 @@
                         }
                     } else {
                         completeButton = `<button class="submit-btn" style="flex:1;background:#4ade80" onclick="completeHabitFromDetails(${habit.id})">Complete</button>`;
+                    }
+                    // Show "Move to Today" if there's a past completion to move
+                    const pastCompletions = habit.completions.filter(c => c.date !== today);
+                    if (pastCompletions.length > 0) {
+                        moveToTodayButton = `<button class="submit-btn secondary" style="flex:1" onclick="moveCompletionToToday(${habit.id})">Move to Today</button>`;
                     }
                 } else {
                     // Show undo button for completed tasks
@@ -4201,7 +4251,8 @@
                     <div class="action-buttons">
                         <div style="display:flex;gap:6px">
                             ${completeButton || undoButton || ''}
-                            <button class="submit-btn${completeButton || undoButton ? ' secondary' : ''}" style="flex:1" onclick="toggleEditMode()">Edit</button>
+                            ${moveToTodayButton}
+                            <button class="submit-btn${completeButton || undoButton || moveToTodayButton ? ' secondary' : ''}" style="flex:1" onclick="toggleEditMode()">Edit</button>
                             ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id})">Snooze</button>` : ''}
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
                         </div>
@@ -4493,6 +4544,15 @@
                 longPressTriggered = false;
             }
         }, true);
+
+        // Scroll/touch on overlay background closes the modal
+        document.getElementById('detailsOverlay').addEventListener('touchmove', e => {
+            // Only close if touching the overlay background, not the modal content
+            if (e.target === document.getElementById('detailsOverlay')) {
+                e.preventDefault();
+                closeDetails();
+            }
+        }, { passive: false });
 
         // Swipe down to dismiss modals/popups
         let swipeStartY = 0;
