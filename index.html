@@ -3509,6 +3509,8 @@
             if (habit.frequency.type === FREQ.TWICE_DAILY) {
                 // Split ring for twice daily - with divider line
                 const bothDone = status.morningDone && status.nightDone;
+                const twiceDailyHasSubtasks = habit.subtasks && habit.subtasks.length > 0;
+                const twiceDailyExtraIndicator = twiceDailyHasSubtasks ? '<div class="extra-indicator"></div>' : '';
                 return `<div class="habit-icon-wrapper">
                     <div class="habit-icon" data-habit-id="${habit.id}" onclick="${bothDone ? `openDetails(${habit.id})` : `completeTwiceDaily(${habit.id})`}" oncontextmenu="${rightClick}">
                         <div class="habit-ring split ${bothDone ? 'completed' : ''}">
@@ -3517,6 +3519,7 @@
                             <div class="divider"></div>
                             <span class="habit-emoji">${icon}</span>
                             ${neglectDots}
+                            ${twiceDailyExtraIndicator}
                         </div>
                     </div>
                 </div>`;
