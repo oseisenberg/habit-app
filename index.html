@@ -850,7 +850,7 @@
             isLarge: false,                      // show as large (2 columns) in grid
             isNegative: false,                   // negative habit (track avoiding)
             confirmDescription: false,           // show description popup before completing
-            autoCompletes: '',                   // habit name to auto-complete when this is done
+            autoCompletes: '',                   // habit ID to auto-complete when this is done
             everyXValue: null,                   // number value for "every X days/weeks/months"
             timesValue: null,                    // number value for "X times per period"
             pointsValue: null                    // number value for "X points per period"
@@ -1089,8 +1089,13 @@
                     <textarea class="form-input" id="${isEdit ? 'editHabitDesc' : 'habitDesc'}" placeholder="Add a description..." rows="2" style="resize:none;font-size:0.85rem">${habitDesc}</textarea>
                 </div>` : ''}
                 <div class="form-group">
-                    <label class="form-label">Auto-completes (habit name)</label>
-                    <input type="text" class="form-input" id="${isEdit ? 'editAutoCompletes' : 'autoCompletes'}" value="${escapeHtml(state.autoCompletes || '')}" placeholder="e.g., Shower" style="font-size:0.85rem" />
+                    <label class="form-label">Auto-completes another habit</label>
+                    <select class="form-input" id="${isEdit ? 'editAutoCompletes' : 'autoCompletes'}" style="font-size:0.85rem">
+                        <option value="">None</option>
+                        ${loadHabits().filter(h => !habit || h.id !== habit.id).map(h =>
+                            `<option value="${h.id}" ${String(state.autoCompletes) === String(h.id) ? 'selected' : ''}>${h.icon || '📌'} ${escapeHtml(h.name)}</option>`
+                        ).join('')}
+                    </select>
                 </div>
                 <div class="form-group" id="${isEdit ? 'editFrequencyGroup' : 'frequencyGroup'}">
                     <label class="form-label">Schedule</label>
@@ -2857,9 +2862,17 @@
             const today = getTodayString();
 
             habits.forEach(habit => {
-                // Update if habit has history (lastScoreUpdate or createdAt) and hasn't been updated today
-                const lastUpdate = habit.lastScoreUpdate || habit.createdAt;
-                if (lastUpdate && lastUpdate !== today) {
+                // Initialize momentum for habits that don't have lastScoreUpdate yet
+                // (e.g., habits created before momentum tracking, or fresh PWA installs)
+                if (!habit.lastScoreUpdate) {
+                    habit.momentumScore = 0;
+                    habit.lastScoreUpdate = today;
+                    changed = true;
+                    return;
+                }
+
+                // Update if habit has history and hasn't been updated today
+                if (habit.lastScoreUpdate !== today) {
                     const scoreData = calculateMomentumScore(habit);
                     habit.momentumScore = scoreData.raw;
                     habit.lastScoreUpdate = today;
@@ -3096,13 +3109,14 @@
                     habit.momentumScore = 0;
                     habit.lastScoreUpdate = today;
                 } else if (!habit.lastScoreUpdate) {
-                    habit.lastScoreUpdate = habit.createdAt || today;
+                    habit.lastScoreUpdate = today;
                     habit.momentumScore = 0;
                 }
 
                 // Auto-complete linked habit if specified
                 if (habit.autoCompletes) {
-                    const linkedHabit = habits.find(h => h.name.toLowerCase() === habit.autoCompletes.toLowerCase() && h.id !== id);
+                    const autoId = Number(habit.autoCompletes);
+                    const linkedHabit = habits.find(h => (autoId ? h.id === autoId : h.name.toLowerCase() === habit.autoCompletes.toLowerCase()) && h.id !== id);
                     if (linkedHabit && !linkedHabit.completions.find(c => c.date === today)) {
                         linkedHabit.completions.push({ date: today, period: null, timestamp: Date.now(), autoCompleted: true });
                         linkedHabit.autoCompletedToday = today; // Hide from view for the day
