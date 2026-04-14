@@ -989,7 +989,11 @@
                         ondragover="handleSubtaskDragOver(event)"
                         ondragleave="handleSubtaskDragLeave(event)"
                         ondrop="handleSubtaskDrop(event, 'edit', ${habit.id})">
-                        <span class="subtask-drag-handle">⋮⋮</span>
+                        <span class="subtask-drag-handle"
+                            ontouchstart="handleSubtaskTouchStart(event, 'edit', ${habit.id})"
+                            ontouchmove="handleSubtaskTouchMove(event)"
+                            ontouchend="handleSubtaskTouchEnd(event)"
+                            ontouchcancel="handleSubtaskTouchEnd(event)">⋮⋮</span>
                         <input type="text" class="subtask-name-input" value="${escapeHtml(s.name)}"
                             onchange="updateEditSubtask(${habit.id}, ${s.id}, this.value)"
                             onkeypress="if(event.key==='Enter')this.blur()">
@@ -1001,7 +1005,11 @@
                         ondragover="handleSubtaskDragOver(event)"
                         ondragleave="handleSubtaskDragLeave(event)"
                         ondrop="handleSubtaskDrop(event, 'new')">
-                        <span class="subtask-drag-handle">⋮⋮</span>
+                        <span class="subtask-drag-handle"
+                            ontouchstart="handleSubtaskTouchStart(event, 'new')"
+                            ontouchmove="handleSubtaskTouchMove(event)"
+                            ontouchend="handleSubtaskTouchEnd(event)"
+                            ontouchcancel="handleSubtaskTouchEnd(event)">⋮⋮</span>
                         <input type="text" class="subtask-name-input" value="${escapeHtml(s.name)}"
                             onchange="updateNewHabitSubtask(${s.id}, this.value)"
                             onkeypress="if(event.key==='Enter')this.blur()">
@@ -1855,29 +1863,48 @@
         function checkNotificationOnOpen() {
             const settings = getSettings();
             if (!settings.notificationsEnabled) return;
-            if (Notification.permission !== 'granted') return;
+            if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
             const now = new Date();
             const hour = now.getHours();
             const today = getTodayString();
 
-            // Check if we're in morning window (between morning reminder and night start)
-            if (hour >= settings.morningReminderTime && hour < settings.nightStart) {
-                const key = `${today}-morning`;
-                if (lastNotificationKey !== key) {
-                    lastNotificationKey = key;
-                    localStorage.setItem('lastNotificationKey', key);
-                    showHabitNotification('morning');
-                }
+            // Helper: send notification once per day/kind
+            const sendOnce = (kind, fn) => {
+                const key = `${today}-${kind}`;
+                if (lastNotificationKey === key) return;
+                // Track multiple keys across a day
+                const seen = (localStorage.getItem('notifSeenToday') || '').split(',');
+                if (seen.includes(key)) return;
+                seen.push(key);
+                localStorage.setItem('notifSeenToday', seen.join(','));
+                localStorage.setItem('notifSeenDate', today);
+                lastNotificationKey = key;
+                localStorage.setItem('lastNotificationKey', key);
+                fn();
+            };
+
+            // Reset seen-today list if date changed
+            if (localStorage.getItem('notifSeenDate') !== today) {
+                localStorage.setItem('notifSeenToday', '');
+                localStorage.setItem('notifSeenDate', today);
             }
-            // Check if we're in night window (after night reminder)
-            else if (hour >= settings.nightReminderTime) {
-                const key = `${today}-night`;
-                if (lastNotificationKey !== key) {
-                    lastNotificationKey = key;
-                    localStorage.setItem('lastNotificationKey', key);
-                    showHabitNotification('night');
-                }
+
+            // Morning window (between morning reminder and night start)
+            if (hour >= settings.morningReminderTime && hour < settings.nightStart) {
+                sendOnce('morning', () => showHabitNotification('morning'));
+            }
+            // Night window (after night reminder)
+            if (hour >= settings.nightReminderTime) {
+                sendOnce('night', () => showHabitNotification('night'));
+            }
+            // Momentum alert window
+            if (settings.momentumAlertEnabled && hour >= settings.momentumAlertTime) {
+                sendOnce('momentum', () => showMomentumAlert());
+            }
+            // Weekly summary on Sunday (day 0) at or after 10am
+            if (settings.weeklySummaryEnabled && now.getDay() === 0 && hour >= 10) {
+                sendOnce('weekly', () => showWeeklySummary());
             }
         }
 
@@ -2207,9 +2234,13 @@
 
         // Drag and drop for subtask reordering
         let draggedSubtaskId = null;
+        let draggedSubtaskMode = null;
+        let draggedSubtaskHabitId = null;
 
         function handleSubtaskDragStart(event, mode, habitId = null) {
             draggedSubtaskId = parseInt(event.target.dataset.subtaskId);
+            draggedSubtaskMode = mode;
+            draggedSubtaskHabitId = habitId;
             event.target.classList.add('dragging');
             event.dataTransfer.effectAllowed = 'move';
             event.dataTransfer.setData('text/plain', draggedSubtaskId);
@@ -2229,30 +2260,22 @@
             if (item) item.classList.remove('drag-over');
         }
 
-        function handleSubtaskDrop(event, mode, habitId = null) {
-            event.preventDefault();
-            const item = event.target.closest('.subtask-item');
-            if (item) item.classList.remove('drag-over');
-
-            const targetId = parseInt(item?.dataset.subtaskId);
-            if (!targetId || targetId === draggedSubtaskId) return;
-
+        function performSubtaskReorder(mode, habitId, fromId, toId) {
+            if (!fromId || !toId || fromId === toId) return;
             if (mode === 'new') {
-                // Reorder newHabitSubtasks array
-                const fromIndex = newHabitSubtasks.findIndex(s => s.id === draggedSubtaskId);
-                const toIndex = newHabitSubtasks.findIndex(s => s.id === targetId);
+                const fromIndex = newHabitSubtasks.findIndex(s => s.id === fromId);
+                const toIndex = newHabitSubtasks.findIndex(s => s.id === toId);
                 if (fromIndex !== -1 && toIndex !== -1) {
                     const [moved] = newHabitSubtasks.splice(fromIndex, 1);
                     newHabitSubtasks.splice(toIndex, 0, moved);
                     rerenderForm();
                 }
             } else if (mode === 'edit' && habitId) {
-                // Reorder existing habit's subtasks
                 const allHabits = loadHabits();
                 const habit = allHabits.find(h => h.id === habitId);
                 if (habit && habit.subtasks) {
-                    const fromIndex = habit.subtasks.findIndex(s => s.id === draggedSubtaskId);
-                    const toIndex = habit.subtasks.findIndex(s => s.id === targetId);
+                    const fromIndex = habit.subtasks.findIndex(s => s.id === fromId);
+                    const toIndex = habit.subtasks.findIndex(s => s.id === toId);
                     if (fromIndex !== -1 && toIndex !== -1) {
                         const [moved] = habit.subtasks.splice(fromIndex, 1);
                         habit.subtasks.splice(toIndex, 0, moved);
@@ -2261,7 +2284,74 @@
                     }
                 }
             }
+        }
+
+        function handleSubtaskDrop(event, mode, habitId = null) {
+            event.preventDefault();
+            const item = event.target.closest('.subtask-item');
+            if (item) item.classList.remove('drag-over');
+
+            const targetId = parseInt(item?.dataset.subtaskId);
+            performSubtaskReorder(mode, habitId, draggedSubtaskId, targetId);
             draggedSubtaskId = null;
+            draggedSubtaskMode = null;
+            draggedSubtaskHabitId = null;
+        }
+
+        // Touch-based subtask reordering for mobile (HTML5 drag-drop doesn't work on touch)
+        let touchDragSubtaskId = null;
+        let touchDragMode = null;
+        let touchDragHabitId = null;
+        let touchDragElement = null;
+        let touchDragStartY = 0;
+        let touchDragCurrentTarget = null;
+
+        function handleSubtaskTouchStart(event, mode, habitId = null) {
+            const item = event.target.closest('.subtask-item');
+            if (!item) return;
+            touchDragSubtaskId = parseInt(item.dataset.subtaskId);
+            touchDragMode = mode;
+            touchDragHabitId = habitId;
+            touchDragElement = item;
+            touchDragStartY = event.touches[0].clientY;
+            item.classList.add('dragging');
+            event.stopPropagation();
+        }
+
+        function handleSubtaskTouchMove(event) {
+            if (!touchDragElement) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const touch = event.touches[0];
+            const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+            const targetItem = elementUnderTouch?.closest('.subtask-item');
+
+            // Clear previous target highlight
+            if (touchDragCurrentTarget && touchDragCurrentTarget !== targetItem) {
+                touchDragCurrentTarget.classList.remove('drag-over');
+            }
+
+            if (targetItem && parseInt(targetItem.dataset.subtaskId) !== touchDragSubtaskId) {
+                targetItem.classList.add('drag-over');
+                touchDragCurrentTarget = targetItem;
+            } else {
+                touchDragCurrentTarget = null;
+            }
+        }
+
+        function handleSubtaskTouchEnd(event) {
+            if (!touchDragElement) return;
+            touchDragElement.classList.remove('dragging');
+            if (touchDragCurrentTarget) {
+                touchDragCurrentTarget.classList.remove('drag-over');
+                const targetId = parseInt(touchDragCurrentTarget.dataset.subtaskId);
+                performSubtaskReorder(touchDragMode, touchDragHabitId, touchDragSubtaskId, targetId);
+            }
+            touchDragSubtaskId = null;
+            touchDragMode = null;
+            touchDragHabitId = null;
+            touchDragElement = null;
+            touchDragCurrentTarget = null;
         }
 
         // Determine the final frequency type based on form state
@@ -2806,7 +2896,7 @@
                     }
                 }
 
-                score = score * 0.93; // Daily decay (7% - faster decline toward zero)
+                score = score * 0.85; // Daily decay (15% - faster decline toward zero)
             }
 
             return { raw: Math.round(score), display: getDisplayScore(score) };
@@ -3196,7 +3286,9 @@
             }
             // If snooze expired today, show habit regardless of natural due date
             if (!snoozeExpiredToday && !isDueToday(habit)) return false;
-            if (habit.timeOfDay === PERIOD.NIGHT && timeOfDay !== PERIOD.NIGHT) return false;
+            // If snooze just expired, allow showing regardless of habit.timeOfDay
+            // (e.g., a bedtime habit snoozed until tomorrow morning should appear in the morning)
+            if (!snoozeExpiredToday && habit.timeOfDay === PERIOD.NIGHT && timeOfDay !== PERIOD.NIGHT) return false;
             return true;
         }
 
@@ -4666,6 +4758,10 @@
         let swipeActive = false;
 
         document.addEventListener('touchstart', e => {
+            // Skip swipe handling when touching form inputs, textareas, or selects
+            // so users can interact with number pickers, text fields, date pickers etc.
+            const interactive = e.target.closest('input, textarea, select, button, .subtask-drag-handle');
+            if (interactive) return;
             const modal = e.target.closest('.modal, .subtask-popup, .points-popup, .emoji-popup');
             if (modal) {
                 // Only enable swipe if at top of scrollable content
