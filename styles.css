@@ -451,6 +451,7 @@
         .points-btn:active { transform: scale(0.95); background: #667eea; border-color: #667eea; }
 
         /* Snooze popup styles */
+        #snoozePopup { width: 300px; }
         .snooze-popup-content { padding: 4px 0; }
         .snooze-popup-title { font-size: 1.05rem; font-weight: 600; color: #e0e0e0; margin-bottom: 18px; text-align: center; letter-spacing: 0.3px; }
         .snooze-section { margin-bottom: 14px; }
@@ -468,9 +469,13 @@
         .snooze-option-icon { font-size: 1.1rem; }
         .skip-cycle-btn { background: linear-gradient(180deg, #1a3a2e 0%, #153025 100%) !important; border-color: #2d5a42 !important; color: #6fbc8f !important; }
         .skip-cycle-btn:hover { background: linear-gradient(180deg, #2d5a42 0%, #1a3a2e 100%) !important; border-color: #40916c !important; color: #fff !important; box-shadow: 0 2px 8px rgba(64,145,108,0.25) !important; }
-        .snooze-date-input { width: 100%; padding: 12px 14px; border: 1px solid #2a2a40; border-radius: 10px; background: linear-gradient(180deg, #1e1e32 0%, #16162a 100%); color: #b0b0b0; font-size: 0.85rem; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .snooze-date-row { display: flex; gap: 6px; align-items: stretch; }
+        .snooze-date-input { flex: 1; min-width: 0; padding: 12px 10px; border: 1px solid #2a2a40; border-radius: 10px; background: linear-gradient(180deg, #1e1e32 0%, #16162a 100%); color: #b0b0b0; font-size: 0.85rem; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); font-family: inherit; }
         .snooze-date-input:focus { outline: none; border-color: #667eea; color: #fff; }
         .snooze-date-input::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
+        .snooze-date-apply { padding: 0 14px; border: 1px solid #2d5a42; border-radius: 10px; background: linear-gradient(180deg, #1a3a2e 0%, #153025 100%); color: #6fbc8f; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+        .snooze-date-apply:hover { background: linear-gradient(180deg, #2d5a42 0%, #1a3a2e 100%); border-color: #40916c; color: #fff; }
+        .snooze-date-apply:active { transform: scale(0.97); }
         .snooze-momentum-label { display: flex; align-items: center; gap: 10px; margin: 14px 0; padding: 10px 12px; background: #12121f; border-radius: 8px; font-size: 0.8rem; color: #777; cursor: pointer; }
         .snooze-momentum-label input { width: 16px; height: 16px; accent-color: #667eea; }
         .snooze-cancel {
