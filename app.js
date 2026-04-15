@@ -940,8 +940,13 @@
             }
 
             saveHabits(habits);
+            const undoneHabitId = lastCompletion.habitId;
             lastCompletion = null;
             hideUndoToast();
+            // If the details modal is open for the same habit, restore the
+            // Complete button (it was greyed when the user completed from
+            // the details screen).
+            if (selectedHabitId === undoneHabitId) ungreyDetailsCompleteButton();
             renderHabits();
         }
 
@@ -2524,13 +2529,37 @@
 
         function greyDetailsCompleteButton() {
             const btn = document.getElementById('detailsCompleteBtn');
-            if (!btn) return;
+            if (!btn || btn.dataset.greyed === '1') return;
+            // Save originals so undo can restore them
+            btn.dataset.greyed = '1';
+            btn.dataset.originalOnclick = btn.getAttribute('onclick') || '';
+            btn.dataset.originalBackground = btn.style.background;
+            btn.dataset.originalColor = btn.style.color;
+            btn.dataset.originalOpacity = btn.style.opacity;
+            btn.dataset.originalCursor = btn.style.cursor;
             btn.disabled = true;
             btn.style.background = '#2a2a3e';
             btn.style.color = '#666';
             btn.style.opacity = '0.6';
             btn.style.cursor = 'default';
-            btn.onclick = null;
+            btn.removeAttribute('onclick');
+        }
+
+        function ungreyDetailsCompleteButton() {
+            const btn = document.getElementById('detailsCompleteBtn');
+            if (!btn || btn.dataset.greyed !== '1') return;
+            btn.disabled = false;
+            btn.style.background = btn.dataset.originalBackground || '#4ade80';
+            btn.style.color = btn.dataset.originalColor || '';
+            btn.style.opacity = btn.dataset.originalOpacity || '';
+            btn.style.cursor = btn.dataset.originalCursor || '';
+            if (btn.dataset.originalOnclick) btn.setAttribute('onclick', btn.dataset.originalOnclick);
+            delete btn.dataset.greyed;
+            delete btn.dataset.originalOnclick;
+            delete btn.dataset.originalBackground;
+            delete btn.dataset.originalColor;
+            delete btn.dataset.originalOpacity;
+            delete btn.dataset.originalCursor;
         }
 
         // ========================================
