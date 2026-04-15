@@ -895,8 +895,6 @@
         // Undo toast functionality
         function showUndoToast() {
             const toast = document.getElementById('undoToast');
-            const text = document.getElementById('undoToastText');
-            text.textContent = 'Completed';
             toast.classList.add('visible');
 
             // Clear existing timeout

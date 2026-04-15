@@ -490,7 +490,6 @@
             pointer-events: none;
         }
         .undo-toast.visible { opacity: 1; pointer-events: auto; }
-        .undo-toast-text { color: #fff; font-size: 0.9rem; }
         .undo-toast-btn {
             background: #667eea; border: none; border-radius: 6px;
             color: #fff; padding: 6px 12px; font-size: 0.85rem; cursor: pointer;
