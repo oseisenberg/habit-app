@@ -2514,8 +2514,23 @@
             } else {
                 completeHabit(id);
             }
-            // Re-render details to show updated state
-            renderDetails();
+            // Keep the details layout stable — only grey out the Complete button
+            // once the habit is fully done for the day. (For twice daily, the
+            // button stays active until both halves are complete.) completeHabit
+            // and completeTwiceDaily already call renderHabits() for the grid.
+            const updated = loadHabits().find(h => h.id === id);
+            if (updated && isCompletedToday(updated)) greyDetailsCompleteButton();
+        }
+
+        function greyDetailsCompleteButton() {
+            const btn = document.getElementById('detailsCompleteBtn');
+            if (!btn) return;
+            btn.disabled = true;
+            btn.style.background = '#2a2a3e';
+            btn.style.color = '#666';
+            btn.style.opacity = '0.6';
+            btn.style.cursor = 'default';
+            btn.onclick = null;
         }
 
         // ========================================
@@ -3657,14 +3672,14 @@
                 let moveToTodayButton = '';
                 if (!completedToday) {
                     if (isPointsBased) {
-                        completeButton = `<button class="submit-btn" style="flex:1;background:#4ade80" onclick="closeDetails();openPointsPopup(${habit.id})">Complete</button>`;
+                        completeButton = `<button id="detailsCompleteBtn" class="submit-btn" style="flex:1;background:#4ade80" onclick="closeDetails();openPointsPopup(${habit.id})">Complete</button>`;
                     } else if (isTwiceDaily) {
                         const canComplete = !status.morningDone || !status.nightDone;
                         if (canComplete) {
-                            completeButton = `<button class="submit-btn" style="flex:1;background:#4ade80" onclick="completeHabitFromDetails(${habit.id})">Complete</button>`;
+                            completeButton = `<button id="detailsCompleteBtn" class="submit-btn" style="flex:1;background:#4ade80" onclick="completeHabitFromDetails(${habit.id})">Complete</button>`;
                         }
                     } else {
-                        completeButton = `<button class="submit-btn" style="flex:1;background:#4ade80" onclick="completeHabitFromDetails(${habit.id})">Complete</button>`;
+                        completeButton = `<button id="detailsCompleteBtn" class="submit-btn" style="flex:1;background:#4ade80" onclick="completeHabitFromDetails(${habit.id})">Complete</button>`;
                     }
                     // Show "Move to Today" if there's a past completion to move
                     const pastCompletions = habit.completions.filter(c => c.date !== today);
