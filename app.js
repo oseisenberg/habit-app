@@ -1745,9 +1745,17 @@
             const cycleDays = habit ? getHabitCycleDays(habit) : 1;
             const cycleLabel = formatCycleDays(cycleDays);
 
-            // Calculate date labels
-            const tomorrow = new Date();
+            // Calculate tomorrow relative to the app's effective "today" so the
+            // snooze date min/value match what the rest of the app considers today.
+            const today = getTodayString();
+            const [ty, tm, td] = today.split('-').map(Number);
+            const tomorrow = new Date(ty, tm - 1, td);
             tomorrow.setDate(tomorrow.getDate() + 1);
+            const tomorrowStr = toDateString(tomorrow);
+            // Prefill with existing snooze date if already set to a specific day,
+            // otherwise leave empty so the native picker opens on tomorrow via min.
+            const currentSnooze = (habit && habit.snoozedUntil && habit.snoozedUntil !== PERIOD.NIGHT && habit.snoozedUntil > today)
+                ? habit.snoozedUntil : '';
 
             document.getElementById('snoozePopup').innerHTML = `
                 <div class="snooze-popup-content">
@@ -1778,7 +1786,7 @@
                     </div>
                     <div class="snooze-section">
                         <div class="snooze-section-label">Pick date</div>
-                        <input type="date" id="snoozeCustomDate" class="snooze-date-input" min="${toDateString(tomorrow)}" onchange="snoozeToDate()" style="width:100%">
+                        <input type="date" id="snoozeCustomDate" class="snooze-date-input" min="${tomorrowStr}" value="${currentSnooze}" onchange="snoozeToDate()" oninput="snoozeToDate()" style="width:100%">
                     </div>
                     <label class="snooze-momentum-label">
                         <input type="checkbox" id="snoozePauseMomentum" checked>
@@ -1790,6 +1798,7 @@
                     </button>
                     <button class="snooze-cancel" onclick="closeSnoozePopup()">Cancel</button>
                 </div>`;
+            document.getElementById('snoozePopup').classList.add('wide');
             document.getElementById('snoozePopupOverlay').classList.add('active');
         }
 
@@ -1823,13 +1832,21 @@
         }
 
         function snoozeToDate() {
+            // Guard against null habitId (fires again after popup closed) and
+            // against the input firing with an invalid or incomplete value.
+            if (snoozePopupHabitId == null) return;
             const dateInput = document.getElementById('snoozeCustomDate');
-            if (!dateInput.value) return;
+            if (!dateInput || !dateInput.value) return;
+            // Require full YYYY-MM-DD so partial typing in desktop browsers does
+            // not trigger a save mid-edit.
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(dateInput.value)) return;
+            const today = getTodayString();
+            if (dateInput.value <= today) return; // Must be in the future
             const habits = loadHabits();
             const habit = habits.find(h => h.id === snoozePopupHabitId);
             if (habit) {
-                const today = getTodayString();
                 habit.snoozedUntil = dateInput.value;
+                delete habit.snoozedUntilPeriod;
                 // Track snooze history for momentum pausing (only if checkbox is checked)
                 const pauseMomentum = document.getElementById('snoozePauseMomentum')?.checked;
                 if (pauseMomentum) {

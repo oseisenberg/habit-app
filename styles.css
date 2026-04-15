@@ -434,6 +434,7 @@
             max-width: 90%; transform: scale(0.95); transition: transform 0.15s;
             text-align: center;
         }
+        .points-popup.wide { width: 320px; }
         .points-popup-overlay.active .points-popup { transform: scale(1); }
         .points-popup-header {
             display: flex; align-items: center; justify-content: center; gap: 8px;
