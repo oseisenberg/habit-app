@@ -97,6 +97,7 @@
             isNegative: false,                   // negative habit (track avoiding)
             confirmDescription: false,           // show description popup before completing
             autoCompletes: '',                   // habit ID to auto-complete when this is done
+            showAutoCompletes: false,            // show auto-completes field
             everyXValue: null,                   // number value for "every X days/weeks/months"
             timesValue: null,                    // number value for "X times per period"
             pointsValue: null                    // number value for "X points per period"
@@ -125,6 +126,7 @@
             formState.isNegative = false;
             formState.confirmDescription = false;
             formState.autoCompletes = '';
+            formState.showAutoCompletes = false;
             formState.everyXValue = null;
             formState.timesValue = null;
             formState.pointsValue = null;
@@ -169,6 +171,7 @@
             formState.isNegative = habit.isNegative || false;
             formState.confirmDescription = habit.confirmDescription || false;
             formState.autoCompletes = habit.autoCompletes || '';
+            formState.showAutoCompletes = !!habit.autoCompletes;
 
             // Initialize number values from habit
             formState.everyXValue = habit.frequency.everyXDays || habit.frequency.everyXWeeks || habit.frequency.everyXMonths || null;
@@ -336,13 +339,17 @@
                             <span class="option-pill-check">✓</span>
                             <span>Confirm</span>
                         </label>
+                        <label class="option-pill ${state.showAutoCompletes ? 'active' : ''}" id="${isEdit ? 'editAutoCompletesPill' : 'autoCompletesPill'}" onclick="toggleFormAutoCompletes()">
+                            <span class="option-pill-check">✓</span>
+                            <span>Auto-complete</span>
+                        </label>
                     </div>
                 </div>
                 ${state.showDescription ? `<div class="form-group">
                     <label class="form-label">Description</label>
                     <textarea class="form-input" id="${isEdit ? 'editHabitDesc' : 'habitDesc'}" placeholder="Add a description..." rows="2" style="resize:none;font-size:0.85rem">${habitDesc}</textarea>
                 </div>` : ''}
-                <div class="form-group">
+                ${state.showAutoCompletes ? `<div class="form-group">
                     <label class="form-label">Auto-completes another habit</label>
                     <select class="form-input" id="${isEdit ? 'editAutoCompletes' : 'autoCompletes'}" style="font-size:0.85rem">
                         <option value="">None</option>
@@ -350,7 +357,7 @@
                             `<option value="${h.id}" ${String(state.autoCompletes) === String(h.id) ? 'selected' : ''}>${h.icon || '📌'} ${escapeHtml(h.name)}</option>`
                         ).join('')}
                     </select>
-                </div>
+                </div>` : ''}
                 <div class="form-group" id="${isEdit ? 'editFrequencyGroup' : 'frequencyGroup'}">
                     <label class="form-label">Schedule</label>
                     <div class="frequency-row" id="${isEdit ? 'editFrequencyRow' : 'frequencyRow'}">
@@ -390,6 +397,8 @@
 
             // Save number input values before re-rendering
             const isEdit = formMode === 'edit';
+            const autoCompletesSelect = document.getElementById(isEdit ? 'editAutoCompletes' : 'autoCompletes');
+            if (autoCompletesSelect) formState.autoCompletes = autoCompletesSelect.value;
             const everyXInput = document.getElementById(isEdit ? 'editEveryXPeriod' : 'everyXPeriod');
             const timesInput = document.getElementById(isEdit ? 'editTimesPerPeriod' : 'timesPerPeriod');
             const pointsInput = document.getElementById(isEdit ? 'editPointsPerPeriod' : 'pointsPerPeriod');
@@ -479,6 +488,11 @@
 
         function toggleFormConfirmDescription() {
             formState.confirmDescription = !formState.confirmDescription;
+            rerenderForm();
+        }
+
+        function toggleFormAutoCompletes() {
+            formState.showAutoCompletes = !formState.showAutoCompletes;
             rerenderForm();
         }
 
