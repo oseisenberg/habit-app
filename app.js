@@ -2443,6 +2443,26 @@
             doCompleteHabit(id, period);
         }
 
+        // If `habit` has an autoCompletes link, mark the linked habit complete
+        // for today (and hide it via autoCompletedToday). Mutates the `habits`
+        // array in place — caller is responsible for saveHabits().
+        function triggerAutoComplete(habits, habit) {
+            if (!habit.autoCompletes) return;
+            const today = getTodayString();
+            const autoId = Number(habit.autoCompletes);
+            const linkedHabit = habits.find(h =>
+                (autoId ? h.id === autoId : h.name.toLowerCase() === String(habit.autoCompletes).toLowerCase())
+                && h.id !== habit.id);
+            if (!linkedHabit) return;
+            if (linkedHabit.completions.find(c => c.date === today)) return;
+            linkedHabit.completions.push({ date: today, period: null, timestamp: Date.now(), autoCompleted: true });
+            linkedHabit.autoCompletedToday = today;
+            if (linkedHabit.snoozedUntil) {
+                linkedHabit.snoozedUntil = null;
+                delete linkedHabit.snoozedUntilPeriod;
+            }
+        }
+
         function doCompleteHabit(id, period = null, skipSubtaskCheck = false) {
             const habits = loadHabits(), habit = habits.find(h => h.id === id), today = getTodayString();
             if (!habit) return;
@@ -2483,19 +2503,7 @@
                 }
 
                 // Auto-complete linked habit if specified
-                if (habit.autoCompletes) {
-                    const autoId = Number(habit.autoCompletes);
-                    const linkedHabit = habits.find(h => (autoId ? h.id === autoId : h.name.toLowerCase() === habit.autoCompletes.toLowerCase()) && h.id !== id);
-                    if (linkedHabit && !linkedHabit.completions.find(c => c.date === today)) {
-                        linkedHabit.completions.push({ date: today, period: null, timestamp: Date.now(), autoCompleted: true });
-                        linkedHabit.autoCompletedToday = today; // Hide from view for the day
-                        // Clear snooze on linked habit too
-                        if (linkedHabit.snoozedUntil) {
-                            linkedHabit.snoozedUntil = null;
-                            delete linkedHabit.snoozedUntilPeriod;
-                        }
-                    }
-                }
+                triggerAutoComplete(habits, habit);
             }
             saveHabits(habits);
             renderHabits();
@@ -3060,6 +3068,12 @@
             } else {
                 habit.completions.push({ date: today, period, timestamp: Date.now() });
                 hapticFeedback();
+                // Fire auto-complete only once the habit is fully done for the day
+                // (both morning AND night). Otherwise the linked habit would be
+                // hidden as soon as the first half completes.
+                const fullyDone = habit.completions.some(c => c.date === today && c.period === PERIOD.MORNING)
+                    && habit.completions.some(c => c.date === today && c.period === PERIOD.NIGHT);
+                if (fullyDone) triggerAutoComplete(habits, habit);
             }
             saveHabits(habits);
             renderHabits();
@@ -3300,6 +3314,9 @@
                     habit.completions.push(completion);
                     habit.momentumScore = (habit.momentumScore || 0) + 15;
                     habit.lastScoreUpdate = today;
+                    // Fire auto-complete once the habit is fully done for today
+                    // (for twice-daily this requires both periods complete).
+                    if (isCompletedToday(habit)) triggerAutoComplete(habits, habit);
                 }
             }
 
@@ -3324,6 +3341,7 @@
             const isTwiceDaily = habit.frequency.type === FREQ.TWICE_DAILY;
             const currentPeriod = getTimeOfDayNow() === PERIOD.MORNING ? PERIOD.MORNING : PERIOD.NIGHT;
 
+            const wasHabitCompleted = isCompletedToday(habit);
             if (wasCompleted) {
                 delete subtask.completedPeriods[periodKey];
                 if (isTwiceDaily) {
@@ -3334,6 +3352,8 @@
             } else {
                 subtask.completedPeriods[periodKey] = Date.now();
                 hapticFeedback();
+                // Fire auto-complete the first time all subtasks finish the habit
+                if (!wasHabitCompleted && isCompletedToday(habit)) triggerAutoComplete(habits, habit);
             }
 
             saveHabits(habits);
@@ -3385,11 +3405,15 @@
             if (!habit) return;
 
             const today = getTodayString();
+            const wasCompleted = isCompletedToday(habit);
             habit.completions.push({ date: today, timestamp: Date.now(), points });
             hapticFeedback();
 
             // Boost momentum based on points
             boostMomentumScore(habit, points);
+
+            // Fire auto-complete only when the habit's point target is first reached
+            if (!wasCompleted && isCompletedToday(habit)) triggerAutoComplete(habits, habit);
 
             saveHabits(habits);
             closePointsPopup();
