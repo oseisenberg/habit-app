@@ -1800,7 +1800,7 @@
                     </div>
                     <div class="snooze-section">
                         <div class="snooze-section-label">Pick date</div>
-                        <input type="date" id="snoozeCustomDate" class="snooze-date-input" min="${tomorrowStr}" value="${currentSnooze}" onchange="snoozeToDate()" oninput="snoozeToDate()" style="width:100%">
+                        <input type="date" id="snoozeCustomDate" class="snooze-date-input" min="${tomorrowStr}" value="${currentSnooze}" onchange="snoozeToDate()" style="width:100%">
                     </div>
                     <label class="snooze-momentum-label">
                         <input type="checkbox" id="snoozePauseMomentum" checked>
@@ -1812,7 +1812,6 @@
                     </button>
                     <button class="snooze-cancel" onclick="closeSnoozePopup()">Cancel</button>
                 </div>`;
-            document.getElementById('snoozePopup').classList.add('wide');
             document.getElementById('snoozePopupOverlay').classList.add('active');
         }
 
