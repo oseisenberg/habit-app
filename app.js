@@ -93,7 +93,8 @@
             timesPeriod: PERIOD.WEEK,            // 'day', 'week' or 'month' for times
             pointsPeriod: PERIOD.WEEK,           // 'day', 'week' or 'month' for points
             afterPeriod: PERIOD.DAY,             // 'day', 'week' or 'month' for after completion
-            isLarge: false,                      // show as large (2 columns) in grid
+            isLarge: false,                      // show as large (2 cols × 2 rows) in grid
+            isMedium: false,                     // show as medium (2 cols × 1 row) in grid
             isNegative: false,                   // negative habit (track avoiding)
             confirmDescription: false,           // show description popup before completing
             autoCompletes: '',                   // habit ID to auto-complete when this is done
@@ -123,6 +124,7 @@
             formState.pointsPeriod = PERIOD.WEEK;
             formState.afterPeriod = PERIOD.DAY;
             formState.isLarge = false;
+            formState.isMedium = false;
             formState.isNegative = false;
             formState.confirmDescription = false;
             formState.autoCompletes = '';
@@ -140,6 +142,7 @@
             formState.icon = habit.icon || HABIT_EMOJIS[0];
             formState.allowOptional = habit.allowOptional !== false;
             formState.isLarge = habit.isLarge || false;
+            formState.isMedium = habit.isMedium || false;
             formState.showSubtasks = (habit.subtasks?.length > 0); // Show if habit has existing subtasks
 
             // Determine mode based on frequency type and flags
@@ -323,6 +326,10 @@
                             <span class="option-pill-check">✓</span>
                             <span>Reminder</span>
                         </label>
+                        <label class="option-pill ${state.isMedium ? 'active' : ''}" id="${isEdit ? 'editMediumPill' : 'mediumPill'}" onclick="toggleFormIsMedium()">
+                            <span class="option-pill-check">✓</span>
+                            <span>Medium</span>
+                        </label>
                         <label class="option-pill ${state.isLarge ? 'active' : ''}" id="${isEdit ? 'editLargePill' : 'largePill'}" onclick="toggleFormIsLarge()">
                             <span class="option-pill-check">✓</span>
                             <span>Large</span>
@@ -469,6 +476,13 @@
 
         function toggleFormIsLarge() {
             formState.isLarge = !formState.isLarge;
+            if (formState.isLarge) formState.isMedium = false;
+            rerenderForm();
+        }
+
+        function toggleFormIsMedium() {
+            formState.isMedium = !formState.isMedium;
+            if (formState.isMedium) formState.isLarge = false;
             rerenderForm();
         }
 
@@ -1577,6 +1591,7 @@
                 isReminder: formState.isReminderMode,
                 allowOptional: formState.allowOptional,
                 isLarge: formState.isLarge,
+                isMedium: formState.isMedium,
                 isNegative: formState.isNegative,
                 confirmDescription: formState.confirmDescription,
                 autoCompletes: document.getElementById('autoCompletes')?.value.trim() || '',
@@ -2713,7 +2728,7 @@
             // Helper: render a sub-section with header and habits grid (large tasks sorted first)
             const subSection = (habits, icon, title) => {
                 if (!habits.length) return '';
-                const sorted = [...habits].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0));
+                const sorted = [...habits].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0) || (b.isMedium ? 1 : 0) - (a.isMedium ? 1 : 0));
                 return `<div class="sub-header"><span class="sub-header-icon">${icon}</span>${title}</div>
                    <div class="habits-grid">${sorted.map(h => renderHabitIcon(h)).join('')}</div>`;
             };
@@ -2733,7 +2748,7 @@
                     } else {
                         const combined = [...bedtimeSpecific, ...anytimeHabits];
                         if (combined.length) {
-                            const sorted = [...combined].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0));
+                            const sorted = [...combined].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0) || (b.isMedium ? 1 : 0) - (a.isMedium ? 1 : 0));
                             nowContent += `<div class="habits-grid">${sorted.map(h => renderHabitIcon(h)).join('')}</div>`;
                         }
                     }
@@ -2787,7 +2802,7 @@
             const headerClass = collapsed ? 'section-header collapsible collapsed' : 'section-header collapsible';
             const sectionClass = renderOpts.inactive ? 'habits-section inactive-section' : 'habits-section';
             // Sort: large tasks first, reminders last
-            const sorted = [...habits].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0) || (a.isReminder ? 1 : 0) - (b.isReminder ? 1 : 0));
+            const sorted = [...habits].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0) || (b.isMedium ? 1 : 0) - (a.isMedium ? 1 : 0) || (a.isReminder ? 1 : 0) - (b.isReminder ? 1 : 0));
             const habitsHtml = sorted.map(h => renderHabitIcon(h, renderOpts.isLater, renderOpts.isCompleted)).join('');
             return `<div class="${sectionClass}">
                 <div class="${headerClass}" onclick="toggleSection('${sectionId}')">
@@ -2944,9 +2959,9 @@
                 ringClass = loggedToday ? 'negative-logged' : 'negative';
             }
 
-            const largeClass = habit.isLarge ? 'large' : '';
+            const sizeClass = habit.isLarge ? 'large' : (habit.isMedium ? 'medium' : '');
 
-            return `<div class="habit-icon-wrapper ${largeClass}">
+            return `<div class="habit-icon-wrapper ${sizeClass}">
                 <div class="habit-icon" data-habit-id="${habit.id}" onclick="${leftClick}" oncontextmenu="${rightClick}">
                     <div class="habit-ring ${ringClass}" style="--progress: ${progress}">
                         <span class="habit-emoji">${icon}</span>
@@ -3477,6 +3492,7 @@
 
             // Save large display preference
             habit.isLarge = formState.isLarge;
+            habit.isMedium = formState.isMedium;
 
             // Save negative habit flag
             habit.isNegative = formState.isNegative;
