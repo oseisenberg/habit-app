@@ -2991,6 +2991,12 @@
             const period = timeOfDay === PERIOD.NIGHT ? PERIOD.NIGHT : PERIOD.MORNING;
 
             const existing = habit.completions.find(c => c.date === today && c.period === period);
+
+            if (!existing && habit.confirmDescription && habit.description) {
+                openConfirmDescPopup(id, period);
+                return;
+            }
+
             if (existing) {
                 habit.completions = habit.completions.filter(c => c !== existing);
             } else {
@@ -3188,6 +3194,9 @@
             habit.momentumScore = (habit.momentumScore || 0) + 15;
             habit.lastScoreUpdate = today;
             hapticFeedback();
+
+            // Fire auto-complete now that the habit is fully done for today
+            if (isCompletedToday(habit)) triggerAutoComplete(habits, habit);
 
             saveHabits(habits);
             closeSubtaskPopup();
