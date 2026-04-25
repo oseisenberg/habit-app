@@ -578,7 +578,8 @@
                 quietHoursEnabled: false,
                 quietHoursStart: 22,
                 quietHoursEnd: 7,
-                weeklySummaryEnabled: false
+                weeklySummaryEnabled: false,
+                separateBedtimeSection: false
             };
             try {
                 const s = localStorage.getItem('habit_settings');
@@ -912,6 +913,7 @@
             document.getElementById('quietHoursStart').value = s.quietHoursStart;
             document.getElementById('quietHoursEnd').value = s.quietHoursEnd;
             document.getElementById('weeklySummaryEnabled').checked = s.weeklySummaryEnabled;
+            document.getElementById('separateBedtimeSection').checked = s.separateBedtimeSection;
             document.getElementById('notificationSettings').style.display = s.notificationsEnabled ? 'block' : 'none';
             document.getElementById('momentumAlertSettings').style.display = s.momentumAlertEnabled ? 'block' : 'none';
             document.getElementById('quietHoursSettings').style.display = s.quietHoursEnabled ? 'block' : 'none';
@@ -941,7 +943,8 @@
                 quietHoursEnabled: document.getElementById('quietHoursEnabled').checked,
                 quietHoursStart: parseInt(document.getElementById('quietHoursStart').value) || 22,
                 quietHoursEnd: parseInt(document.getElementById('quietHoursEnd').value) || 7,
-                weeklySummaryEnabled: document.getElementById('weeklySummaryEnabled').checked
+                weeklySummaryEnabled: document.getElementById('weeklySummaryEnabled').checked,
+                separateBedtimeSection: document.getElementById('separateBedtimeSection').checked
             };
             try {
                 localStorage.setItem('habit_settings', JSON.stringify(settings));
@@ -2724,8 +2727,16 @@
                     nowContent += subSection(morningSpecific, '🌅', 'Morning');
                     nowContent += subSection(anytimeHabits, '☀️', 'Anytime');
                 } else if (timeOfDay === PERIOD.NIGHT) {
-                    nowContent += subSection(bedtimeSpecific, '🌙', 'Bedtime');
-                    nowContent += subSection(anytimeHabits, '☀️', 'Anytime');
+                    if (getSettings().separateBedtimeSection) {
+                        nowContent += subSection(bedtimeSpecific, '🌙', 'Bedtime');
+                        nowContent += subSection(anytimeHabits, '☀️', 'Anytime');
+                    } else {
+                        const combined = [...bedtimeSpecific, ...anytimeHabits];
+                        if (combined.length) {
+                            const sorted = [...combined].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0));
+                            nowContent += `<div class="habits-grid">${sorted.map(h => renderHabitIcon(h)).join('')}</div>`;
+                        }
+                    }
                 }
                 nowContent += subSection(reminderHabits, '🔔', 'Reminders');
 
