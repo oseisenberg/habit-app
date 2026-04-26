@@ -170,9 +170,10 @@
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0, 0, 0, 0.7); display: flex; align-items: flex-end;
             justify-content: center; z-index: 200; opacity: 0; visibility: hidden;
+            pointer-events: none;
             transition: opacity 0.2s, visibility 0.2s;
         }
-        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
 
         .modal {
             background: #1a1a2e; border-radius: 16px 16px 0 0; padding: 18px;
@@ -416,9 +417,10 @@
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0, 0, 0, 0.5); display: flex; align-items: center;
             justify-content: center; z-index: 250; opacity: 0; visibility: hidden;
+            pointer-events: none;
             transition: opacity 0.15s, visibility 0.15s;
         }
-        .subtask-popup-overlay.active { opacity: 1; visibility: visible; }
+        .subtask-popup-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
         .subtask-popup {
             background: #1a1a2e; border-radius: 12px; padding: 12px; width: 280px;
             max-width: 90%; transform: scale(0.95); transition: transform 0.15s;
@@ -445,9 +447,10 @@
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0, 0, 0, 0.5); display: flex; align-items: center;
             justify-content: center; z-index: 250; opacity: 0; visibility: hidden;
+            pointer-events: none;
             transition: opacity 0.15s, visibility 0.15s;
         }
-        .points-popup-overlay.active { opacity: 1; visibility: visible; }
+        .points-popup-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
         .points-popup {
             background: #1a1a2e; border-radius: 12px; padding: 16px; width: 260px;
             max-width: 90%; transform: scale(0.95); transition: transform 0.15s;
@@ -526,9 +529,10 @@
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0, 0, 0, 0.5); display: flex; align-items: center;
             justify-content: center; z-index: 260; opacity: 0; visibility: hidden;
+            pointer-events: none;
             transition: opacity 0.15s, visibility 0.15s;
         }
-        .emoji-popup-overlay.active { opacity: 1; visibility: visible; }
+        .emoji-popup-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
         .emoji-popup {
             background: #1a1a2e; border-radius: 12px; padding: 16px; width: 340px;
             max-width: 95%; max-height: 80vh; overflow-y: auto;

@@ -4090,22 +4090,24 @@
             const elementToReset = swipeElement; // Save reference before clearing
 
             if (swipeActive && swipeDelta > 80) {
-                // Animate out then close
+                // Animate the slide-out via inline transform AND close the
+                // overlay immediately so it stops catching taps that should
+                // reach the buttons underneath. Both happen in parallel: the
+                // overlay fades via its CSS opacity transition while the
+                // modal continues its inline translate animation.
                 swipeElement.style.transition = 'transform 0.2s ease-out';
                 swipeElement.style.transform = 'translateY(100%)';
+                if (document.getElementById('modalOverlay').classList.contains('active')) closeModal();
+                else if (document.getElementById('detailsOverlay').classList.contains('active')) closeDetails();
+                else if (document.getElementById('settingsOverlay').classList.contains('active')) closeSettings();
+                else if (document.getElementById('subtaskPopupOverlay').classList.contains('active')) closeSubtaskPopup();
+                else if (document.getElementById('pointsPopupOverlay').classList.contains('active')) closePointsPopup();
+                else if (document.getElementById('emojiPopupOverlay').classList.contains('active')) closeEmojiPopup();
+                else if (document.getElementById('snoozePopupOverlay').classList.contains('active')) closeSnoozePopup();
+                else if (document.getElementById('allHabitsOverlay').classList.contains('active')) closeAllHabits();
                 setTimeout(() => {
-                    // Reset transform first
                     elementToReset.style.transform = '';
                     elementToReset.style.transition = '';
-                    // Then close
-                    if (document.getElementById('modalOverlay').classList.contains('active')) closeModal();
-                    else if (document.getElementById('detailsOverlay').classList.contains('active')) closeDetails();
-                    else if (document.getElementById('settingsOverlay').classList.contains('active')) closeSettings();
-                    else if (document.getElementById('subtaskPopupOverlay').classList.contains('active')) closeSubtaskPopup();
-                    else if (document.getElementById('pointsPopupOverlay').classList.contains('active')) closePointsPopup();
-                    else if (document.getElementById('emojiPopupOverlay').classList.contains('active')) closeEmojiPopup();
-                    else if (document.getElementById('snoozePopupOverlay').classList.contains('active')) closeSnoozePopup();
-                    else if (document.getElementById('allHabitsOverlay').classList.contains('active')) closeAllHabits();
                 }, 200);
             } else if (swipeActive) {
                 // Snap back
