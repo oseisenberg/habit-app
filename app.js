@@ -204,7 +204,7 @@
             let freqInputsHtml = '';
             if (state.frequency === FREQ.EVERY_X_DAYS) {
                 const afterVal = state.everyXValue ?? habit?.frequency?.everyXDays ?? habit?.frequency?.everyXWeeks ?? habit?.frequency?.everyXMonths ?? DEFAULTS.EVERY_X_DAYS;
-                freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'E' : 'e'}veryXPeriod" value="${afterVal}" min="1">
+                freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'E' : 'e'}veryXPeriod" value="${afterVal}" min="1" onfocus="this.select()">
                     <div class="period-toggle">
                         <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.DAY}')">day</button>
                         <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.WEEK}')">wk</button>
@@ -213,7 +213,7 @@
             } else if (state.frequency === FREQ.TIMES_PER_PERIOD) {
                 if (state.isPointsMode) {
                     const ptsVal = state.pointsValue ?? habit?.frequency?.pointsPerDay ?? habit?.frequency?.pointsPerWeek ?? habit?.frequency?.pointsPerMonth ?? DEFAULTS.POINTS_PER_PERIOD;
-                    freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'P' : 'p'}ointsPerPeriod" value="${ptsVal}" min="1"><span style="color:#888">pts /</span>
+                    freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'P' : 'p'}ointsPerPeriod" value="${ptsVal}" min="1" onfocus="this.select()"><span style="color:#888">pts /</span>
                         <div class="period-toggle">
                             <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.DAY}')">day</button>
                             <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.WEEK}')">wk</button>
@@ -221,7 +221,7 @@
                         </div>`;
                 } else {
                     const timesVal = state.timesValue ?? habit?.frequency?.timesPerDay ?? habit?.frequency?.timesPerWeek ?? habit?.frequency?.timesPerMonth ?? DEFAULTS.TIMES_PER_PERIOD;
-                    freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'T' : 't'}imesPerPeriod" value="${timesVal}" min="1" max="31">
+                    freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'T' : 't'}imesPerPeriod" value="${timesVal}" min="1" max="31" onfocus="this.select()">
                         <div class="period-toggle">
                             <button type="button" class="period-toggle-btn ${state.timesPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('times', '${PERIOD.DAY}')">day</button>
                             <button type="button" class="period-toggle-btn ${state.timesPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('times', '${PERIOD.WEEK}')">wk</button>
@@ -756,9 +756,14 @@
         function updateBadge() {
             if (!('setAppBadge' in navigator)) return;
             const habits = loadHabits().filter(h => !h.archived);
-            const { now: nowHabits } = categorizeHabits(habits);
-            // Exclude reminders from badge count
-            const count = nowHabits.filter(h => !h.isReminder && h.frequency.type !== FREQ.REMINDER).length;
+            const cat = categorizeHabits(habits);
+            // In the morning, badge counts only the morning-tagged tasks
+            // (so it reflects what to do before work). At night, the badge
+            // counts everything still to do — both bedtime-tagged and anytime.
+            // Reminders are excluded from both buckets.
+            const count = cat.timeOfDay === PERIOD.MORNING
+                ? cat.morning.length
+                : cat.bedtime.length + cat.anytime.length;
             if (count > 0) {
                 navigator.setAppBadge(count).catch(() => {});
             } else {
@@ -2445,12 +2450,7 @@
             } else {
                 completeHabit(id);
             }
-            // Keep the details layout stable — only grey out the Complete button
-            // once the habit is fully done for the day. (For twice daily, the
-            // button stays active until both halves are complete.) completeHabit
-            // and completeTwiceDaily already call renderHabits() for the grid.
-            const updated = loadHabits().find(h => h.id === id);
-            if (updated && isCompletedToday(updated)) greyDetailsCompleteButton();
+            closeDetails();
         }
 
         function greyDetailsCompleteButton() {
@@ -4118,13 +4118,18 @@
         updateAllHabitScores();
         updateDisplay();
 
-        // Initialize PWA and notifications
-        registerServiceWorker();
-        // Run notification check immediately (doesn't need SW)
-        if (getSettings().notificationsEnabled) {
-            scheduleNotifications();
-            checkNotificationOnOpen();
-        }
+        // Initialize PWA and notifications.
+        // Wait for the service worker to register before scheduling — otherwise
+        // a notification fired right on open (via checkNotificationOnOpen) can
+        // race ahead of swRegistration being set, fall through to the basic
+        // Notification API, and silently fail in standalone PWA contexts.
+        (async () => {
+            await registerServiceWorker();
+            if (getSettings().notificationsEnabled) {
+                scheduleNotifications();
+                checkNotificationOnOpen();
+            }
+        })();
 
         // Update badge and check notifications when app becomes visible
         document.addEventListener('visibilitychange', () => {
