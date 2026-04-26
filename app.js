@@ -2722,8 +2722,31 @@
                 return;
             }
 
-            const { now: nowHabits, optional: optionalHabits, later: laterHabits, done: completedHabits,
-                    morning: morningSpecific, bedtime: bedtimeSpecific, anytime: anytimeHabits, reminders: reminderHabits, timeOfDay } = categorizeHabits(habits);
+            const cat = categorizeHabits(habits);
+
+            // A habit with autoCompletes renders inline as a connected pair
+            // (see renderHabitIcon), so filter the linked target out of every
+            // bucket to avoid drawing it twice. Only consume the target if
+            // its trigger habit is actually visible somewhere — otherwise a
+            // snoozed/skipped trigger would silently hide the target too.
+            const visibleIds = new Set();
+            [cat.now, cat.optional, cat.later, cat.done].forEach(arr => arr.forEach(h => visibleIds.add(h.id)));
+            const consumedLinkedIds = new Set();
+            habits.forEach(h => {
+                if (!visibleIds.has(h.id) || !h.autoCompletes) return;
+                const lid = Number(h.autoCompletes);
+                if (lid && lid !== h.id) consumedLinkedIds.add(lid);
+            });
+            const drop = arr => arr.filter(h => !consumedLinkedIds.has(h.id));
+            const nowHabits = drop(cat.now);
+            const optionalHabits = drop(cat.optional);
+            const laterHabits = drop(cat.later);
+            const completedHabits = drop(cat.done);
+            const morningSpecific = drop(cat.morning);
+            const bedtimeSpecific = drop(cat.bedtime);
+            const anytimeHabits = drop(cat.anytime);
+            const reminderHabits = drop(cat.reminders);
+            const timeOfDay = cat.timeOfDay;
 
             // Helper: render a sub-section with header and habits grid (large tasks sorted first)
             const subSection = (habits, icon, title) => {
@@ -2817,87 +2840,76 @@
             </div>`;
         }
 
-        function renderHabitIcon(habit, isLater = false, isCompleted = false) {
+        // Renders just the inner <div class="habit-icon">…</div> block — no wrapper.
+        // opts.muted adds .linked-muted (used for the trailing icon of a linked
+        // pair when it isn't due today).
+        function renderHabitIconInner(habit, isLater = false, isCompleted = false, opts = {}) {
             const status = getCompletionStatus(habit);
             const scoreData = calculateMomentumScore(habit);
             const isReminder = habit.isReminder || habit.frequency.type === FREQ.REMINDER;
             const hasHistory = !!(habit.lastScoreUpdate || habit.createdAt);
 
-            // Calculate neglect level differently for reminders vs regular habits
             let neglectLevel = 0;
             if (isReminder) {
-                // For reminders: show dots based on days since last completion, scaled by expected frequency
                 const lastCompletion = getLastCompletionDate(habit);
-                // Use momentum reset date as reference if it's more recent than last completion
                 const resetDate = habit.momentumResetDate;
                 const referenceDate = (lastCompletion && resetDate) ? (lastCompletion > resetDate ? lastCompletion : resetDate) :
                                       (lastCompletion || resetDate);
                 if (referenceDate) {
                     const freq = habit.frequency;
-                    // Calculate expected cycle days for this reminder
-                    let expectedCycle = 7; // default
+                    let expectedCycle = 7;
                     if (freq.reminderDays) expectedCycle = freq.reminderDays;
                     else if (freq.everyXWeeks) expectedCycle = freq.everyXWeeks * 7;
                     else if (freq.everyXMonths) expectedCycle = freq.everyXMonths * 30;
                     else if (freq.everyXDays) expectedCycle = freq.everyXDays;
 
                     const daysSince = daysBetween(referenceDate, getTodayString());
-                    // Scale thresholds based on expected cycle (dots appear as you approach/pass due date)
-                    if (daysSince >= expectedCycle * 1.75) neglectLevel = 3;      // Significantly overdue
-                    else if (daysSince >= expectedCycle) neglectLevel = 2;        // Overdue
-                    else if (daysSince >= expectedCycle * 0.5) neglectLevel = 1;  // Approaching due
+                    if (daysSince >= expectedCycle * 1.75) neglectLevel = 3;
+                    else if (daysSince >= expectedCycle) neglectLevel = 2;
+                    else if (daysSince >= expectedCycle * 0.5) neglectLevel = 1;
                 }
             } else {
-                // For regular habits: show dots based on negative momentum score
                 neglectLevel = hasHistory && scoreData.display < 0 ? Math.min(3, Math.abs(scoreData.display)) : 0;
             }
             const icon = habit.icon || '📌';
 
-            // Calculate progress for ring
             let progress = '0%';
             let ringClass = '';
 
-            // Click handlers: left click = complete (or details if completed), right click = details
             const isPointsBased = habit.frequency.type === FREQ.POINTS_PER_DAY || habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH;
             const leftClick = isCompleted ? `openDetails(${habit.id})` : (isPointsBased ? `openPointsPopup(${habit.id})` : `completeHabit(${habit.id})`);
             const rightClick = `event.preventDefault();openDetails(${habit.id})`;
+            const mutedClass = opts.muted ? ' linked-muted' : '';
 
-            // Render neglect dots (1-3 based on neglect level)
             const neglectDots = neglectLevel > 0 ?
                 `<div class="neglect-dots">${'<div class="neglect-dot"></div>'.repeat(neglectLevel)}</div>` : '';
 
             if (habit.frequency.type === FREQ.TWICE_DAILY) {
-                // Split ring for twice daily - with divider line
                 const bothDone = status.morningDone && status.nightDone;
                 const twiceDailyHasSubtasks = habit.subtasks && habit.subtasks.length > 0;
                 const twiceDailyExtraIndicator = twiceDailyHasSubtasks ? '<div class="extra-indicator"></div>' : '';
-                return `<div class="habit-icon-wrapper">
-                    <div class="habit-icon" data-habit-id="${habit.id}" onclick="${bothDone ? `openDetails(${habit.id})` : `completeTwiceDaily(${habit.id})`}" oncontextmenu="${rightClick}">
-                        <div class="habit-ring split ${bothDone ? 'completed' : ''}">
-                            <div class="half-fill left ${status.morningDone ? 'filled' : ''}"></div>
-                            <div class="half-fill right ${status.nightDone ? 'filled' : ''}"></div>
-                            <div class="divider"></div>
-                            <span class="habit-emoji">${icon}</span>
-                            ${neglectDots}
-                            ${twiceDailyExtraIndicator}
-                        </div>
+                return `<div class="habit-icon${mutedClass}" data-habit-id="${habit.id}" onclick="${bothDone ? `openDetails(${habit.id})` : `completeTwiceDaily(${habit.id})`}" oncontextmenu="${rightClick}">
+                    <div class="habit-ring split ${bothDone ? 'completed' : ''}">
+                        <div class="half-fill left ${status.morningDone ? 'filled' : ''}"></div>
+                        <div class="half-fill right ${status.nightDone ? 'filled' : ''}"></div>
+                        <div class="divider"></div>
+                        <span class="habit-emoji">${icon}</span>
+                        ${neglectDots}
+                        ${twiceDailyExtraIndicator}
                     </div>
                 </div>`;
             }
 
-            // Check subtask progress for partial fill
             const subtaskProgress = getSubtaskProgress(habit);
             const hasSubtasks = subtaskProgress && subtaskProgress.total > 0;
             const subtaskPct = hasSubtasks ? Math.round((subtaskProgress.completed / subtaskProgress.total) * 100) : 0;
             const allSubtasksDone = hasSubtasks && subtaskProgress.completed === subtaskProgress.total;
 
             if (isCompleted) {
-                // In Finished section
                 const today = getTodayString();
                 const completedToday = habit.completions.some(c => c.date === today);
                 if (completedToday || status.completed || allSubtasksDone) {
                     if (hasSubtasks && !allSubtasksDone) {
-                        // Partial subtask completion - show green partial fill
                         ringClass = 'partial';
                         progress = `${subtaskPct}%`;
                     } else {
@@ -2905,71 +2917,71 @@
                         progress = '100%';
                     }
                 } else {
-                    // Unfinished task in Finished section (e.g., missed morning task)
                     ringClass = 'missed';
                     progress = '0%';
                 }
             } else if (hasSubtasks) {
-                // Subtasks take priority - show progress based on subtask completion
                 progress = `${subtaskPct}%`;
-                if (allSubtasksDone) {
-                    ringClass = 'completed';
-                    progress = '100%';
-                } else if (subtaskPct > 0) {
-                    ringClass = 'partial';
-                }
-                // Red dots show momentum, no red background here
+                if (allSubtasksDone) { ringClass = 'completed'; progress = '100%'; }
+                else if (subtaskPct > 0) ringClass = 'partial';
             } else if (status.completed) {
                 ringClass = 'completed';
                 progress = '100%';
             } else if (habit.frequency.type === FREQ.POINTS_PER_DAY) {
-                // Points per day - show progress based on points accumulated today
                 const pct = Math.min(100, Math.round((status.points / status.target) * 100));
                 progress = `${pct}%`;
-                if (pct > 0) {
-                    ringClass = 'partial';
-                }
+                if (pct > 0) ringClass = 'partial';
             } else if (habit.frequency.type === FREQ.TIMES_PER_WEEK || habit.frequency.type === FREQ.TIMES_PER_MONTH ||
                        habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH) {
-                // For weekly/monthly/points habits without subtasks
                 const today = getTodayString();
                 const completedToday = habit.completions.some(c => c.date === today);
-                if (completedToday) {
-                    ringClass = 'completed';
-                    progress = '100%';
-                } else {
-                    progress = '0%';
-                    // Red dots show momentum, no red background here
-                }
+                if (completedToday) { ringClass = 'completed'; progress = '100%'; }
+                else { progress = '0%'; }
             } else {
                 progress = '0%';
-                // Red dots show momentum, no red background here
             }
 
-            // Subtle indicator for habits with extra interactions (subtasks or points)
             const extraIndicator = (hasSubtasks || isPointsBased) ? '<div class="extra-indicator"></div>' : '';
 
-            // Handle negative habits differently
             const isNegative = habit.isNegative;
             const today = getTodayString();
             const loggedToday = habit.completions.some(c => c.date === today);
 
             if (isNegative) {
-                // Negative habits: logged = bad (red), not logged = avoiding successfully
                 ringClass = loggedToday ? 'negative-logged' : 'negative';
             }
 
-            const sizeClass = habit.isLarge ? 'large' : (habit.isMedium ? 'medium' : '');
-
-            return `<div class="habit-icon-wrapper ${sizeClass}">
-                <div class="habit-icon" data-habit-id="${habit.id}" onclick="${leftClick}" oncontextmenu="${rightClick}">
-                    <div class="habit-ring ${ringClass}" style="--progress: ${progress}">
-                        <span class="habit-emoji">${icon}</span>
-                        ${isNegative && !loggedToday ? '' : neglectDots}
-                        ${extraIndicator}
-                    </div>
+            return `<div class="habit-icon${mutedClass}" data-habit-id="${habit.id}" onclick="${leftClick}" oncontextmenu="${rightClick}">
+                <div class="habit-ring ${ringClass}" style="--progress: ${progress}">
+                    <span class="habit-emoji">${icon}</span>
+                    ${isNegative && !loggedToday ? '' : neglectDots}
+                    ${extraIndicator}
                 </div>
             </div>`;
+        }
+
+        function renderHabitIcon(habit, isLater = false, isCompleted = false) {
+            // If this habit auto-completes another, render them as a connected
+            // pair (icon — line — icon) sharing one 2-column wrapper. The
+            // linked target is shown muted when it isn't due today, but the
+            // tap target still routes through the normal completion flow.
+            if (habit.autoCompletes) {
+                const linkedId = Number(habit.autoCompletes);
+                if (linkedId && linkedId !== habit.id) {
+                    const linked = loadHabits().find(h => h.id === linkedId && !h.archived);
+                    if (linked) {
+                        const today = getTodayString();
+                        const linkedDoneToday = isCompletedToday(linked) || linked.autoCompletedToday === today;
+                        const linkedMuted = !linkedDoneToday && !isDueToday(linked);
+                        const aInner = renderHabitIconInner(habit, isLater, isCompleted);
+                        const bInner = renderHabitIconInner(linked, false, linkedDoneToday, { muted: linkedMuted });
+                        return `<div class="habit-icon-wrapper linked-pair">${aInner}<div class="link-line"></div>${bInner}</div>`;
+                    }
+                }
+            }
+
+            const sizeClass = habit.isLarge ? 'large' : (habit.isMedium ? 'medium' : '');
+            return `<div class="habit-icon-wrapper ${sizeClass}">${renderHabitIconInner(habit, isLater, isCompleted)}</div>`;
         }
 
         function toggleSection(sectionId) {
