@@ -849,6 +849,28 @@
                 habit.completions = habit.completions.filter(c =>
                     !(c.date === lastCompletion.date && c.timestamp === lastCompletion.timestamp)
                 );
+                // Roll back the bulk subtask ticks that were applied with
+                // this completion (Complete-All button, or last-subtask-
+                // completes-the-habit path).
+                if (lastCompletion.resetSubtasks && habit.subtasks) {
+                    habit.subtasks.forEach(s => {
+                        if (s.completedPeriods && lastCompletion.periodKey) {
+                            delete s.completedPeriods[lastCompletion.periodKey];
+                        }
+                    });
+                }
+                // Cascade: if this habit auto-completed a linked target,
+                // un-mark the linked target too. Otherwise the user would
+                // be left with a silently-completed Shower (etc.) after
+                // undoing the trigger.
+                if (habit.autoCompletes) {
+                    const linkedId = Number(habit.autoCompletes);
+                    const linked = habits.find(h => h.id === linkedId);
+                    if (linked && linked.autoCompletedToday === lastCompletion.date) {
+                        linked.completions = linked.completions.filter(c => !(c.date === lastCompletion.date && c.autoCompleted));
+                        delete linked.autoCompletedToday;
+                    }
+                }
             } else if (lastCompletion.type === 'subtask' && lastCompletion.subtaskId) {
                 const subtask = habit.subtasks?.find(s => s.id === lastCompletion.subtaskId);
                 if (subtask && subtask.completedPeriods) {
@@ -3011,9 +3033,13 @@
 
             if (existing) {
                 habit.completions = habit.completions.filter(c => c !== existing);
+                hideUndoToast();
             } else {
-                habit.completions.push({ date: today, period, timestamp: Date.now() });
+                const timestamp = Date.now();
+                habit.completions.push({ date: today, period, timestamp });
                 hapticFeedback();
+                lastCompletion = { habitId: id, date: today, period, timestamp, type: 'complete' };
+                showUndoToast();
                 // Fire auto-complete only once the habit is fully done for the day
                 // (both morning AND night). Otherwise the linked habit would be
                 // hidden as soon as the first half completes.
@@ -3198,7 +3224,8 @@
             }
 
             // Complete the habit itself (include period for twiceDaily)
-            const completion = { date: today, timestamp: Date.now() };
+            const timestamp = Date.now();
+            const completion = { date: today, timestamp };
             if (isTwiceDaily) {
                 completion.period = currentPeriod;
             }
@@ -3206,6 +3233,12 @@
             habit.momentumScore = (habit.momentumScore || 0) + 15;
             habit.lastScoreUpdate = today;
             hapticFeedback();
+
+            // Track for undo. resetSubtasks rolls back the bulk subtask
+            // ticks too if the user hits Undo, so the habit returns to
+            // its pre-tap state instead of being left "all subtasks done".
+            lastCompletion = { habitId, date: today, period: isTwiceDaily ? currentPeriod : null, timestamp, type: 'complete', resetSubtasks: true, periodKey };
+            showUndoToast();
 
             // Fire auto-complete now that the habit is fully done for today
             if (isCompletedToday(habit)) triggerAutoComplete(habits, habit);
@@ -3258,11 +3291,17 @@
                         renderHabits();
                         return;
                     }
-                    const completion = { date: today, timestamp: Date.now() };
+                    const timestamp = Date.now();
+                    const completion = { date: today, timestamp };
                     if (isTwiceDaily) completion.period = currentPeriod;
                     habit.completions.push(completion);
                     habit.momentumScore = (habit.momentumScore || 0) + 15;
                     habit.lastScoreUpdate = today;
+                    // Track the just-completed habit for undo. resetSubtasks
+                    // rolls back today's subtask ticks too so undo restores
+                    // the pre-tap state cleanly.
+                    lastCompletion = { habitId, date: today, period: isTwiceDaily ? currentPeriod : null, timestamp, type: 'complete', resetSubtasks: true, periodKey };
+                    showUndoToast();
                     // Fire auto-complete once the habit is fully done for today
                     // (for twice-daily this requires both periods complete).
                     if (isCompletedToday(habit)) triggerAutoComplete(habits, habit);
@@ -3355,8 +3394,11 @@
 
             const today = getTodayString();
             const wasCompleted = isCompletedToday(habit);
-            habit.completions.push({ date: today, timestamp: Date.now(), points });
+            const timestamp = Date.now();
+            habit.completions.push({ date: today, timestamp, points });
             hapticFeedback();
+            lastCompletion = { habitId, date: today, period: null, timestamp, type: 'complete' };
+            showUndoToast();
 
             // Boost momentum based on points
             boostMomentumScore(habit, points);

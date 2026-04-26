@@ -30,11 +30,22 @@
             gap: 0;
         }
         .habit-icon-wrapper.linked-pair .link-line {
-            flex: 0 0 18px;
+            flex: 0 0 22px;
             height: 3px;
             background: #4a4a5e;
             border-radius: 2px;
             align-self: center;
+            position: relative;
+        }
+        .habit-icon-wrapper.linked-pair .link-line::after {
+            content: '';
+            position: absolute;
+            right: -1px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 5px solid transparent;
+            border-left-color: #4a4a5e;
+            border-right: 0;
         }
         .habit-icon.linked-muted { opacity: 0.4; }
         .habit-icon-wrapper.large { grid-column: span 2; grid-row: span 2; }
