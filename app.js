@@ -2366,6 +2366,7 @@
             const period = confirmDescPeriod;
             closeConfirmDescPopup();
             doCompleteHabit(id, period, true);
+            if (document.getElementById('detailsOverlay').classList.contains('active')) closeDetails();
         }
 
         function completeHabit(id, period = null) {
@@ -3245,6 +3246,7 @@
 
             saveHabits(habits);
             closeSubtaskPopup();
+            if (document.getElementById('detailsOverlay').classList.contains('active')) closeDetails();
             renderHabits();
         }
 
@@ -3263,6 +3265,7 @@
             const today = getTodayString();
             const isTwiceDaily = habit.frequency.type === FREQ.TWICE_DAILY;
             const currentPeriod = getTimeOfDayNow() === PERIOD.MORNING ? PERIOD.MORNING : PERIOD.NIGHT;
+            let habitJustCompleted = false;
 
             if (wasCompleted) {
                 delete subtask.completedPeriods[periodKey];
@@ -3305,11 +3308,17 @@
                     // Fire auto-complete once the habit is fully done for today
                     // (for twice-daily this requires both periods complete).
                     if (isCompletedToday(habit)) triggerAutoComplete(habits, habit);
+                    habitJustCompleted = true;
                 }
             }
 
             saveHabits(habits);
-            renderSubtaskPopup();
+            if (habitJustCompleted) {
+                closeSubtaskPopup();
+                if (document.getElementById('detailsOverlay').classList.contains('active')) closeDetails();
+            } else {
+                renderSubtaskPopup();
+            }
             renderHabits();
         }
 
@@ -3345,8 +3354,10 @@
             }
 
             saveHabits(habits);
-            renderDetails();
+            const justCompleted = !wasHabitCompleted && isCompletedToday(habit);
             renderHabits();
+            if (justCompleted) closeDetails();
+            else renderDetails();
         }
 
         // Points popup functions
