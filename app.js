@@ -99,6 +99,10 @@
             confirmDescription: false,           // show description popup before completing
             autoCompletes: '',                   // habit ID to auto-complete when this is done
             showAutoCompletes: false,            // show auto-completes field
+            linkedHabit: '',                     // habit ID of a companion habit (visual link only, bidirectional, no auto-completion)
+            showLinkedHabit: false,              // show linked-habit field
+            sequentialSubtasks: false,           // subtasks must be completed in order; popup shows "Complete Next" instead of "Complete All"
+            showAllPills: false,                 // expand the options list to show all pills (default hides least-used)
             everyXValue: null,                   // number value for "every X days/weeks/months"
             timesValue: null,                    // number value for "X times per period"
             pointsValue: null                    // number value for "X points per period"
@@ -129,6 +133,10 @@
             formState.confirmDescription = false;
             formState.autoCompletes = '';
             formState.showAutoCompletes = false;
+            formState.linkedHabit = '';
+            formState.showLinkedHabit = false;
+            formState.sequentialSubtasks = false;
+            formState.showAllPills = false;
             formState.everyXValue = null;
             formState.timesValue = null;
             formState.pointsValue = null;
@@ -175,6 +183,10 @@
             formState.confirmDescription = habit.confirmDescription || false;
             formState.autoCompletes = habit.autoCompletes || '';
             formState.showAutoCompletes = !!habit.autoCompletes;
+            formState.linkedHabit = habit.linkedHabit || '';
+            formState.showLinkedHabit = !!habit.linkedHabit;
+            formState.sequentialSubtasks = !!habit.sequentialSubtasks;
+            formState.showAllPills = false;
 
             // Initialize number values from habit
             formState.everyXValue = habit.frequency.everyXDays || habit.frequency.everyXWeeks || habit.frequency.everyXMonths || null;
@@ -204,7 +216,7 @@
             let freqInputsHtml = '';
             if (state.frequency === FREQ.EVERY_X_DAYS) {
                 const afterVal = state.everyXValue ?? habit?.frequency?.everyXDays ?? habit?.frequency?.everyXWeeks ?? habit?.frequency?.everyXMonths ?? DEFAULTS.EVERY_X_DAYS;
-                freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'E' : 'e'}veryXPeriod" value="${afterVal}" min="1" onfocus="this.select()">
+                freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'E' : 'e'}veryXPeriod" value="${afterVal}" min="1">
                     <div class="period-toggle">
                         <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.DAY}')">day</button>
                         <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.WEEK}')">wk</button>
@@ -213,7 +225,7 @@
             } else if (state.frequency === FREQ.TIMES_PER_PERIOD) {
                 if (state.isPointsMode) {
                     const ptsVal = state.pointsValue ?? habit?.frequency?.pointsPerDay ?? habit?.frequency?.pointsPerWeek ?? habit?.frequency?.pointsPerMonth ?? DEFAULTS.POINTS_PER_PERIOD;
-                    freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'P' : 'p'}ointsPerPeriod" value="${ptsVal}" min="1" onfocus="this.select()"><span style="color:#888">pts /</span>
+                    freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'P' : 'p'}ointsPerPeriod" value="${ptsVal}" min="1"><span style="color:#888">pts /</span>
                         <div class="period-toggle">
                             <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.DAY}')">day</button>
                             <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.WEEK}')">wk</button>
@@ -221,7 +233,7 @@
                         </div>`;
                 } else {
                     const timesVal = state.timesValue ?? habit?.frequency?.timesPerDay ?? habit?.frequency?.timesPerWeek ?? habit?.frequency?.timesPerMonth ?? DEFAULTS.TIMES_PER_PERIOD;
-                    freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'T' : 't'}imesPerPeriod" value="${timesVal}" min="1" max="31" onfocus="this.select()">
+                    freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'T' : 't'}imesPerPeriod" value="${timesVal}" min="1" max="31">
                         <div class="period-toggle">
                             <button type="button" class="period-toggle-btn ${state.timesPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('times', '${PERIOD.DAY}')">day</button>
                             <button type="button" class="period-toggle-btn ${state.timesPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('times', '${PERIOD.WEEK}')">wk</button>
@@ -308,48 +320,55 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Options</label>
+                    <label class="form-label" style="display:flex;align-items:center;gap:6px">
+                        <span>Options</span>
+                        <button type="button" class="tag-glossary-btn" onclick="openTagGlossary()" aria-label="What do these tags do?">?</button>
+                    </label>
                     <div class="task-options">
-                        <label class="option-pill ${state.showSubtasks ? 'active' : ''}" id="${isEdit ? 'editSubtasksPill' : 'subtasksPill'}" onclick="toggleFormSubtasks()">
-                            <span class="option-pill-check">✓</span>
-                            <span>Subtasks</span>
-                        </label>
-                        <label class="option-pill ${state.isPointsMode ? 'active' : ''} ${pointsDisabled ? 'disabled' : ''}" id="${isEdit ? 'editPointsPill' : 'pointsPill'}" onclick="toggleFormPointsMode()">
-                            <span class="option-pill-check">✓</span>
-                            <span>Points</span>
-                        </label>
-                        <label class="option-pill ${state.allowOptional ? 'active' : ''}" id="${isEdit ? 'editOptionalPill' : 'optionalPill'}" onclick="toggleFormAllowOptional()">
-                            <span class="option-pill-check">✓</span>
-                            <span>Allow extra</span>
-                        </label>
-                        <label class="option-pill ${state.isReminderMode ? 'active' : ''}" id="${isEdit ? 'editReminderPill' : 'reminderPill'}" onclick="toggleFormReminderMode()">
-                            <span class="option-pill-check">✓</span>
-                            <span>Reminder</span>
-                        </label>
-                        <label class="option-pill ${state.isMedium ? 'active' : ''}" id="${isEdit ? 'editMediumPill' : 'mediumPill'}" onclick="toggleFormIsMedium()">
-                            <span class="option-pill-check">✓</span>
-                            <span>Medium</span>
-                        </label>
-                        <label class="option-pill ${state.isLarge ? 'active' : ''}" id="${isEdit ? 'editLargePill' : 'largePill'}" onclick="toggleFormIsLarge()">
-                            <span class="option-pill-check">✓</span>
-                            <span>Large</span>
-                        </label>
-                        <label class="option-pill ${state.showDescription ? 'active' : ''}" id="${isEdit ? 'editDescPill' : 'descPill'}" onclick="toggleFormDescription()">
-                            <span class="option-pill-check">✓</span>
-                            <span>Description</span>
-                        </label>
-                        <label class="option-pill ${state.isNegative ? 'active' : ''}" id="${isEdit ? 'editNegativePill' : 'negativePill'}" onclick="toggleFormNegative()" style="${state.isNegative ? 'border-color:#dc2626;background:rgba(220,38,38,0.15)' : ''}">
-                            <span class="option-pill-check">✓</span>
-                            <span>Negative</span>
-                        </label>
-                        <label class="option-pill ${state.confirmDescription ? 'active' : ''}" id="${isEdit ? 'editConfirmDescPill' : 'confirmDescPill'}" onclick="toggleFormConfirmDescription()" style="${state.confirmDescription ? 'border-color:#f59e0b;background:rgba(245,158,11,0.15)' : ''}">
-                            <span class="option-pill-check">✓</span>
-                            <span>Confirm</span>
-                        </label>
-                        <label class="option-pill ${state.showAutoCompletes ? 'active' : ''}" id="${isEdit ? 'editAutoCompletesPill' : 'autoCompletesPill'}" onclick="toggleFormAutoCompletes()">
-                            <span class="option-pill-check">✓</span>
-                            <span>Auto-complete</span>
-                        </label>
+                        ${(() => {
+                            // Build the pill list once, then sort the inactive
+                            // ones by how often each option is used across the
+                            // user's existing habits. The least-used inactive
+                            // pills get hidden behind a "More" chip so the
+                            // form stays compact for new users while power
+                            // users still see the options they reach for most.
+                            const allHabits = loadHabits();
+                            const count = fn => allHabits.filter(fn).length;
+                            const pills = [
+                                { id: 'subtasks',    label: 'Subtasks',      active: state.showSubtasks,        domId: isEdit ? 'editSubtasksPill' : 'subtasksPill',           onclick: 'toggleFormSubtasks()',          usage: count(h => h.subtasks?.length > 0) },
+                                { id: 'points',      label: 'Points',        active: state.isPointsMode,        domId: isEdit ? 'editPointsPill' : 'pointsPill',               onclick: 'toggleFormPointsMode()',        usage: count(h => h.usePoints), extraClass: pointsDisabled ? 'disabled' : '' },
+                                { id: 'optional',    label: 'Allow extra',   active: state.allowOptional,       domId: isEdit ? 'editOptionalPill' : 'optionalPill',           onclick: 'toggleFormAllowOptional()',     usage: count(h => h.allowOptional !== false) },
+                                { id: 'reminder',    label: 'Reminder',      active: state.isReminderMode,      domId: isEdit ? 'editReminderPill' : 'reminderPill',           onclick: 'toggleFormReminderMode()',      usage: count(h => h.isReminder || h.frequency?.type === FREQ.REMINDER) },
+                                { id: 'medium',      label: 'Medium',        active: state.isMedium,            domId: isEdit ? 'editMediumPill' : 'mediumPill',               onclick: 'toggleFormIsMedium()',          usage: count(h => h.isMedium) },
+                                { id: 'large',       label: 'Large',         active: state.isLarge,             domId: isEdit ? 'editLargePill' : 'largePill',                 onclick: 'toggleFormIsLarge()',           usage: count(h => h.isLarge) },
+                                { id: 'desc',        label: 'Description',   active: state.showDescription,     domId: isEdit ? 'editDescPill' : 'descPill',                   onclick: 'toggleFormDescription()',       usage: count(h => !!h.description) },
+                                { id: 'negative',    label: 'Negative',      active: state.isNegative,          domId: isEdit ? 'editNegativePill' : 'negativePill',           onclick: 'toggleFormNegative()',          usage: count(h => h.isNegative),          activeStyle: 'border-color:#dc2626;background:rgba(220,38,38,0.15)' },
+                                { id: 'confirm',     label: 'Confirm',       active: state.confirmDescription,  domId: isEdit ? 'editConfirmDescPill' : 'confirmDescPill',     onclick: 'toggleFormConfirmDescription()',usage: count(h => h.confirmDescription),  activeStyle: 'border-color:#f59e0b;background:rgba(245,158,11,0.15)' },
+                                { id: 'autoComplete',label: 'Auto-complete', active: state.showAutoCompletes,   domId: isEdit ? 'editAutoCompletesPill' : 'autoCompletesPill', onclick: 'toggleFormAutoCompletes()',     usage: count(h => !!h.autoCompletes) },
+                                { id: 'link',        label: 'Link',          active: state.showLinkedHabit,     domId: isEdit ? 'editLinkedHabitPill' : 'linkedHabitPill',     onclick: 'toggleFormLinkedHabit()',       usage: count(h => !!h.linkedHabit) },
+                                { id: 'sequential',  label: 'Sequential',    active: state.sequentialSubtasks,  domId: isEdit ? 'editSequentialPill' : 'sequentialPill',       onclick: 'toggleFormSequentialSubtasks()',usage: count(h => !!h.sequentialSubtasks) },
+                            ];
+
+                            // Render every pill with its usage as data so the
+                            // post-render fitter (fitOptionsToTwoLines) can
+                            // hide the least-used inactive ones until the
+                            // pill row is at most two lines tall. The More
+                            // chip starts hidden and only shows if the fitter
+                            // had to hide anything.
+                            const renderPill = p => {
+                                const cls = `option-pill ${p.active ? 'active' : ''} ${p.extraClass || ''}`.trim();
+                                const styleAttr = p.active && p.activeStyle ? ` style="${p.activeStyle}"` : '';
+                                return `<label class="${cls}" id="${p.domId}" data-usage="${p.usage}" onclick="${p.onclick}"${styleAttr}>
+                                    <span class="option-pill-check">✓</span>
+                                    <span>${p.label}</span>
+                                </label>`;
+                            };
+                            const moreInitialStyle = state.showAllPills ? 'display:none' : 'display:none';
+                            const more = `<label class="option-pill option-pill-more" onclick="toggleFormShowAllPills()" style="${moreInitialStyle}">
+                                <span>+ More</span>
+                            </label>`;
+                            return pills.map(renderPill).join('') + more;
+                        })()}
                     </div>
                 </div>
                 ${state.showDescription ? `<div class="form-group">
@@ -365,13 +384,22 @@
                         ).join('')}
                     </select>
                 </div>` : ''}
+                ${state.showLinkedHabit ? `<div class="form-group">
+                    <label class="form-label">Linked with (often done together)</label>
+                    <select class="form-input" id="${isEdit ? 'editLinkedHabit' : 'linkedHabit'}" style="font-size:0.85rem">
+                        <option value="">None</option>
+                        ${loadHabits().filter(h => !habit || h.id !== habit.id).map(h =>
+                            `<option value="${h.id}" ${String(state.linkedHabit) === String(h.id) ? 'selected' : ''}>${h.icon || '📌'} ${escapeHtml(h.name)}</option>`
+                        ).join('')}
+                    </select>
+                </div>` : ''}
                 <div class="form-group" id="${isEdit ? 'editFrequencyGroup' : 'frequencyGroup'}">
                     <label class="form-label">Schedule</label>
                     <div class="frequency-row" id="${isEdit ? 'editFrequencyRow' : 'frequencyRow'}">
                         <select class="form-input" id="${isEdit ? 'editFrequencySelect' : 'frequencySelect'}" onchange="selectFormFrequency(this.value)" style="flex:1">
                             <option value="${FREQ.DAILY}" ${state.frequency === FREQ.DAILY ? 'selected' : ''}>Daily</option>
                             <option value="${FREQ.TWICE_DAILY}" ${state.frequency === FREQ.TWICE_DAILY ? 'selected' : ''} ${state.isPointsMode ? 'disabled' : ''}>Morning & Bedtime${state.isPointsMode ? ' (not with Points)' : ''}</option>
-                            <option value="${FREQ.EVERY_X_DAYS}" ${state.frequency === FREQ.EVERY_X_DAYS ? 'selected' : ''}>After completion</option>
+                            <option value="${FREQ.EVERY_X_DAYS}" ${state.frequency === FREQ.EVERY_X_DAYS ? 'selected' : ''}>Completion</option>
                             <option value="${FREQ.TIMES_PER_PERIOD}" ${state.frequency === FREQ.TIMES_PER_PERIOD ? 'selected' : ''}>Within period</option>
                         </select>
                         <div id="${isEdit ? 'editFrequencyInputs' : 'frequencyInputs'}">${freqInputsHtml}</div>
@@ -406,6 +434,8 @@
             const isEdit = formMode === 'edit';
             const autoCompletesSelect = document.getElementById(isEdit ? 'editAutoCompletes' : 'autoCompletes');
             if (autoCompletesSelect) formState.autoCompletes = autoCompletesSelect.value;
+            const linkedHabitSelect = document.getElementById(isEdit ? 'editLinkedHabit' : 'linkedHabit');
+            if (linkedHabitSelect) formState.linkedHabit = linkedHabitSelect.value;
             const everyXInput = document.getElementById(isEdit ? 'editEveryXPeriod' : 'everyXPeriod');
             const timesInput = document.getElementById(isEdit ? 'editTimesPerPeriod' : 'timesPerPeriod');
             const pointsInput = document.getElementById(isEdit ? 'editPointsPerPeriod' : 'pointsPerPeriod');
@@ -424,11 +454,15 @@
                 const habit = loadHabits().find(h => h.id === formHabitId);
                 document.getElementById('detailsModal').innerHTML = renderHabitForm(habit);
             }
+            fitOptionsToTwoLines();
 
-            // Restore focus to the same input after re-render
+            // Restore focus to the same input after re-render. Skip <select>
+            // elements — re-focusing them on mobile re-opens the dropdown
+            // immediately after the user just picked a value, which feels
+            // broken.
             if (focusedId) {
                 const el = document.getElementById(focusedId);
-                if (el) {
+                if (el && el.tagName !== 'SELECT') {
                     el.focus();
                     if (typeof focusedSelStart === 'number' && el.setSelectionRange) {
                         try { el.setSelectionRange(focusedSelStart, focusedSelEnd); } catch(e) {}
@@ -508,6 +542,139 @@
         function toggleFormAutoCompletes() {
             formState.showAutoCompletes = !formState.showAutoCompletes;
             rerenderForm();
+        }
+
+        function toggleFormLinkedHabit() {
+            formState.showLinkedHabit = !formState.showLinkedHabit;
+            rerenderForm();
+        }
+
+        function toggleFormShowAllPills() {
+            formState.showAllPills = !formState.showAllPills;
+            rerenderForm();
+        }
+
+        // After the form HTML is in the DOM, walk the option pills and hide
+        // the least-used inactive ones until the row is at most two lines
+        // tall. The "More" chip is shown only when something was hidden.
+        // Skipped entirely when the user has expanded the row via "More".
+        function fitOptionsToTwoLines() {
+            const container = document.querySelector('.task-options');
+            if (!container) return;
+            const moreChip = container.querySelector('.option-pill-more');
+            const pills = Array.from(container.children).filter(c => c !== moreChip);
+            if (!pills.length) return;
+
+            // Reset to a known state: everything visible, More hidden.
+            pills.forEach(p => { p.style.display = ''; });
+            if (moreChip) moreChip.style.display = 'none';
+
+            if (formState.showAllPills) return; // user opted into see-everything
+
+            const rowCount = () => {
+                const tops = new Set();
+                Array.from(container.children).forEach(c => {
+                    if (c.style.display !== 'none') tops.add(c.offsetTop);
+                });
+                return tops.size;
+            };
+
+            if (rowCount() <= 2) return;
+
+            // Need to hide pills. Show More chip, then hide inactive pills
+            // in least-used order until we fit two lines (including More).
+            if (moreChip) moreChip.style.display = '';
+            const candidates = pills
+                .filter(p => !p.classList.contains('active'))
+                .sort((a, b) =>
+                    parseInt(a.dataset.usage || '0', 10) - parseInt(b.dataset.usage || '0', 10)
+                );
+            for (const pill of candidates) {
+                pill.style.display = 'none';
+                if (rowCount() <= 2) return;
+            }
+        }
+
+        function toggleFormSequentialSubtasks() {
+            formState.sequentialSubtasks = !formState.sequentialSubtasks;
+            rerenderForm();
+        }
+
+        // Glossary describing every option pill so the user can look up what
+        // each tag actually does without having to experiment.
+        const TAG_GLOSSARY = [
+            { label: 'Subtasks',      desc: 'Break the habit into a checklist; the habit auto-completes when every subtask is done.' },
+            { label: 'Points',        desc: 'Score each completion (1, 2, or 3 points) and aim for a daily, weekly, or monthly target instead of a fixed count.' },
+            { label: 'Allow extra',   desc: 'After hitting the target, completions stay tickable in an Optional section so you can keep going without breaking the count.' },
+            { label: 'Reminder',      desc: 'Treat as a recurring nudge rather than a streak — momentum resets to zero on completion instead of building up.' },
+            { label: 'Medium',        desc: 'Lay this habit out across two grid columns for emphasis.' },
+            { label: 'Large',         desc: 'Lay this habit out across two columns and two rows — the biggest tile.' },
+            { label: 'Description',   desc: 'Attach freeform notes that show on the details page.' },
+            { label: 'Negative',      desc: 'Track avoiding something. Tapping logs an incident (red ring) instead of a completion.' },
+            { label: 'Confirm',       desc: 'Ask for confirmation before completing — pops up the description so you can re-read it first.' },
+            { label: 'Auto-complete', desc: 'Completing this habit also marks another linked habit complete (one-way).' },
+            { label: 'Link',          desc: 'Pair with another habit visually so they sit side-by-side in the grid. Bidirectional, but completion does not transfer.' },
+            { label: 'Sequential',    desc: 'Subtasks must be ticked top-to-bottom via a Complete Next button. Individual rows are not tappable; no Complete All shortcut.' },
+        ];
+
+        function openTagGlossary() {
+            const rows = TAG_GLOSSARY.map(t =>
+                `<div style="padding:8px 0;border-bottom:1px solid #2a2a3e">
+                    <div style="font-weight:600;color:#e0e0e0;font-size:0.9rem;margin-bottom:2px">${t.label}</div>
+                    <div style="color:#aaa;font-size:0.8rem;line-height:1.4">${t.desc}</div>
+                </div>`
+            ).join('');
+            document.getElementById('tagGlossaryPopup').innerHTML = `
+                <div class="points-popup-header">
+                    <span>Options reference</span>
+                    <button class="subtask-popup-close" style="margin-left:auto" onclick="closeTagGlossary()">&times;</button>
+                </div>
+                <div style="max-height:60vh;overflow-y:auto;padding:0 4px">${rows}</div>
+                <button class="submit-btn" style="margin-top:12px;width:100%" onclick="closeTagGlossary()">Close</button>`;
+            document.getElementById('tagGlossaryOverlay').classList.add('active');
+        }
+
+        function closeTagGlossary() {
+            document.getElementById('tagGlossaryOverlay').classList.remove('active');
+        }
+
+        // Bidirectionally sync the linkedHabit field. When habit A links to
+        // B, B's link is set to A — and any previous partner of either is
+        // cleared so we never end up with a triangle. Mutates `habits` in
+        // place; caller is responsible for saveHabits().
+        function syncLinkedHabit(habits, habitId, newLinkedRaw) {
+            const habit = habits.find(h => h.id === habitId);
+            if (!habit) return;
+            const newLinkedId = Number(newLinkedRaw) || null;
+            const oldLinkedId = Number(habit.linkedHabit) || null;
+
+            const clearPartnerIfPointsBack = (partnerId, expectedTargetId) => {
+                if (!partnerId) return;
+                const partner = habits.find(h => h.id === partnerId);
+                if (partner && Number(partner.linkedHabit) === expectedTargetId) {
+                    partner.linkedHabit = '';
+                }
+            };
+
+            // Drop the old partner's link to this habit if it pointed back.
+            if (oldLinkedId && oldLinkedId !== newLinkedId) {
+                clearPartnerIfPointsBack(oldLinkedId, habitId);
+            }
+
+            habit.linkedHabit = newLinkedId || '';
+
+            // Wire up the new partner. If the new partner already pointed
+            // somewhere else, clear that stale back-link too.
+            if (newLinkedId && newLinkedId !== habitId) {
+                const newPartner = habits.find(h => h.id === newLinkedId);
+                if (newPartner) {
+                    const newPartnerOldLink = Number(newPartner.linkedHabit) || null;
+                    if (newPartnerOldLink && newPartnerOldLink !== habitId) {
+                        clearPartnerIfPointsBack(newPartnerOldLink, newLinkedId);
+                    }
+                    newPartner.linkedHabit = habitId;
+                }
+            }
         }
 
         function toggleFormSubtasks() {
@@ -927,6 +1094,7 @@
             // Render the form
             document.getElementById('createModal').innerHTML = renderHabitForm();
             document.getElementById('modalOverlay').classList.add('active');
+            fitOptionsToTwoLines();
             document.getElementById('habitInput').focus();
         }
 
@@ -970,7 +1138,20 @@
             const enabled = document.getElementById('quietHoursEnabled').checked;
             document.getElementById('quietHoursSettings').style.display = enabled ? 'block' : 'none';
         }
-        function saveSettings() {
+        async function saveSettings() {
+            const wantNotifications = document.getElementById('notificationsEnabled').checked;
+            // If notifications are turned on but the browser hasn't granted
+            // permission yet (e.g. first run with the default), request it now.
+            // Without this, scheduleNotifications() runs but every send is
+            // silently dropped until the user flips the toggle off and on.
+            if (wantNotifications && 'Notification' in window && Notification.permission !== 'granted') {
+                const permission = await requestNotificationPermission();
+                if (permission !== 'granted') {
+                    document.getElementById('notificationsEnabled').checked = false;
+                    document.getElementById('notificationSettings').style.display = 'none';
+                    alert('Notification permission denied. Please enable in browser settings.');
+                }
+            }
             const settings = {
                 morningStart: parseInt(document.getElementById('morningStart').value) || 5,
                 nightStart: parseInt(document.getElementById('nightStart').value) || 18,
@@ -1622,8 +1803,13 @@
                 isNegative: formState.isNegative,
                 confirmDescription: formState.confirmDescription,
                 autoCompletes: document.getElementById('autoCompletes')?.value.trim() || '',
+                linkedHabit: '',
+                sequentialSubtasks: formState.sequentialSubtasks,
                 completions: [], skippedDates: [], snoozedUntil: null, subtasks: [...newHabitSubtasks], createdAt: getTodayString()
             });
+            const newId = habits[habits.length - 1].id;
+            const linkedRaw = document.getElementById('linkedHabit')?.value.trim() || '';
+            if (linkedRaw) syncLinkedHabit(habits, newId, linkedRaw);
             saveHabits(habits);
             closeModal();
             renderHabits();
@@ -1631,7 +1817,12 @@
 
         function deleteHabit(id) {
             if (confirm('Delete this habit?')) {
-                saveHabits(loadHabits().filter(h => h.id !== id));
+                const habits = loadHabits().filter(h => h.id !== id);
+                // Clear any companion-link back-references to the deleted habit
+                habits.forEach(h => {
+                    if (Number(h.linkedHabit) === id) h.linkedHabit = '';
+                });
+                saveHabits(habits);
                 closeDetails();
                 renderHabits();
             }
@@ -2330,6 +2521,28 @@
             renderHabits();
         }
 
+        // For habits scheduled for a future day (already completed in the
+        // past, not yet due today): drop the most recent past completion so
+        // today becomes due, but don't mark it complete. The user then taps
+        // the green Complete button to actually complete it.
+        function moveScheduleToToday(id) {
+            const habits = loadHabits();
+            const habit = habits.find(h => h.id === id);
+            if (!habit || habit.completions.length === 0) return;
+
+            const today = getTodayString();
+            const pastCompletions = habit.completions.filter(c => c.date !== today);
+            if (pastCompletions.length === 0) return;
+
+            pastCompletions.sort((a, b) => b.date.localeCompare(a.date));
+            const mostRecent = pastCompletions[0];
+            habit.completions = habit.completions.filter(c => c !== mostRecent);
+
+            saveHabits(habits);
+            renderDetails();
+            renderHabits();
+        }
+
         // Description confirmation popup
         let confirmDescHabitId = null;
         let confirmDescPeriod = null;
@@ -2349,7 +2562,7 @@
                 <div style="padding:16px;color:#ccc;font-size:0.95rem;line-height:1.5">${formatDescription(habit.description || 'No description')}</div>
                 <div style="padding:0 16px 16px;display:flex;gap:8px">
                     <button class="submit-btn secondary" onclick="closeConfirmDescPopup()" style="flex:1">Cancel</button>
-                    <button class="submit-btn" onclick="confirmAndCompleteHabit()" style="flex:1">Complete</button>
+                    <button class="submit-btn" onclick="confirmAndCompleteHabit()" style="flex:1;background:#4ade80">Complete</button>
                 </div>
             `;
             document.getElementById('confirmDescPopupOverlay').classList.add('active');
@@ -2366,6 +2579,7 @@
             const period = confirmDescPeriod;
             closeConfirmDescPopup();
             doCompleteHabit(id, period, true);
+            if (document.getElementById('detailsOverlay').classList.contains('active')) closeDetails();
         }
 
         function completeHabit(id, period = null) {
@@ -2759,6 +2973,33 @@
                 const lid = Number(h.autoCompletes);
                 if (lid && lid !== h.id) consumedLinkedIds.add(lid);
             });
+            // Companion links: both partners point at each other.
+            // - If exactly one is completed today, drop the completed one so
+            //   only the still-pending partner shows (alone, no pair).
+            // - Otherwise (both done OR both pending), drop the higher-id
+            //   partner so the lower-id one renders the pair.
+            // - Skip dedup entirely when sizes mismatch (one is Large or
+            //   Medium): renderHabitIcon won't draw a paired wrapper in
+            //   that case, so both partners need to stay in their buckets
+            //   to render independently at their natural sizes.
+            habits.forEach(h => {
+                if (!visibleIds.has(h.id) || !h.linkedHabit) return;
+                const lid = Number(h.linkedHabit);
+                if (!lid || lid === h.id) return;
+                const partner = habits.find(ph => ph.id === lid);
+                if (!partner) return;
+                const sizeMismatch = h.isLarge || h.isMedium || partner.isLarge || partner.isMedium;
+                if (sizeMismatch) return;
+                const hDone = isCompletedToday(h);
+                const pDone = isCompletedToday(partner);
+                if (hDone && !pDone) {
+                    consumedLinkedIds.add(h.id);
+                } else if (!hDone && pDone) {
+                    consumedLinkedIds.add(lid);
+                } else if (h.id < lid) {
+                    consumedLinkedIds.add(lid);
+                }
+            });
             const drop = arr => arr.filter(h => !consumedLinkedIds.has(h.id));
             const nowHabits = drop(cat.now);
             const optionalHabits = drop(cat.optional);
@@ -2787,16 +3028,11 @@
                     nowContent += subSection(morningSpecific, '🌅', 'Morning');
                     nowContent += subSection(anytimeHabits, '☀️', 'Anytime');
                 } else if (timeOfDay === PERIOD.NIGHT) {
-                    if (getSettings().separateBedtimeSection) {
-                        nowContent += subSection(bedtimeSpecific, '🌙', 'Bedtime');
-                        nowContent += subSection(anytimeHabits, '☀️', 'Anytime');
-                    } else {
-                        const combined = [...bedtimeSpecific, ...anytimeHabits];
-                        if (combined.length) {
-                            const sorted = [...combined].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0) || (b.isMedium ? 1 : 0) - (a.isMedium ? 1 : 0));
-                            nowContent += `<div class="habits-grid">${sorted.map(h => renderHabitIcon(h)).join('')}</div>`;
-                        }
-                    }
+                    // Always surface bedtime tasks in their own section at
+                    // night so they're visible at the top, not buried in a
+                    // mixed grid with anytime habits.
+                    nowContent += subSection(bedtimeSpecific, '🌙', 'Bedtime');
+                    nowContent += subSection(anytimeHabits, '☀️', 'Anytime');
                 }
                 nowContent += subSection(reminderHabits, '🔔', 'Reminders');
 
@@ -3002,6 +3238,31 @@
                 }
             }
 
+            // Companion link: bidirectional, visual only — no auto-completion.
+            // Render as a pair only when both partners are in the same
+            // completion state today AND neither is sized larger than the
+            // default. A Large or Medium partner inside a paired wrapper
+            // would force both icons down to the compact 78px size, and
+            // when the other partner gets hidden (e.g. completed) the
+            // survivor would visibly "grow" back to its natural size.
+            if (habit.linkedHabit) {
+                const linkedId = Number(habit.linkedHabit);
+                if (linkedId && linkedId !== habit.id) {
+                    const linked = loadHabits().find(h => h.id === linkedId && !h.archived);
+                    if (linked) {
+                        const sizeMismatch = habit.isLarge || habit.isMedium || linked.isLarge || linked.isMedium;
+                        const habitDone = isCompletedToday(habit);
+                        const linkedDone = isCompletedToday(linked);
+                        const sameState = habitDone === linkedDone;
+                        if (!sizeMismatch && sameState && habit.id < linkedId) {
+                            const aInner = renderHabitIconInner(habit, isLater, isCompleted);
+                            const bInner = renderHabitIconInner(linked, isLater, isCompleted);
+                            return `<div class="habit-icon-wrapper linked-pair companion-pair">${aInner}<div class="link-line"></div>${bInner}</div>`;
+                        }
+                    }
+                }
+            }
+
             const sizeClass = habit.isLarge ? 'large' : (habit.isMedium ? 'medium' : '');
             return `<div class="habit-icon-wrapper ${sizeClass}">${renderHabitIconInner(habit, isLater, isCompleted)}</div>`;
         }
@@ -3177,14 +3438,25 @@
 
             const icon = habit.icon || '📌';
             const subtasks = habit.subtasks || [];
+            const isSequential = !!habit.sequentialSubtasks;
 
             const subtaskItems = subtasks.map(s => {
                 const completed = isSubtaskCompleted(habit, s.id);
-                return `<div class="subtask-popup-item" onclick="toggleSubtaskFromPopup(${habit.id}, ${s.id})">
+                // In sequential mode the user can only tick the next pending
+                // item via the Complete Next button — disable individual taps
+                // so they can't skip ahead.
+                const onclick = isSequential ? '' : `onclick="toggleSubtaskFromPopup(${habit.id}, ${s.id})"`;
+                const itemClass = `subtask-popup-item${isSequential ? ' subtask-popup-item-locked' : ''}`;
+                return `<div class="${itemClass}" ${onclick}>
                     <div class="subtask-checkbox ${completed ? 'checked' : ''}"></div>
                     <span class="subtask-name ${completed ? 'completed' : ''}">${escapeHtml(s.name)}</span>
                 </div>`;
             }).join('');
+
+            const allDone = subtasks.length > 0 && subtasks.every(s => isSubtaskCompleted(habit, s.id));
+            const button = isSequential
+                ? `<button class="submit-btn" style="margin-top:12px;width:100%" onclick="completeNextSubtask(${habit.id})" ${allDone ? 'disabled style="margin-top:12px;width:100%;opacity:0.5;cursor:default"' : ''}>Complete Next</button>`
+                : `<button class="submit-btn" style="margin-top:12px;width:100%" onclick="completeHabitWithAllSubtasks(${habit.id})">Complete All</button>`;
 
             document.getElementById('subtaskPopup').innerHTML = `
                 <div class="subtask-popup-header">
@@ -3193,7 +3465,19 @@
                     <button class="subtask-popup-close" onclick="closeSubtaskPopup()">&times;</button>
                 </div>
                 <div class="subtask-popup-list">${subtaskItems}</div>
-                <button class="submit-btn" style="margin-top:12px;width:100%" onclick="completeHabitWithAllSubtasks(${habit.id})">Complete All</button>`;
+                ${button}`;
+        }
+
+        // Sequential mode: tick the next pending subtask (top-to-bottom).
+        // Reuses toggleSubtaskFromPopup so completion, momentum boost,
+        // confirm-description popup, and details auto-close all behave
+        // exactly as if the user had tapped the checkbox themselves.
+        function completeNextSubtask(habitId) {
+            const habit = loadHabits().find(h => h.id === habitId);
+            if (!habit || !habit.subtasks) return;
+            const next = habit.subtasks.find(s => !isSubtaskCompleted(habit, s.id));
+            if (!next) return;
+            toggleSubtaskFromPopup(habitId, next.id);
         }
 
         function completeHabitWithAllSubtasks(habitId) {
@@ -3245,6 +3529,7 @@
 
             saveHabits(habits);
             closeSubtaskPopup();
+            if (document.getElementById('detailsOverlay').classList.contains('active')) closeDetails();
             renderHabits();
         }
 
@@ -3263,6 +3548,7 @@
             const today = getTodayString();
             const isTwiceDaily = habit.frequency.type === FREQ.TWICE_DAILY;
             const currentPeriod = getTimeOfDayNow() === PERIOD.MORNING ? PERIOD.MORNING : PERIOD.NIGHT;
+            let habitJustCompleted = false;
 
             if (wasCompleted) {
                 delete subtask.completedPeriods[periodKey];
@@ -3305,11 +3591,17 @@
                     // Fire auto-complete once the habit is fully done for today
                     // (for twice-daily this requires both periods complete).
                     if (isCompletedToday(habit)) triggerAutoComplete(habits, habit);
+                    habitJustCompleted = true;
                 }
             }
 
             saveHabits(habits);
-            renderSubtaskPopup();
+            if (habitJustCompleted) {
+                closeSubtaskPopup();
+                if (document.getElementById('detailsOverlay').classList.contains('active')) closeDetails();
+            } else {
+                renderSubtaskPopup();
+            }
             renderHabits();
         }
 
@@ -3345,8 +3637,10 @@
             }
 
             saveHabits(habits);
-            renderDetails();
+            const justCompleted = !wasHabitCompleted && isCompletedToday(habit);
             renderHabits();
+            if (justCompleted) closeDetails();
+            else renderDetails();
         }
 
         // Points popup functions
@@ -3426,7 +3720,15 @@
 
         function openDetails(id) {
             selectedHabitId = id;
-            detailsOpenedFromAllHabits = false;
+            // If All Habits is currently open, remember to return there on
+            // close. This covers any caller that lands here from the All
+            // Habits view without going through openDetailsFromAllHabits
+            // explicitly.
+            const fromAllHabits = document.getElementById('allHabitsOverlay').classList.contains('active');
+            detailsOpenedFromAllHabits = fromAllHabits;
+            if (fromAllHabits) {
+                document.getElementById('allHabitsOverlay').classList.remove('active');
+            }
             editMode = false;
             formMode = 'create';
             renderDetails();
@@ -3462,11 +3764,11 @@
             editMode = false;
             formMode = 'create';
             resetFormState();
-            // Return to All Habits if that's where we came from
-            if (detailsOpenedFromAllHabits) {
-                detailsOpenedFromAllHabits = false;
-                openAllHabits();
-            }
+            // Closing details always returns to the home screen, even if the
+            // user originally opened the habit from All Habits. The All
+            // Habits view stays closed so the user lands somewhere familiar
+            // instead of being pushed back into a list.
+            detailsOpenedFromAllHabits = false;
         }
 
         function toggleEditMode() {
@@ -3566,6 +3868,13 @@
             // Save auto-completes
             habit.autoCompletes = document.getElementById('editAutoCompletes')?.value.trim() || '';
 
+            // Save linked-habit (bidirectional companion)
+            const linkedRaw = document.getElementById('editLinkedHabit')?.value.trim() || '';
+            syncLinkedHabit(habits, habit.id, linkedRaw);
+
+            // Save sequential-subtasks flag
+            habit.sequentialSubtasks = formState.sequentialSubtasks;
+
             saveHabits(habits);
             editMode = false;
             formMode = 'create';
@@ -3586,6 +3895,7 @@
                 formMode = 'edit';
                 formHabitId = habit.id;
                 document.getElementById('detailsModal').innerHTML = renderHabitForm(habit);
+                fitOptionsToTwoLines();
             } else {
                 // View mode
                 const total = habit.completions.length;
@@ -3714,7 +4024,16 @@
                 let undoButton = '';
                 let moveToTodayButton = '';
                 if (!completedToday) {
-                    if (isPointsBased) {
+                    const pastCompletions = habit.completions.filter(c => c.date !== today);
+                    // Already completed in the past and won't be due again
+                    // until a future day. Replace the green Complete with an
+                    // orange "Move to Today" — tapping it pulls the schedule
+                    // forward (drops the blocking past completion) so today
+                    // becomes due, leaving the user to tap Complete next.
+                    const futureDue = pastCompletions.length > 0 && !isDueToday(habit);
+                    if (futureDue) {
+                        completeButton = `<button id="detailsCompleteBtn" class="submit-btn" style="flex:1;background:#ea580c" onclick="moveScheduleToToday(${habit.id})">Move to Today</button>`;
+                    } else if (isPointsBased) {
                         completeButton = `<button id="detailsCompleteBtn" class="submit-btn" style="flex:1;background:#4ade80" onclick="closeDetails();openPointsPopup(${habit.id})">Complete</button>`;
                     } else if (isTwiceDaily) {
                         const canComplete = !status.morningDone || !status.nightDone;
@@ -3724,13 +4043,18 @@
                     } else {
                         completeButton = `<button id="detailsCompleteBtn" class="submit-btn" style="flex:1;background:#4ade80" onclick="completeHabitFromDetails(${habit.id})">Complete</button>`;
                     }
-                    // Show "Move to Today" if there's a past completion to move
-                    const pastCompletions = habit.completions.filter(c => c.date !== today);
-                    if (pastCompletions.length > 0) {
+                    // Show secondary "Move to Today" only when the habit is
+                    // already due today and has past completions to bring
+                    // forward — when futureDue, the orange primary already
+                    // covers the move action.
+                    if (!futureDue && pastCompletions.length > 0) {
                         moveToTodayButton = `<button class="submit-btn secondary" style="flex:1" onclick="moveCompletionToToday(${habit.id})">Move to Today</button>`;
                     }
                 } else {
-                    // Show undo button for completed tasks
+                    // Already completed: keep the Complete button visible but
+                    // disabled/greyed so the layout stays consistent and it's
+                    // clear the action has been taken. Undo sits next to it.
+                    completeButton = `<button id="detailsCompleteBtn" class="submit-btn" style="flex:1;background:#2a2a3e;color:#666;opacity:0.6;cursor:default" disabled>Complete</button>`;
                     undoButton = `<button class="submit-btn secondary" style="flex:1" onclick="undoHabitCompletion(${habit.id})">Undo</button>`;
                 }
 
@@ -4013,7 +4337,31 @@
             }
         }
 
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetails(); closeSettings(); closeSubtaskPopup(); closePointsPopup(); closeEmojiPopup(); closeSnoozePopup(); closeConfirmDescPopup(); closeAllHabits(); } });
+        // Escape closes the topmost open overlay only. Closing one at a time
+        // matters because closeDetails reopens All Habits when the user came
+        // from there — calling closeAllHabits in the same handler would just
+        // close it right back.
+        document.addEventListener('keydown', e => {
+            if (e.key !== 'Escape') return;
+            const closers = [
+                ['tagGlossaryOverlay', closeTagGlossary],
+                ['confirmDescPopupOverlay', closeConfirmDescPopup],
+                ['snoozePopupOverlay', closeSnoozePopup],
+                ['emojiPopupOverlay', closeEmojiPopup],
+                ['pointsPopupOverlay', closePointsPopup],
+                ['subtaskPopupOverlay', closeSubtaskPopup],
+                ['settingsOverlay', closeSettings],
+                ['detailsOverlay', closeDetails],
+                ['modalOverlay', closeModal],
+                ['allHabitsOverlay', closeAllHabits],
+            ];
+            for (const [id, close] of closers) {
+                if (document.getElementById(id)?.classList.contains('active')) {
+                    close();
+                    return;
+                }
+            }
+        });
 
         // Long press support for touch devices (equivalent to right-click)
         let longPressTimer = null;
@@ -4057,6 +4405,13 @@
             }
             if (longPressTriggered) {
                 e.preventDefault();
+                // Clear on the next tick. If the browser still synthesizes a
+                // click after preventDefault, the capture-phase click handler
+                // catches it and resets first. If preventDefault fully
+                // suppresses the click (which it often does on mobile), the
+                // flag would otherwise stay true forever and swallow the next
+                // unrelated tap — e.g. the Settings button.
+                setTimeout(() => { longPressTriggered = false; }, 50);
             }
         });
 
@@ -4096,6 +4451,11 @@
             // so users can interact with number pickers, text fields, date pickers etc.
             const interactive = e.target.closest('input, textarea, select, button, .subtask-drag-handle');
             if (interactive) return;
+            // Popups that contain their own scrollable region opt out of
+            // swipe-to-dismiss — otherwise scrolling the inner content gets
+            // interpreted as a dismiss gesture and closes the popup. Tap-
+            // outside still closes them via handleOverlayClick.
+            if (e.target.closest('[data-no-swipe-dismiss]')) return;
             const modal = e.target.closest('.modal, .subtask-popup, .points-popup, .emoji-popup');
             if (modal) {
                 // Only enable swipe if at top of scrollable content
@@ -4131,7 +4491,11 @@
             const swipeDelta = swipeEndY - swipeStartY;
             const elementToReset = swipeElement; // Save reference before clearing
 
-            if (swipeActive && swipeDelta > 80) {
+            // Small popups (points/snooze/confirm/emoji/subtask) are easy to
+            // dismiss by accident — keep the older 80px threshold for them so
+            // the Confirm-description popup doesn't slip away mid-tap.
+            const dismissThreshold = swipeElement.classList.contains('modal') ? 40 : 80;
+            if (swipeActive && swipeDelta > dismissThreshold) {
                 // Animate the slide-out via inline transform AND close the
                 // overlay immediately so it stops catching taps that should
                 // reach the buttons underneath. Both happen in parallel: the
@@ -4170,9 +4534,51 @@
             loadTestData();
         }
 
+        // One-time companion-link migration. Apply curated pairings to
+        // existing saved habits if neither side already has a link set —
+        // never overwrite a user-chosen link. Tracked by a localStorage
+        // flag so it runs at most once per device.
+        (function migrateCompanionLinks() {
+            const KEY = 'migration_companion_links_v1';
+            if (localStorage.getItem(KEY)) return;
+            const pairs = [
+                [36, 38],              // Brush teeth ↔ Floss
+                [3, 1776936635163],    // Strength training ↔ Cardio
+                [33, 47],              // Hair management ↔ Cut chest hair
+            ];
+            const habits = loadHabits();
+            let changed = false;
+            for (const [a, b] of pairs) {
+                const ha = habits.find(h => h.id === a);
+                const hb = habits.find(h => h.id === b);
+                if (!ha || !hb) continue;
+                if (ha.linkedHabit || hb.linkedHabit) continue;
+                ha.linkedHabit = b;
+                hb.linkedHabit = a;
+                changed = true;
+            }
+            if (changed) saveHabits(habits);
+            localStorage.setItem(KEY, '1');
+        })();
+
         // Update scores on page load to persist momentum for missed days
         updateAllHabitScores();
         updateDisplay();
+
+        // When a number input gains focus, select its current value so the
+        // user can type to overwrite. Inline `onfocus="this.select()"` runs
+        // before the touch's cursor-positioning on mobile and gets overridden
+        // — deferring with setTimeout(0) lets the click finish first, so the
+        // selection sticks. Covers any number-like input (type="number" or
+        // inputmode="numeric") anywhere in the UI, current or future.
+        document.addEventListener('focusin', e => {
+            const t = e.target;
+            if (t.tagName !== 'INPUT') return;
+            if (t.type !== 'number' && t.inputMode !== 'numeric') return;
+            setTimeout(() => {
+                try { t.select(); } catch (_) {}
+            }, 0);
+        });
 
         // Initialize PWA and notifications.
         // Wait for the service worker to register before scheduling — otherwise

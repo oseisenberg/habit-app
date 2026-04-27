@@ -55,14 +55,14 @@
             <div class="settings-row">
                 <span class="settings-label">Morning starts at</span>
                 <div class="settings-value">
-                    <input type="number" class="settings-input" id="morningStart" min="0" max="23" value="5" onfocus="this.select()">
+                    <input type="number" class="settings-input" id="morningStart" min="0" max="23" value="5">
                     <span style="color:#666">:00</span>
                 </div>
             </div>
             <div class="settings-row">
                 <span class="settings-label">Bedtime starts at</span>
                 <div class="settings-value">
-                    <input type="number" class="settings-input" id="nightStart" min="0" max="23" value="18" onfocus="this.select()">
+                    <input type="number" class="settings-input" id="nightStart" min="0" max="23" value="18">
                     <span style="color:#666">:00</span>
                 </div>
             </div>
@@ -78,7 +78,7 @@
             </div>
 
             <!-- Notifications Section -->
-            <div class="settings-row" style="margin-top:16px; border-top:1px solid #333; padding-top:16px;">
+            <div class="settings-row" style="margin-top:8px; border-top:1px solid #333; padding-top:10px;">
                 <span class="settings-label">Notifications</span>
                 <label class="toggle-switch">
                     <input type="checkbox" id="notificationsEnabled" onchange="toggleNotifications()">
@@ -89,14 +89,14 @@
                 <div class="settings-row">
                     <span class="settings-label">Morning reminder</span>
                     <div class="settings-value">
-                        <input type="number" class="settings-input" id="morningReminderTime" min="0" max="23" value="5" onfocus="this.select()">
+                        <input type="number" class="settings-input" id="morningReminderTime" min="0" max="23" value="5">
                         <span style="color:#666">:00</span>
                     </div>
                 </div>
                 <div class="settings-row">
                     <span class="settings-label">Night reminder</span>
                     <div class="settings-value">
-                        <input type="number" class="settings-input" id="nightReminderTime" min="0" max="23" value="18" onfocus="this.select()">
+                        <input type="number" class="settings-input" id="nightReminderTime" min="0" max="23" value="18">
                         <span style="color:#666">:00</span>
                     </div>
                 </div>
@@ -111,14 +111,14 @@
                     <div class="settings-row">
                         <span class="settings-label" style="padding-left:12px">Alert time</span>
                         <div class="settings-value">
-                            <input type="number" class="settings-input" id="momentumAlertTime" min="0" max="23" value="18" onfocus="this.select()">
+                            <input type="number" class="settings-input" id="momentumAlertTime" min="0" max="23" value="18">
                             <span style="color:#666">:00</span>
                         </div>
                     </div>
                     <div class="settings-row">
                         <span class="settings-label" style="padding-left:12px">Threshold</span>
                         <div class="settings-value">
-                            <input type="number" class="settings-input" id="momentumAlertThreshold" min="-100" max="0" value="-20" onfocus="this.select()">
+                            <input type="number" class="settings-input" id="momentumAlertThreshold" min="-100" max="0" value="-20">
                         </div>
                     </div>
                 </div>
@@ -133,14 +133,14 @@
                     <div class="settings-row">
                         <span class="settings-label" style="padding-left:12px">From</span>
                         <div class="settings-value">
-                            <input type="number" class="settings-input" id="quietHoursStart" min="0" max="23" value="22" onfocus="this.select()">
+                            <input type="number" class="settings-input" id="quietHoursStart" min="0" max="23" value="22">
                             <span style="color:#666">:00</span>
                         </div>
                     </div>
                     <div class="settings-row">
                         <span class="settings-label" style="padding-left:12px">Until</span>
                         <div class="settings-value">
-                            <input type="number" class="settings-input" id="quietHoursEnd" min="0" max="23" value="7" onfocus="this.select()">
+                            <input type="number" class="settings-input" id="quietHoursEnd" min="0" max="23" value="7">
                             <span style="color:#666">:00</span>
                         </div>
                     </div>
@@ -197,6 +197,11 @@
     <!-- Description Confirmation Popup -->
     <div class="points-popup-overlay" id="confirmDescPopupOverlay" onclick="handleOverlayClick(event, 'confirmDescPopupOverlay', closeConfirmDescPopup)">
         <div class="points-popup" id="confirmDescPopup"></div>
+    </div>
+
+    <!-- Tag Glossary Popup -->
+    <div class="points-popup-overlay" id="tagGlossaryOverlay" onclick="handleOverlayClick(event, 'tagGlossaryOverlay', closeTagGlossary)">
+        <div class="points-popup" id="tagGlossaryPopup" data-no-swipe-dismiss></div>
     </div>
 
     <!-- All Habits View -->
