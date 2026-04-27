@@ -4397,6 +4397,33 @@
             loadTestData();
         }
 
+        // One-time companion-link migration. Apply curated pairings to
+        // existing saved habits if neither side already has a link set —
+        // never overwrite a user-chosen link. Tracked by a localStorage
+        // flag so it runs at most once per device.
+        (function migrateCompanionLinks() {
+            const KEY = 'migration_companion_links_v1';
+            if (localStorage.getItem(KEY)) return;
+            const pairs = [
+                [36, 38],              // Brush teeth ↔ Floss
+                [3, 1776936635163],    // Strength training ↔ Cardio
+                [33, 47],              // Hair management ↔ Cut chest hair
+            ];
+            const habits = loadHabits();
+            let changed = false;
+            for (const [a, b] of pairs) {
+                const ha = habits.find(h => h.id === a);
+                const hb = habits.find(h => h.id === b);
+                if (!ha || !hb) continue;
+                if (ha.linkedHabit || hb.linkedHabit) continue;
+                ha.linkedHabit = b;
+                hb.linkedHabit = a;
+                changed = true;
+            }
+            if (changed) saveHabits(habits);
+            localStorage.setItem(KEY, '1');
+        })();
+
         // Update scores on page load to persist momentum for missed days
         updateAllHabitScores();
         updateDisplay();
