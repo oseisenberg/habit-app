@@ -101,6 +101,7 @@
             showAutoCompletes: false,            // show auto-completes field
             linkedHabit: '',                     // habit ID of a companion habit (visual link only, bidirectional, no auto-completion)
             showLinkedHabit: false,              // show linked-habit field
+            showAllPills: false,                 // expand the options list to show all pills (default hides least-used)
             everyXValue: null,                   // number value for "every X days/weeks/months"
             timesValue: null,                    // number value for "X times per period"
             pointsValue: null                    // number value for "X points per period"
@@ -133,6 +134,7 @@
             formState.showAutoCompletes = false;
             formState.linkedHabit = '';
             formState.showLinkedHabit = false;
+            formState.showAllPills = false;
             formState.everyXValue = null;
             formState.timesValue = null;
             formState.pointsValue = null;
@@ -181,6 +183,7 @@
             formState.showAutoCompletes = !!habit.autoCompletes;
             formState.linkedHabit = habit.linkedHabit || '';
             formState.showLinkedHabit = !!habit.linkedHabit;
+            formState.showAllPills = false;
 
             // Initialize number values from habit
             formState.everyXValue = habit.frequency.everyXDays || habit.frequency.everyXWeeks || habit.frequency.everyXMonths || null;
@@ -316,50 +319,61 @@
                 <div class="form-group">
                     <label class="form-label">Options</label>
                     <div class="task-options">
-                        <label class="option-pill ${state.showSubtasks ? 'active' : ''}" id="${isEdit ? 'editSubtasksPill' : 'subtasksPill'}" onclick="toggleFormSubtasks()">
-                            <span class="option-pill-check">✓</span>
-                            <span>Subtasks</span>
-                        </label>
-                        <label class="option-pill ${state.isPointsMode ? 'active' : ''} ${pointsDisabled ? 'disabled' : ''}" id="${isEdit ? 'editPointsPill' : 'pointsPill'}" onclick="toggleFormPointsMode()">
-                            <span class="option-pill-check">✓</span>
-                            <span>Points</span>
-                        </label>
-                        <label class="option-pill ${state.allowOptional ? 'active' : ''}" id="${isEdit ? 'editOptionalPill' : 'optionalPill'}" onclick="toggleFormAllowOptional()">
-                            <span class="option-pill-check">✓</span>
-                            <span>Allow extra</span>
-                        </label>
-                        <label class="option-pill ${state.isReminderMode ? 'active' : ''}" id="${isEdit ? 'editReminderPill' : 'reminderPill'}" onclick="toggleFormReminderMode()">
-                            <span class="option-pill-check">✓</span>
-                            <span>Reminder</span>
-                        </label>
-                        <label class="option-pill ${state.isMedium ? 'active' : ''}" id="${isEdit ? 'editMediumPill' : 'mediumPill'}" onclick="toggleFormIsMedium()">
-                            <span class="option-pill-check">✓</span>
-                            <span>Medium</span>
-                        </label>
-                        <label class="option-pill ${state.isLarge ? 'active' : ''}" id="${isEdit ? 'editLargePill' : 'largePill'}" onclick="toggleFormIsLarge()">
-                            <span class="option-pill-check">✓</span>
-                            <span>Large</span>
-                        </label>
-                        <label class="option-pill ${state.showDescription ? 'active' : ''}" id="${isEdit ? 'editDescPill' : 'descPill'}" onclick="toggleFormDescription()">
-                            <span class="option-pill-check">✓</span>
-                            <span>Description</span>
-                        </label>
-                        <label class="option-pill ${state.isNegative ? 'active' : ''}" id="${isEdit ? 'editNegativePill' : 'negativePill'}" onclick="toggleFormNegative()" style="${state.isNegative ? 'border-color:#dc2626;background:rgba(220,38,38,0.15)' : ''}">
-                            <span class="option-pill-check">✓</span>
-                            <span>Negative</span>
-                        </label>
-                        <label class="option-pill ${state.confirmDescription ? 'active' : ''}" id="${isEdit ? 'editConfirmDescPill' : 'confirmDescPill'}" onclick="toggleFormConfirmDescription()" style="${state.confirmDescription ? 'border-color:#f59e0b;background:rgba(245,158,11,0.15)' : ''}">
-                            <span class="option-pill-check">✓</span>
-                            <span>Confirm</span>
-                        </label>
-                        <label class="option-pill ${state.showAutoCompletes ? 'active' : ''}" id="${isEdit ? 'editAutoCompletesPill' : 'autoCompletesPill'}" onclick="toggleFormAutoCompletes()">
-                            <span class="option-pill-check">✓</span>
-                            <span>Auto-complete</span>
-                        </label>
-                        <label class="option-pill ${state.showLinkedHabit ? 'active' : ''}" id="${isEdit ? 'editLinkedHabitPill' : 'linkedHabitPill'}" onclick="toggleFormLinkedHabit()">
-                            <span class="option-pill-check">✓</span>
-                            <span>Link</span>
-                        </label>
+                        ${(() => {
+                            // Build the pill list once, then sort the inactive
+                            // ones by how often each option is used across the
+                            // user's existing habits. The least-used inactive
+                            // pills get hidden behind a "More" chip so the
+                            // form stays compact for new users while power
+                            // users still see the options they reach for most.
+                            const allHabits = loadHabits();
+                            const count = fn => allHabits.filter(fn).length;
+                            const pills = [
+                                { id: 'subtasks',    label: 'Subtasks',      active: state.showSubtasks,        domId: isEdit ? 'editSubtasksPill' : 'subtasksPill',           onclick: 'toggleFormSubtasks()',          usage: count(h => h.subtasks?.length > 0) },
+                                { id: 'points',      label: 'Points',        active: state.isPointsMode,        domId: isEdit ? 'editPointsPill' : 'pointsPill',               onclick: 'toggleFormPointsMode()',        usage: count(h => h.usePoints), extraClass: pointsDisabled ? 'disabled' : '' },
+                                { id: 'optional',    label: 'Allow extra',   active: state.allowOptional,       domId: isEdit ? 'editOptionalPill' : 'optionalPill',           onclick: 'toggleFormAllowOptional()',     usage: count(h => h.allowOptional !== false) },
+                                { id: 'reminder',    label: 'Reminder',      active: state.isReminderMode,      domId: isEdit ? 'editReminderPill' : 'reminderPill',           onclick: 'toggleFormReminderMode()',      usage: count(h => h.isReminder || h.frequency?.type === FREQ.REMINDER) },
+                                { id: 'medium',      label: 'Medium',        active: state.isMedium,            domId: isEdit ? 'editMediumPill' : 'mediumPill',               onclick: 'toggleFormIsMedium()',          usage: count(h => h.isMedium) },
+                                { id: 'large',       label: 'Large',         active: state.isLarge,             domId: isEdit ? 'editLargePill' : 'largePill',                 onclick: 'toggleFormIsLarge()',           usage: count(h => h.isLarge) },
+                                { id: 'desc',        label: 'Description',   active: state.showDescription,     domId: isEdit ? 'editDescPill' : 'descPill',                   onclick: 'toggleFormDescription()',       usage: count(h => !!h.description) },
+                                { id: 'negative',    label: 'Negative',      active: state.isNegative,          domId: isEdit ? 'editNegativePill' : 'negativePill',           onclick: 'toggleFormNegative()',          usage: count(h => h.isNegative),          activeStyle: 'border-color:#dc2626;background:rgba(220,38,38,0.15)' },
+                                { id: 'confirm',     label: 'Confirm',       active: state.confirmDescription,  domId: isEdit ? 'editConfirmDescPill' : 'confirmDescPill',     onclick: 'toggleFormConfirmDescription()',usage: count(h => h.confirmDescription),  activeStyle: 'border-color:#f59e0b;background:rgba(245,158,11,0.15)' },
+                                { id: 'autoComplete',label: 'Auto-complete', active: state.showAutoCompletes,   domId: isEdit ? 'editAutoCompletesPill' : 'autoCompletesPill', onclick: 'toggleFormAutoCompletes()',     usage: count(h => !!h.autoCompletes) },
+                                { id: 'link',        label: 'Link',          active: state.showLinkedHabit,     domId: isEdit ? 'editLinkedHabitPill' : 'linkedHabitPill',     onclick: 'toggleFormLinkedHabit()',       usage: count(h => !!h.linkedHabit) },
+                            ];
+
+                            // Hide up to HIDE_COUNT least-used inactive pills.
+                            // Active pills always stay visible so the user can
+                            // see (and disable) what's currently set.
+                            const HIDE_COUNT = 5;
+                            const hidden = new Set();
+                            if (!state.showAllPills) {
+                                const inactiveIdx = pills
+                                    .map((p, i) => ({ p, i }))
+                                    .filter(({ p }) => !p.active)
+                                    .sort((a, b) => a.p.usage - b.p.usage || a.i - b.i)
+                                    .slice(0, HIDE_COUNT)
+                                    .map(({ p }) => p.id);
+                                inactiveIdx.forEach(id => hidden.add(id));
+                            }
+
+                            const renderPill = p => {
+                                const cls = `option-pill ${p.active ? 'active' : ''} ${p.extraClass || ''}`.trim();
+                                const styleAttr = p.active && p.activeStyle ? ` style="${p.activeStyle}"` : '';
+                                return `<label class="${cls}" id="${p.domId}" onclick="${p.onclick}"${styleAttr}>
+                                    <span class="option-pill-check">✓</span>
+                                    <span>${p.label}</span>
+                                </label>`;
+                            };
+
+                            const visible = pills.filter(p => !hidden.has(p.id)).map(renderPill).join('');
+                            const more = hidden.size > 0
+                                ? `<label class="option-pill option-pill-more" onclick="toggleFormShowAllPills()">
+                                       <span>+ More</span>
+                                   </label>`
+                                : '';
+                            return visible + more;
+                        })()}
                     </div>
                 </div>
                 ${state.showDescription ? `<div class="form-group">
@@ -533,6 +547,11 @@
 
         function toggleFormLinkedHabit() {
             formState.showLinkedHabit = !formState.showLinkedHabit;
+            rerenderForm();
+        }
+
+        function toggleFormShowAllPills() {
+            formState.showAllPills = !formState.showAllPills;
             rerenderForm();
         }
 

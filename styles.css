@@ -291,6 +291,7 @@
         .option-pill.disabled { opacity: 0.35; cursor: not-allowed; }
         .option-pill-check { display: none; font-size: 0.75rem; }
         .option-pill.active .option-pill-check { display: inline; }
+        .option-pill-more { color: #aaa; border-style: dashed; }
 
         .submit-btn {
             width: 100%; padding: 14px; background: #667eea; color: white; border: none;
