@@ -2978,12 +2978,18 @@
             //   only the still-pending partner shows (alone, no pair).
             // - Otherwise (both done OR both pending), drop the higher-id
             //   partner so the lower-id one renders the pair.
+            // - Skip dedup entirely when sizes mismatch (one is Large or
+            //   Medium): renderHabitIcon won't draw a paired wrapper in
+            //   that case, so both partners need to stay in their buckets
+            //   to render independently at their natural sizes.
             habits.forEach(h => {
                 if (!visibleIds.has(h.id) || !h.linkedHabit) return;
                 const lid = Number(h.linkedHabit);
                 if (!lid || lid === h.id) return;
                 const partner = habits.find(ph => ph.id === lid);
                 if (!partner) return;
+                const sizeMismatch = h.isLarge || h.isMedium || partner.isLarge || partner.isMedium;
+                if (sizeMismatch) return;
                 const hDone = isCompletedToday(h);
                 const pDone = isCompletedToday(partner);
                 if (hDone && !pDone) {
@@ -3234,17 +3240,21 @@
 
             // Companion link: bidirectional, visual only — no auto-completion.
             // Render as a pair only when both partners are in the same
-            // completion state today. If exactly one is done, the done one is
-            // dropped by the bucket dedup and the other renders alone here.
+            // completion state today AND neither is sized larger than the
+            // default. A Large or Medium partner inside a paired wrapper
+            // would force both icons down to the compact 78px size, and
+            // when the other partner gets hidden (e.g. completed) the
+            // survivor would visibly "grow" back to its natural size.
             if (habit.linkedHabit) {
                 const linkedId = Number(habit.linkedHabit);
                 if (linkedId && linkedId !== habit.id) {
                     const linked = loadHabits().find(h => h.id === linkedId && !h.archived);
                     if (linked) {
+                        const sizeMismatch = habit.isLarge || habit.isMedium || linked.isLarge || linked.isMedium;
                         const habitDone = isCompletedToday(habit);
                         const linkedDone = isCompletedToday(linked);
                         const sameState = habitDone === linkedDone;
-                        if (sameState && habit.id < linkedId) {
+                        if (!sizeMismatch && sameState && habit.id < linkedId) {
                             const aInner = renderHabitIconInner(habit, isLater, isCompleted);
                             const bInner = renderHabitIconInner(linked, isLater, isCompleted);
                             return `<div class="habit-icon-wrapper linked-pair companion-pair">${aInner}<div class="link-line"></div>${bInner}</div>`;
