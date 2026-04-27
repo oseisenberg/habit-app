@@ -970,7 +970,20 @@
             const enabled = document.getElementById('quietHoursEnabled').checked;
             document.getElementById('quietHoursSettings').style.display = enabled ? 'block' : 'none';
         }
-        function saveSettings() {
+        async function saveSettings() {
+            const wantNotifications = document.getElementById('notificationsEnabled').checked;
+            // If notifications are turned on but the browser hasn't granted
+            // permission yet (e.g. first run with the default), request it now.
+            // Without this, scheduleNotifications() runs but every send is
+            // silently dropped until the user flips the toggle off and on.
+            if (wantNotifications && 'Notification' in window && Notification.permission !== 'granted') {
+                const permission = await requestNotificationPermission();
+                if (permission !== 'granted') {
+                    document.getElementById('notificationsEnabled').checked = false;
+                    document.getElementById('notificationSettings').style.display = 'none';
+                    alert('Notification permission denied. Please enable in browser settings.');
+                }
+            }
             const settings = {
                 morningStart: parseInt(document.getElementById('morningStart').value) || 5,
                 nightStart: parseInt(document.getElementById('nightStart').value) || 18,
@@ -2349,7 +2362,7 @@
                 <div style="padding:16px;color:#ccc;font-size:0.95rem;line-height:1.5">${formatDescription(habit.description || 'No description')}</div>
                 <div style="padding:0 16px 16px;display:flex;gap:8px">
                     <button class="submit-btn secondary" onclick="closeConfirmDescPopup()" style="flex:1">Cancel</button>
-                    <button class="submit-btn" onclick="confirmAndCompleteHabit()" style="flex:1">Complete</button>
+                    <button class="submit-btn" onclick="confirmAndCompleteHabit()" style="flex:1;background:#4ade80">Complete</button>
                 </div>
             `;
             document.getElementById('confirmDescPopupOverlay').classList.add('active');
@@ -4142,7 +4155,11 @@
             const swipeDelta = swipeEndY - swipeStartY;
             const elementToReset = swipeElement; // Save reference before clearing
 
-            if (swipeActive && swipeDelta > 40) {
+            // Small popups (points/snooze/confirm/emoji/subtask) are easy to
+            // dismiss by accident — keep the older 80px threshold for them so
+            // the Confirm-description popup doesn't slip away mid-tap.
+            const dismissThreshold = swipeElement.classList.contains('modal') ? 40 : 80;
+            if (swipeActive && swipeDelta > dismissThreshold) {
                 // Animate the slide-out via inline transform AND close the
                 // overlay immediately so it stops catching taps that should
                 // reach the buttons underneath. Both happen in parallel: the
