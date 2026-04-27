@@ -22,22 +22,27 @@
         .habit-icon-wrapper.medium .habit-ring { width: 200px; height: 78px; border-radius: 20px; }
         .habit-icon-wrapper.medium .habit-ring::before { width: 188px; height: 66px; border-radius: 14px; }
 
-        /* Linked pair: two habit icons in one row connected by a line */
+        /* Linked pair: two habit icons in one row connected by a line.
+         * The wrapper still occupies exactly 2 grid columns; the line is
+         * kept thin so two 78px rings + line fit inside the 2-column slot
+         * without overflowing and pushing neighbouring habits out of
+         * alignment. */
         .habit-icon-wrapper.linked-pair {
             grid-column: span 2;
             flex-direction: row;
             align-items: center;
             justify-content: center;
             gap: 0;
-            /* Match a single-icon wrapper's content height (78px ring + 4px
-             * vertical padding inside .habit-icon). Without this, row-flex
-             * vs column-flex can resolve to subtly different wrapper heights,
-             * shifting the linked rings up/down relative to non-linked rings
-             * in the same grid row. */
             min-height: 82px;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .habit-icon-wrapper.linked-pair .habit-icon {
+            flex: 0 0 auto;
         }
         .habit-icon-wrapper.linked-pair .link-line {
-            flex: 0 0 22px;
+            flex: 0 1 12px;
+            min-width: 6px;
             height: 3px;
             background: #4a4a5e;
             border-radius: 2px;

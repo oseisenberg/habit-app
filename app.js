@@ -371,7 +371,7 @@
                         <select class="form-input" id="${isEdit ? 'editFrequencySelect' : 'frequencySelect'}" onchange="selectFormFrequency(this.value)" style="flex:1">
                             <option value="${FREQ.DAILY}" ${state.frequency === FREQ.DAILY ? 'selected' : ''}>Daily</option>
                             <option value="${FREQ.TWICE_DAILY}" ${state.frequency === FREQ.TWICE_DAILY ? 'selected' : ''} ${state.isPointsMode ? 'disabled' : ''}>Morning & Bedtime${state.isPointsMode ? ' (not with Points)' : ''}</option>
-                            <option value="${FREQ.EVERY_X_DAYS}" ${state.frequency === FREQ.EVERY_X_DAYS ? 'selected' : ''}>After completion</option>
+                            <option value="${FREQ.EVERY_X_DAYS}" ${state.frequency === FREQ.EVERY_X_DAYS ? 'selected' : ''}>Completion</option>
                             <option value="${FREQ.TIMES_PER_PERIOD}" ${state.frequency === FREQ.TIMES_PER_PERIOD ? 'selected' : ''}>Within period</option>
                         </select>
                         <div id="${isEdit ? 'editFrequencyInputs' : 'frequencyInputs'}">${freqInputsHtml}</div>
@@ -2343,6 +2343,28 @@
             renderHabits();
         }
 
+        // For habits scheduled for a future day (already completed in the
+        // past, not yet due today): drop the most recent past completion so
+        // today becomes due, but don't mark it complete. The user then taps
+        // the green Complete button to actually complete it.
+        function moveScheduleToToday(id) {
+            const habits = loadHabits();
+            const habit = habits.find(h => h.id === id);
+            if (!habit || habit.completions.length === 0) return;
+
+            const today = getTodayString();
+            const pastCompletions = habit.completions.filter(c => c.date !== today);
+            if (pastCompletions.length === 0) return;
+
+            pastCompletions.sort((a, b) => b.date.localeCompare(a.date));
+            const mostRecent = pastCompletions[0];
+            habit.completions = habit.completions.filter(c => c !== mostRecent);
+
+            saveHabits(habits);
+            renderDetails();
+            renderHabits();
+        }
+
         // Description confirmation popup
         let confirmDescHabitId = null;
         let confirmDescPeriod = null;
@@ -3450,7 +3472,15 @@
 
         function openDetails(id) {
             selectedHabitId = id;
-            detailsOpenedFromAllHabits = false;
+            // If All Habits is currently open, remember to return there on
+            // close. This covers any caller that lands here from the All
+            // Habits view without going through openDetailsFromAllHabits
+            // explicitly.
+            const fromAllHabits = document.getElementById('allHabitsOverlay').classList.contains('active');
+            detailsOpenedFromAllHabits = fromAllHabits;
+            if (fromAllHabits) {
+                document.getElementById('allHabitsOverlay').classList.remove('active');
+            }
             editMode = false;
             formMode = 'create';
             renderDetails();
@@ -3738,7 +3768,16 @@
                 let undoButton = '';
                 let moveToTodayButton = '';
                 if (!completedToday) {
-                    if (isPointsBased) {
+                    const pastCompletions = habit.completions.filter(c => c.date !== today);
+                    // Already completed in the past and won't be due again
+                    // until a future day. Replace the green Complete with an
+                    // orange "Move to Today" — tapping it pulls the schedule
+                    // forward (drops the blocking past completion) so today
+                    // becomes due, leaving the user to tap Complete next.
+                    const futureDue = pastCompletions.length > 0 && !isDueToday(habit);
+                    if (futureDue) {
+                        completeButton = `<button id="detailsCompleteBtn" class="submit-btn" style="flex:1;background:#ea580c" onclick="moveScheduleToToday(${habit.id})">Move to Today</button>`;
+                    } else if (isPointsBased) {
                         completeButton = `<button id="detailsCompleteBtn" class="submit-btn" style="flex:1;background:#4ade80" onclick="closeDetails();openPointsPopup(${habit.id})">Complete</button>`;
                     } else if (isTwiceDaily) {
                         const canComplete = !status.morningDone || !status.nightDone;
@@ -3748,9 +3787,11 @@
                     } else {
                         completeButton = `<button id="detailsCompleteBtn" class="submit-btn" style="flex:1;background:#4ade80" onclick="completeHabitFromDetails(${habit.id})">Complete</button>`;
                     }
-                    // Show "Move to Today" if there's a past completion to move
-                    const pastCompletions = habit.completions.filter(c => c.date !== today);
-                    if (pastCompletions.length > 0) {
+                    // Show secondary "Move to Today" only when the habit is
+                    // already due today and has past completions to bring
+                    // forward — when futureDue, the orange primary already
+                    // covers the move action.
+                    if (!futureDue && pastCompletions.length > 0) {
                         moveToTodayButton = `<button class="submit-btn secondary" style="flex:1" onclick="moveCompletionToToday(${habit.id})">Move to Today</button>`;
                     }
                 } else {
@@ -4040,7 +4081,30 @@
             }
         }
 
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetails(); closeSettings(); closeSubtaskPopup(); closePointsPopup(); closeEmojiPopup(); closeSnoozePopup(); closeConfirmDescPopup(); closeAllHabits(); } });
+        // Escape closes the topmost open overlay only. Closing one at a time
+        // matters because closeDetails reopens All Habits when the user came
+        // from there — calling closeAllHabits in the same handler would just
+        // close it right back.
+        document.addEventListener('keydown', e => {
+            if (e.key !== 'Escape') return;
+            const closers = [
+                ['confirmDescPopupOverlay', closeConfirmDescPopup],
+                ['snoozePopupOverlay', closeSnoozePopup],
+                ['emojiPopupOverlay', closeEmojiPopup],
+                ['pointsPopupOverlay', closePointsPopup],
+                ['subtaskPopupOverlay', closeSubtaskPopup],
+                ['settingsOverlay', closeSettings],
+                ['detailsOverlay', closeDetails],
+                ['modalOverlay', closeModal],
+                ['allHabitsOverlay', closeAllHabits],
+            ];
+            for (const [id, close] of closers) {
+                if (document.getElementById(id)?.classList.contains('active')) {
+                    close();
+                    return;
+                }
+            }
+        });
 
         // Long press support for touch devices (equivalent to right-click)
         let longPressTimer = null;
