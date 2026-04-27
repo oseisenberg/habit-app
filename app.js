@@ -4131,7 +4131,7 @@
             const swipeDelta = swipeEndY - swipeStartY;
             const elementToReset = swipeElement; // Save reference before clearing
 
-            if (swipeActive && swipeDelta > 80) {
+            if (swipeActive && swipeDelta > 40) {
                 // Animate the slide-out via inline transform AND close the
                 // overlay immediately so it stops catching taps that should
                 // reach the buttons underneath. Both happen in parallel: the
