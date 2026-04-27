@@ -472,6 +472,8 @@
             background: #0f0f1a; border-radius: 8px; cursor: pointer; transition: background 0.1s;
         }
         .subtask-popup-item:active { background: #252540; }
+        .subtask-popup-item-locked { cursor: default; }
+        .subtask-popup-item-locked:active { background: #0f0f1a; }
         .subtask-popup-item .subtask-checkbox { width: 20px; height: 20px; }
         .subtask-popup-item .subtask-name { font-size: 0.85rem; }
 

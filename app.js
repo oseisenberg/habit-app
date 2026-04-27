@@ -101,6 +101,7 @@
             showAutoCompletes: false,            // show auto-completes field
             linkedHabit: '',                     // habit ID of a companion habit (visual link only, bidirectional, no auto-completion)
             showLinkedHabit: false,              // show linked-habit field
+            sequentialSubtasks: false,           // subtasks must be completed in order; popup shows "Complete Next" instead of "Complete All"
             showAllPills: false,                 // expand the options list to show all pills (default hides least-used)
             everyXValue: null,                   // number value for "every X days/weeks/months"
             timesValue: null,                    // number value for "X times per period"
@@ -134,6 +135,7 @@
             formState.showAutoCompletes = false;
             formState.linkedHabit = '';
             formState.showLinkedHabit = false;
+            formState.sequentialSubtasks = false;
             formState.showAllPills = false;
             formState.everyXValue = null;
             formState.timesValue = null;
@@ -183,6 +185,7 @@
             formState.showAutoCompletes = !!habit.autoCompletes;
             formState.linkedHabit = habit.linkedHabit || '';
             formState.showLinkedHabit = !!habit.linkedHabit;
+            formState.sequentialSubtasks = !!habit.sequentialSubtasks;
             formState.showAllPills = false;
 
             // Initialize number values from habit
@@ -340,6 +343,7 @@
                                 { id: 'confirm',     label: 'Confirm',       active: state.confirmDescription,  domId: isEdit ? 'editConfirmDescPill' : 'confirmDescPill',     onclick: 'toggleFormConfirmDescription()',usage: count(h => h.confirmDescription),  activeStyle: 'border-color:#f59e0b;background:rgba(245,158,11,0.15)' },
                                 { id: 'autoComplete',label: 'Auto-complete', active: state.showAutoCompletes,   domId: isEdit ? 'editAutoCompletesPill' : 'autoCompletesPill', onclick: 'toggleFormAutoCompletes()',     usage: count(h => !!h.autoCompletes) },
                                 { id: 'link',        label: 'Link',          active: state.showLinkedHabit,     domId: isEdit ? 'editLinkedHabitPill' : 'linkedHabitPill',     onclick: 'toggleFormLinkedHabit()',       usage: count(h => !!h.linkedHabit) },
+                                { id: 'sequential',  label: 'Sequential',    active: state.sequentialSubtasks,  domId: isEdit ? 'editSequentialPill' : 'sequentialPill',       onclick: 'toggleFormSequentialSubtasks()',usage: count(h => !!h.sequentialSubtasks) },
                             ];
 
                             // Hide up to HIDE_COUNT least-used inactive pills.
@@ -552,6 +556,11 @@
 
         function toggleFormShowAllPills() {
             formState.showAllPills = !formState.showAllPills;
+            rerenderForm();
+        }
+
+        function toggleFormSequentialSubtasks() {
+            formState.sequentialSubtasks = !formState.sequentialSubtasks;
             rerenderForm();
         }
 
@@ -1720,6 +1729,7 @@
                 confirmDescription: formState.confirmDescription,
                 autoCompletes: document.getElementById('autoCompletes')?.value.trim() || '',
                 linkedHabit: '',
+                sequentialSubtasks: formState.sequentialSubtasks,
                 completions: [], skippedDates: [], snoozedUntil: null, subtasks: [...newHabitSubtasks], createdAt: getTodayString()
             });
             const newId = habits[habits.length - 1].id;
@@ -3334,14 +3344,25 @@
 
             const icon = habit.icon || '📌';
             const subtasks = habit.subtasks || [];
+            const isSequential = !!habit.sequentialSubtasks;
 
             const subtaskItems = subtasks.map(s => {
                 const completed = isSubtaskCompleted(habit, s.id);
-                return `<div class="subtask-popup-item" onclick="toggleSubtaskFromPopup(${habit.id}, ${s.id})">
+                // In sequential mode the user can only tick the next pending
+                // item via the Complete Next button — disable individual taps
+                // so they can't skip ahead.
+                const onclick = isSequential ? '' : `onclick="toggleSubtaskFromPopup(${habit.id}, ${s.id})"`;
+                const itemClass = `subtask-popup-item${isSequential ? ' subtask-popup-item-locked' : ''}`;
+                return `<div class="${itemClass}" ${onclick}>
                     <div class="subtask-checkbox ${completed ? 'checked' : ''}"></div>
                     <span class="subtask-name ${completed ? 'completed' : ''}">${escapeHtml(s.name)}</span>
                 </div>`;
             }).join('');
+
+            const allDone = subtasks.length > 0 && subtasks.every(s => isSubtaskCompleted(habit, s.id));
+            const button = isSequential
+                ? `<button class="submit-btn" style="margin-top:12px;width:100%" onclick="completeNextSubtask(${habit.id})" ${allDone ? 'disabled style="margin-top:12px;width:100%;opacity:0.5;cursor:default"' : ''}>Complete Next</button>`
+                : `<button class="submit-btn" style="margin-top:12px;width:100%" onclick="completeHabitWithAllSubtasks(${habit.id})">Complete All</button>`;
 
             document.getElementById('subtaskPopup').innerHTML = `
                 <div class="subtask-popup-header">
@@ -3350,7 +3371,19 @@
                     <button class="subtask-popup-close" onclick="closeSubtaskPopup()">&times;</button>
                 </div>
                 <div class="subtask-popup-list">${subtaskItems}</div>
-                <button class="submit-btn" style="margin-top:12px;width:100%" onclick="completeHabitWithAllSubtasks(${habit.id})">Complete All</button>`;
+                ${button}`;
+        }
+
+        // Sequential mode: tick the next pending subtask (top-to-bottom).
+        // Reuses toggleSubtaskFromPopup so completion, momentum boost,
+        // confirm-description popup, and details auto-close all behave
+        // exactly as if the user had tapped the checkbox themselves.
+        function completeNextSubtask(habitId) {
+            const habit = loadHabits().find(h => h.id === habitId);
+            if (!habit || !habit.subtasks) return;
+            const next = habit.subtasks.find(s => !isSubtaskCompleted(habit, s.id));
+            if (!next) return;
+            toggleSubtaskFromPopup(habitId, next.id);
         }
 
         function completeHabitWithAllSubtasks(habitId) {
@@ -3744,6 +3777,9 @@
             // Save linked-habit (bidirectional companion)
             const linkedRaw = document.getElementById('editLinkedHabit')?.value.trim() || '';
             syncLinkedHabit(habits, habit.id, linkedRaw);
+
+            // Save sequential-subtasks flag
+            habit.sequentialSubtasks = formState.sequentialSubtasks;
 
             saveHabits(habits);
             editMode = false;
