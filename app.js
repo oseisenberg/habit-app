@@ -320,7 +320,10 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Options</label>
+                    <label class="form-label" style="display:flex;align-items:center;gap:6px">
+                        <span>Options</span>
+                        <button type="button" class="tag-glossary-btn" onclick="openTagGlossary()" aria-label="What do these tags do?">?</button>
+                    </label>
                     <div class="task-options">
                         ${(() => {
                             // Build the pill list once, then sort the inactive
@@ -562,6 +565,44 @@
         function toggleFormSequentialSubtasks() {
             formState.sequentialSubtasks = !formState.sequentialSubtasks;
             rerenderForm();
+        }
+
+        // Glossary describing every option pill so the user can look up what
+        // each tag actually does without having to experiment.
+        const TAG_GLOSSARY = [
+            { label: 'Subtasks',      desc: 'Break the habit into a checklist; the habit auto-completes when every subtask is done.' },
+            { label: 'Points',        desc: 'Score each completion (1, 2, or 3 points) and aim for a daily, weekly, or monthly target instead of a fixed count.' },
+            { label: 'Allow extra',   desc: 'After hitting the target, completions stay tickable in an Optional section so you can keep going without breaking the count.' },
+            { label: 'Reminder',      desc: 'Treat as a recurring nudge rather than a streak — momentum resets to zero on completion instead of building up.' },
+            { label: 'Medium',        desc: 'Lay this habit out across two grid columns for emphasis.' },
+            { label: 'Large',         desc: 'Lay this habit out across two columns and two rows — the biggest tile.' },
+            { label: 'Description',   desc: 'Attach freeform notes that show on the details page.' },
+            { label: 'Negative',      desc: 'Track avoiding something. Tapping logs an incident (red ring) instead of a completion.' },
+            { label: 'Confirm',       desc: 'Ask for confirmation before completing — pops up the description so you can re-read it first.' },
+            { label: 'Auto-complete', desc: 'Completing this habit also marks another linked habit complete (one-way).' },
+            { label: 'Link',          desc: 'Pair with another habit visually so they sit side-by-side in the grid. Bidirectional, but completion does not transfer.' },
+            { label: 'Sequential',    desc: 'Subtasks must be ticked top-to-bottom via a Complete Next button. Individual rows are not tappable; no Complete All shortcut.' },
+        ];
+
+        function openTagGlossary() {
+            const rows = TAG_GLOSSARY.map(t =>
+                `<div style="padding:8px 0;border-bottom:1px solid #2a2a3e">
+                    <div style="font-weight:600;color:#e0e0e0;font-size:0.9rem;margin-bottom:2px">${t.label}</div>
+                    <div style="color:#aaa;font-size:0.8rem;line-height:1.4">${t.desc}</div>
+                </div>`
+            ).join('');
+            document.getElementById('tagGlossaryPopup').innerHTML = `
+                <div class="points-popup-header">
+                    <span>Options reference</span>
+                    <button class="subtask-popup-close" style="margin-left:auto" onclick="closeTagGlossary()">&times;</button>
+                </div>
+                <div style="max-height:60vh;overflow-y:auto;padding:0 4px">${rows}</div>
+                <button class="submit-btn" style="margin-top:12px;width:100%" onclick="closeTagGlossary()">Close</button>`;
+            document.getElementById('tagGlossaryOverlay').classList.add('active');
+        }
+
+        function closeTagGlossary() {
+            document.getElementById('tagGlossaryOverlay').classList.remove('active');
         }
 
         // Bidirectionally sync the linkedHabit field. When habit A links to
@@ -4249,6 +4290,7 @@
         document.addEventListener('keydown', e => {
             if (e.key !== 'Escape') return;
             const closers = [
+                ['tagGlossaryOverlay', closeTagGlossary],
                 ['confirmDescPopupOverlay', closeConfirmDescPopup],
                 ['snoozePopupOverlay', closeSnoozePopup],
                 ['emojiPopupOverlay', closeEmojiPopup],

@@ -292,6 +292,13 @@
         .option-pill-check { display: none; font-size: 0.75rem; }
         .option-pill.active .option-pill-check { display: inline; }
         .option-pill-more { color: #aaa; border-style: dashed; }
+        .tag-glossary-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 18px; height: 18px; padding: 0; border-radius: 50%;
+            background: #2a2a3e; border: 1px solid #444; color: #aaa;
+            font-size: 0.7rem; font-weight: 600; cursor: pointer; line-height: 1;
+        }
+        .tag-glossary-btn:hover { color: #e0e0e0; border-color: #667eea; }
 
         .submit-btn {
             width: 100%; padding: 14px; background: #667eea; color: white; border: none;
