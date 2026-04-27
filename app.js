@@ -3754,11 +3754,11 @@
             editMode = false;
             formMode = 'create';
             resetFormState();
-            // Return to All Habits if that's where we came from
-            if (detailsOpenedFromAllHabits) {
-                detailsOpenedFromAllHabits = false;
-                openAllHabits();
-            }
+            // Closing details always returns to the home screen, even if the
+            // user originally opened the habit from All Habits. The All
+            // Habits view stays closed so the user lands somewhere familiar
+            // instead of being pushed back into a list.
+            detailsOpenedFromAllHabits = false;
         }
 
         function toggleEditMode() {
