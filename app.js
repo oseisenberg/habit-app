@@ -456,10 +456,13 @@
             }
             fitOptionsToTwoLines();
 
-            // Restore focus to the same input after re-render
+            // Restore focus to the same input after re-render. Skip <select>
+            // elements — re-focusing them on mobile re-opens the dropdown
+            // immediately after the user just picked a value, which feels
+            // broken.
             if (focusedId) {
                 const el = document.getElementById(focusedId);
-                if (el) {
+                if (el && el.tagName !== 'SELECT') {
                     el.focus();
                     if (typeof focusedSelStart === 'number' && el.setSelectionRange) {
                         try { el.setSelectionRange(focusedSelStart, focusedSelEnd); } catch(e) {}
@@ -2970,15 +2973,26 @@
                 const lid = Number(h.autoCompletes);
                 if (lid && lid !== h.id) consumedLinkedIds.add(lid);
             });
-            // Companion links: both partners point at each other. The lower-id
-            // partner draws the pair; drop the higher-id one from buckets to
-            // avoid a duplicate icon. Only consume when the lower-id partner
-            // is visible (otherwise hide nothing).
+            // Companion links: both partners point at each other.
+            // - If exactly one is completed today, drop the completed one so
+            //   only the still-pending partner shows (alone, no pair).
+            // - Otherwise (both done OR both pending), drop the higher-id
+            //   partner so the lower-id one renders the pair.
             habits.forEach(h => {
                 if (!visibleIds.has(h.id) || !h.linkedHabit) return;
                 const lid = Number(h.linkedHabit);
                 if (!lid || lid === h.id) return;
-                if (h.id < lid) consumedLinkedIds.add(lid);
+                const partner = habits.find(ph => ph.id === lid);
+                if (!partner) return;
+                const hDone = isCompletedToday(h);
+                const pDone = isCompletedToday(partner);
+                if (hDone && !pDone) {
+                    consumedLinkedIds.add(h.id);
+                } else if (!hDone && pDone) {
+                    consumedLinkedIds.add(lid);
+                } else if (h.id < lid) {
+                    consumedLinkedIds.add(lid);
+                }
             });
             const drop = arr => arr.filter(h => !consumedLinkedIds.has(h.id));
             const nowHabits = drop(cat.now);
@@ -3008,16 +3022,11 @@
                     nowContent += subSection(morningSpecific, '🌅', 'Morning');
                     nowContent += subSection(anytimeHabits, '☀️', 'Anytime');
                 } else if (timeOfDay === PERIOD.NIGHT) {
-                    if (getSettings().separateBedtimeSection) {
-                        nowContent += subSection(bedtimeSpecific, '🌙', 'Bedtime');
-                        nowContent += subSection(anytimeHabits, '☀️', 'Anytime');
-                    } else {
-                        const combined = [...bedtimeSpecific, ...anytimeHabits];
-                        if (combined.length) {
-                            const sorted = [...combined].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0) || (b.isMedium ? 1 : 0) - (a.isMedium ? 1 : 0));
-                            nowContent += `<div class="habits-grid">${sorted.map(h => renderHabitIcon(h)).join('')}</div>`;
-                        }
-                    }
+                    // Always surface bedtime tasks in their own section at
+                    // night so they're visible at the top, not buried in a
+                    // mixed grid with anytime habits.
+                    nowContent += subSection(bedtimeSpecific, '🌙', 'Bedtime');
+                    nowContent += subSection(anytimeHabits, '☀️', 'Anytime');
                 }
                 nowContent += subSection(reminderHabits, '🔔', 'Reminders');
 
@@ -3224,19 +3233,22 @@
             }
 
             // Companion link: bidirectional, visual only — no auto-completion.
-            // Only the lower-id partner draws the pair; the higher-id one is
-            // filtered out of the bucket in renderHabits so it doesn't draw
-            // again. If the partner is missing/archived, fall through and
-            // render this habit alone.
+            // Render as a pair only when both partners are in the same
+            // completion state today. If exactly one is done, the done one is
+            // dropped by the bucket dedup and the other renders alone here.
             if (habit.linkedHabit) {
                 const linkedId = Number(habit.linkedHabit);
-                if (linkedId && linkedId !== habit.id && habit.id < linkedId) {
+                if (linkedId && linkedId !== habit.id) {
                     const linked = loadHabits().find(h => h.id === linkedId && !h.archived);
                     if (linked) {
-                        const partnerCompleted = isCompletedToday(linked);
-                        const aInner = renderHabitIconInner(habit, isLater, isCompleted);
-                        const bInner = renderHabitIconInner(linked, isLater, isCompleted || partnerCompleted);
-                        return `<div class="habit-icon-wrapper linked-pair companion-pair">${aInner}<div class="link-line"></div>${bInner}</div>`;
+                        const habitDone = isCompletedToday(habit);
+                        const linkedDone = isCompletedToday(linked);
+                        const sameState = habitDone === linkedDone;
+                        if (sameState && habit.id < linkedId) {
+                            const aInner = renderHabitIconInner(habit, isLater, isCompleted);
+                            const bInner = renderHabitIconInner(linked, isLater, isCompleted);
+                            return `<div class="habit-icon-wrapper linked-pair companion-pair">${aInner}<div class="link-line"></div>${bInner}</div>`;
+                        }
                     }
                 }
             }
@@ -4429,6 +4441,11 @@
             // so users can interact with number pickers, text fields, date pickers etc.
             const interactive = e.target.closest('input, textarea, select, button, .subtask-drag-handle');
             if (interactive) return;
+            // Popups that contain their own scrollable region opt out of
+            // swipe-to-dismiss — otherwise scrolling the inner content gets
+            // interpreted as a dismiss gesture and closes the popup. Tap-
+            // outside still closes them via handleOverlayClick.
+            if (e.target.closest('[data-no-swipe-dismiss]')) return;
             const modal = e.target.closest('.modal, .subtask-popup, .points-popup, .emoji-popup');
             if (modal) {
                 // Only enable swipe if at top of scrollable content

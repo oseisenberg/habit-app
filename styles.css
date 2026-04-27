@@ -19,8 +19,10 @@
         .habits-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 90px; gap: 8px 0; padding: 8px; justify-items: center; align-items: center; grid-auto-flow: dense; }
         .habit-icon-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .habit-icon-wrapper.medium { grid-column: span 2; }
-        .habit-icon-wrapper.medium .habit-ring { width: 200px; height: 78px; border-radius: 20px; }
-        .habit-icon-wrapper.medium .habit-ring::before { width: 188px; height: 66px; border-radius: 14px; }
+        /* Cap medium tile to the column slot it occupies so it can't bleed
+         * past the grid padding on narrow phones (was a hard 200px). */
+        .habit-icon-wrapper.medium .habit-ring { width: 100%; max-width: 184px; height: 78px; border-radius: 20px; box-sizing: border-box; }
+        .habit-icon-wrapper.medium .habit-ring::before { width: calc(100% - 12px); max-width: 172px; height: 66px; border-radius: 14px; }
 
         /* Linked pair: two habit icons in one row connected by a line.
          * The wrapper still occupies exactly 2 grid columns; the line is
@@ -101,8 +103,8 @@
         .habit-ring.missed { background: rgba(220, 38, 38, 0.15); } /* Muted red for missed tasks (not completed today) */
         .habit-ring.negative { background: linear-gradient(135deg, #2a2a3e 0%, #3d2a2a 100%); border: 2px solid #5c3030; }
         .habit-ring.negative::before { background: #1a1a2e; }
-        .habit-ring.negative-logged { background: #dc2626; border: none; }
-        .habit-ring.negative-logged::before { background: #dc2626; }
+        .habit-ring.negative-logged { background: #2a2a3e; border: 3px solid #dc2626; box-sizing: border-box; }
+        .habit-ring.negative-logged::before { background: #1a1a2e; }
 
         /* Neglect indicators - 1 to 3 red dots along the circle arc */
         .neglect-dots { position: absolute; inset: 0; pointer-events: none; }
@@ -135,7 +137,16 @@
         }
         .habit-ring.split .half-fill.left { left: 0; border-radius: 32px 0 0 32px; }
         .habit-ring.split .half-fill.right { right: 0; border-radius: 0 32px 32px 0; }
-        .habit-ring.split .half-fill.filled { background: #4ade80; }
+        /* Partially-completed half (one period done): outline only, no
+         * green fill. Drop the inner border so the two halves don't draw
+         * a double line down the middle next to the divider. */
+        .habit-ring.split .half-fill.filled {
+            background: transparent;
+            border: 3px solid #4ade80;
+            box-sizing: border-box;
+        }
+        .habit-ring.split .half-fill.left.filled { border-right: none; }
+        .habit-ring.split .half-fill.right.filled { border-left: none; }
         .habit-ring.split .divider {
             position: absolute; width: 2px; height: 100%; left: 50%; transform: translateX(-50%);
             background: linear-gradient(to bottom, transparent 4px, #555 4px, #555 calc(100% - 4px), transparent calc(100% - 4px));
