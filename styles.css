@@ -26,8 +26,15 @@
         .habit-icon-wrapper.linked-pair {
             grid-column: span 2;
             flex-direction: row;
+            align-items: center;
             justify-content: center;
             gap: 0;
+            /* Match a single-icon wrapper's content height (78px ring + 4px
+             * vertical padding inside .habit-icon). Without this, row-flex
+             * vs column-flex can resolve to subtly different wrapper heights,
+             * shifting the linked rings up/down relative to non-linked rings
+             * in the same grid row. */
+            min-height: 82px;
         }
         .habit-icon-wrapper.linked-pair .link-line {
             flex: 0 0 22px;

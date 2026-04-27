@@ -3754,7 +3754,10 @@
                         moveToTodayButton = `<button class="submit-btn secondary" style="flex:1" onclick="moveCompletionToToday(${habit.id})">Move to Today</button>`;
                     }
                 } else {
-                    // Show undo button for completed tasks
+                    // Already completed: keep the Complete button visible but
+                    // disabled/greyed so the layout stays consistent and it's
+                    // clear the action has been taken. Undo sits next to it.
+                    completeButton = `<button id="detailsCompleteBtn" class="submit-btn" style="flex:1;background:#2a2a3e;color:#666;opacity:0.6;cursor:default" disabled>Complete</button>`;
                     undoButton = `<button class="submit-btn secondary" style="flex:1" onclick="undoHabitCompletion(${habit.id})">Undo</button>`;
                 }
 
@@ -4081,6 +4084,13 @@
             }
             if (longPressTriggered) {
                 e.preventDefault();
+                // Clear on the next tick. If the browser still synthesizes a
+                // click after preventDefault, the capture-phase click handler
+                // catches it and resets first. If preventDefault fully
+                // suppresses the click (which it often does on mobile), the
+                // flag would otherwise stay true forever and swallow the next
+                // unrelated tap — e.g. the Settings button.
+                setTimeout(() => { longPressTriggered = false; }, 50);
             }
         });
 
