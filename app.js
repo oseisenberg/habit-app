@@ -349,37 +349,25 @@
                                 { id: 'sequential',  label: 'Sequential',    active: state.sequentialSubtasks,  domId: isEdit ? 'editSequentialPill' : 'sequentialPill',       onclick: 'toggleFormSequentialSubtasks()',usage: count(h => !!h.sequentialSubtasks) },
                             ];
 
-                            // Hide up to HIDE_COUNT least-used inactive pills.
-                            // Active pills always stay visible so the user can
-                            // see (and disable) what's currently set.
-                            const HIDE_COUNT = 5;
-                            const hidden = new Set();
-                            if (!state.showAllPills) {
-                                const inactiveIdx = pills
-                                    .map((p, i) => ({ p, i }))
-                                    .filter(({ p }) => !p.active)
-                                    .sort((a, b) => a.p.usage - b.p.usage || a.i - b.i)
-                                    .slice(0, HIDE_COUNT)
-                                    .map(({ p }) => p.id);
-                                inactiveIdx.forEach(id => hidden.add(id));
-                            }
-
+                            // Render every pill with its usage as data so the
+                            // post-render fitter (fitOptionsToTwoLines) can
+                            // hide the least-used inactive ones until the
+                            // pill row is at most two lines tall. The More
+                            // chip starts hidden and only shows if the fitter
+                            // had to hide anything.
                             const renderPill = p => {
                                 const cls = `option-pill ${p.active ? 'active' : ''} ${p.extraClass || ''}`.trim();
                                 const styleAttr = p.active && p.activeStyle ? ` style="${p.activeStyle}"` : '';
-                                return `<label class="${cls}" id="${p.domId}" onclick="${p.onclick}"${styleAttr}>
+                                return `<label class="${cls}" id="${p.domId}" data-usage="${p.usage}" onclick="${p.onclick}"${styleAttr}>
                                     <span class="option-pill-check">✓</span>
                                     <span>${p.label}</span>
                                 </label>`;
                             };
-
-                            const visible = pills.filter(p => !hidden.has(p.id)).map(renderPill).join('');
-                            const more = hidden.size > 0
-                                ? `<label class="option-pill option-pill-more" onclick="toggleFormShowAllPills()">
-                                       <span>+ More</span>
-                                   </label>`
-                                : '';
-                            return visible + more;
+                            const moreInitialStyle = state.showAllPills ? 'display:none' : 'display:none';
+                            const more = `<label class="option-pill option-pill-more" onclick="toggleFormShowAllPills()" style="${moreInitialStyle}">
+                                <span>+ More</span>
+                            </label>`;
+                            return pills.map(renderPill).join('') + more;
                         })()}
                     </div>
                 </div>
@@ -466,6 +454,7 @@
                 const habit = loadHabits().find(h => h.id === formHabitId);
                 document.getElementById('detailsModal').innerHTML = renderHabitForm(habit);
             }
+            fitOptionsToTwoLines();
 
             // Restore focus to the same input after re-render
             if (focusedId) {
@@ -560,6 +549,47 @@
         function toggleFormShowAllPills() {
             formState.showAllPills = !formState.showAllPills;
             rerenderForm();
+        }
+
+        // After the form HTML is in the DOM, walk the option pills and hide
+        // the least-used inactive ones until the row is at most two lines
+        // tall. The "More" chip is shown only when something was hidden.
+        // Skipped entirely when the user has expanded the row via "More".
+        function fitOptionsToTwoLines() {
+            const container = document.querySelector('.task-options');
+            if (!container) return;
+            const moreChip = container.querySelector('.option-pill-more');
+            const pills = Array.from(container.children).filter(c => c !== moreChip);
+            if (!pills.length) return;
+
+            // Reset to a known state: everything visible, More hidden.
+            pills.forEach(p => { p.style.display = ''; });
+            if (moreChip) moreChip.style.display = 'none';
+
+            if (formState.showAllPills) return; // user opted into see-everything
+
+            const rowCount = () => {
+                const tops = new Set();
+                Array.from(container.children).forEach(c => {
+                    if (c.style.display !== 'none') tops.add(c.offsetTop);
+                });
+                return tops.size;
+            };
+
+            if (rowCount() <= 2) return;
+
+            // Need to hide pills. Show More chip, then hide inactive pills
+            // in least-used order until we fit two lines (including More).
+            if (moreChip) moreChip.style.display = '';
+            const candidates = pills
+                .filter(p => !p.classList.contains('active'))
+                .sort((a, b) =>
+                    parseInt(a.dataset.usage || '0', 10) - parseInt(b.dataset.usage || '0', 10)
+                );
+            for (const pill of candidates) {
+                pill.style.display = 'none';
+                if (rowCount() <= 2) return;
+            }
         }
 
         function toggleFormSequentialSubtasks() {
@@ -1061,6 +1091,7 @@
             // Render the form
             document.getElementById('createModal').innerHTML = renderHabitForm();
             document.getElementById('modalOverlay').classList.add('active');
+            fitOptionsToTwoLines();
             document.getElementById('habitInput').focus();
         }
 
@@ -3842,6 +3873,7 @@
                 formMode = 'edit';
                 formHabitId = habit.id;
                 document.getElementById('detailsModal').innerHTML = renderHabitForm(habit);
+                fitOptionsToTwoLines();
             } else {
                 // View mode
                 const total = habit.completions.length;
