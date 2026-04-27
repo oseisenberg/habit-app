@@ -59,6 +59,15 @@
             border-left-color: #4a4a5e;
             border-right: 0;
         }
+        /* Companion pair: same layout as linked-pair but no arrowhead — the
+         * relationship is bidirectional/visual, not a directional auto-
+         * completion. Slightly different line tint for distinction. */
+        .habit-icon-wrapper.companion-pair .link-line {
+            background: #5a7a9e;
+        }
+        .habit-icon-wrapper.companion-pair .link-line::after {
+            display: none;
+        }
         .habit-icon.linked-muted { opacity: 0.4; }
         .habit-icon-wrapper.large { grid-column: span 2; grid-row: span 2; }
         .habit-icon-wrapper.large .habit-ring { width: 156px; height: 156px; }

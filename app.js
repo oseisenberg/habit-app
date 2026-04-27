@@ -99,6 +99,8 @@
             confirmDescription: false,           // show description popup before completing
             autoCompletes: '',                   // habit ID to auto-complete when this is done
             showAutoCompletes: false,            // show auto-completes field
+            linkedHabit: '',                     // habit ID of a companion habit (visual link only, bidirectional, no auto-completion)
+            showLinkedHabit: false,              // show linked-habit field
             everyXValue: null,                   // number value for "every X days/weeks/months"
             timesValue: null,                    // number value for "X times per period"
             pointsValue: null                    // number value for "X points per period"
@@ -129,6 +131,8 @@
             formState.confirmDescription = false;
             formState.autoCompletes = '';
             formState.showAutoCompletes = false;
+            formState.linkedHabit = '';
+            formState.showLinkedHabit = false;
             formState.everyXValue = null;
             formState.timesValue = null;
             formState.pointsValue = null;
@@ -175,6 +179,8 @@
             formState.confirmDescription = habit.confirmDescription || false;
             formState.autoCompletes = habit.autoCompletes || '';
             formState.showAutoCompletes = !!habit.autoCompletes;
+            formState.linkedHabit = habit.linkedHabit || '';
+            formState.showLinkedHabit = !!habit.linkedHabit;
 
             // Initialize number values from habit
             formState.everyXValue = habit.frequency.everyXDays || habit.frequency.everyXWeeks || habit.frequency.everyXMonths || null;
@@ -350,6 +356,10 @@
                             <span class="option-pill-check">✓</span>
                             <span>Auto-complete</span>
                         </label>
+                        <label class="option-pill ${state.showLinkedHabit ? 'active' : ''}" id="${isEdit ? 'editLinkedHabitPill' : 'linkedHabitPill'}" onclick="toggleFormLinkedHabit()">
+                            <span class="option-pill-check">✓</span>
+                            <span>Link</span>
+                        </label>
                     </div>
                 </div>
                 ${state.showDescription ? `<div class="form-group">
@@ -362,6 +372,15 @@
                         <option value="">None</option>
                         ${loadHabits().filter(h => !habit || h.id !== habit.id).map(h =>
                             `<option value="${h.id}" ${String(state.autoCompletes) === String(h.id) ? 'selected' : ''}>${h.icon || '📌'} ${escapeHtml(h.name)}</option>`
+                        ).join('')}
+                    </select>
+                </div>` : ''}
+                ${state.showLinkedHabit ? `<div class="form-group">
+                    <label class="form-label">Linked with (often done together)</label>
+                    <select class="form-input" id="${isEdit ? 'editLinkedHabit' : 'linkedHabit'}" style="font-size:0.85rem">
+                        <option value="">None</option>
+                        ${loadHabits().filter(h => !habit || h.id !== habit.id).map(h =>
+                            `<option value="${h.id}" ${String(state.linkedHabit) === String(h.id) ? 'selected' : ''}>${h.icon || '📌'} ${escapeHtml(h.name)}</option>`
                         ).join('')}
                     </select>
                 </div>` : ''}
@@ -406,6 +425,8 @@
             const isEdit = formMode === 'edit';
             const autoCompletesSelect = document.getElementById(isEdit ? 'editAutoCompletes' : 'autoCompletes');
             if (autoCompletesSelect) formState.autoCompletes = autoCompletesSelect.value;
+            const linkedHabitSelect = document.getElementById(isEdit ? 'editLinkedHabit' : 'linkedHabit');
+            if (linkedHabitSelect) formState.linkedHabit = linkedHabitSelect.value;
             const everyXInput = document.getElementById(isEdit ? 'editEveryXPeriod' : 'everyXPeriod');
             const timesInput = document.getElementById(isEdit ? 'editTimesPerPeriod' : 'timesPerPeriod');
             const pointsInput = document.getElementById(isEdit ? 'editPointsPerPeriod' : 'pointsPerPeriod');
@@ -508,6 +529,50 @@
         function toggleFormAutoCompletes() {
             formState.showAutoCompletes = !formState.showAutoCompletes;
             rerenderForm();
+        }
+
+        function toggleFormLinkedHabit() {
+            formState.showLinkedHabit = !formState.showLinkedHabit;
+            rerenderForm();
+        }
+
+        // Bidirectionally sync the linkedHabit field. When habit A links to
+        // B, B's link is set to A — and any previous partner of either is
+        // cleared so we never end up with a triangle. Mutates `habits` in
+        // place; caller is responsible for saveHabits().
+        function syncLinkedHabit(habits, habitId, newLinkedRaw) {
+            const habit = habits.find(h => h.id === habitId);
+            if (!habit) return;
+            const newLinkedId = Number(newLinkedRaw) || null;
+            const oldLinkedId = Number(habit.linkedHabit) || null;
+
+            const clearPartnerIfPointsBack = (partnerId, expectedTargetId) => {
+                if (!partnerId) return;
+                const partner = habits.find(h => h.id === partnerId);
+                if (partner && Number(partner.linkedHabit) === expectedTargetId) {
+                    partner.linkedHabit = '';
+                }
+            };
+
+            // Drop the old partner's link to this habit if it pointed back.
+            if (oldLinkedId && oldLinkedId !== newLinkedId) {
+                clearPartnerIfPointsBack(oldLinkedId, habitId);
+            }
+
+            habit.linkedHabit = newLinkedId || '';
+
+            // Wire up the new partner. If the new partner already pointed
+            // somewhere else, clear that stale back-link too.
+            if (newLinkedId && newLinkedId !== habitId) {
+                const newPartner = habits.find(h => h.id === newLinkedId);
+                if (newPartner) {
+                    const newPartnerOldLink = Number(newPartner.linkedHabit) || null;
+                    if (newPartnerOldLink && newPartnerOldLink !== habitId) {
+                        clearPartnerIfPointsBack(newPartnerOldLink, newLinkedId);
+                    }
+                    newPartner.linkedHabit = habitId;
+                }
+            }
         }
 
         function toggleFormSubtasks() {
@@ -1635,8 +1700,12 @@
                 isNegative: formState.isNegative,
                 confirmDescription: formState.confirmDescription,
                 autoCompletes: document.getElementById('autoCompletes')?.value.trim() || '',
+                linkedHabit: '',
                 completions: [], skippedDates: [], snoozedUntil: null, subtasks: [...newHabitSubtasks], createdAt: getTodayString()
             });
+            const newId = habits[habits.length - 1].id;
+            const linkedRaw = document.getElementById('linkedHabit')?.value.trim() || '';
+            if (linkedRaw) syncLinkedHabit(habits, newId, linkedRaw);
             saveHabits(habits);
             closeModal();
             renderHabits();
@@ -1644,7 +1713,12 @@
 
         function deleteHabit(id) {
             if (confirm('Delete this habit?')) {
-                saveHabits(loadHabits().filter(h => h.id !== id));
+                const habits = loadHabits().filter(h => h.id !== id);
+                // Clear any companion-link back-references to the deleted habit
+                habits.forEach(h => {
+                    if (Number(h.linkedHabit) === id) h.linkedHabit = '';
+                });
+                saveHabits(habits);
                 closeDetails();
                 renderHabits();
             }
@@ -2795,6 +2869,16 @@
                 const lid = Number(h.autoCompletes);
                 if (lid && lid !== h.id) consumedLinkedIds.add(lid);
             });
+            // Companion links: both partners point at each other. The lower-id
+            // partner draws the pair; drop the higher-id one from buckets to
+            // avoid a duplicate icon. Only consume when the lower-id partner
+            // is visible (otherwise hide nothing).
+            habits.forEach(h => {
+                if (!visibleIds.has(h.id) || !h.linkedHabit) return;
+                const lid = Number(h.linkedHabit);
+                if (!lid || lid === h.id) return;
+                if (h.id < lid) consumedLinkedIds.add(lid);
+            });
             const drop = arr => arr.filter(h => !consumedLinkedIds.has(h.id));
             const nowHabits = drop(cat.now);
             const optionalHabits = drop(cat.optional);
@@ -3034,6 +3118,24 @@
                         const aInner = renderHabitIconInner(habit, isLater, isCompleted);
                         const bInner = renderHabitIconInner(linked, false, linkedDoneToday, { muted: linkedMuted });
                         return `<div class="habit-icon-wrapper linked-pair">${aInner}<div class="link-line"></div>${bInner}</div>`;
+                    }
+                }
+            }
+
+            // Companion link: bidirectional, visual only — no auto-completion.
+            // Only the lower-id partner draws the pair; the higher-id one is
+            // filtered out of the bucket in renderHabits so it doesn't draw
+            // again. If the partner is missing/archived, fall through and
+            // render this habit alone.
+            if (habit.linkedHabit) {
+                const linkedId = Number(habit.linkedHabit);
+                if (linkedId && linkedId !== habit.id && habit.id < linkedId) {
+                    const linked = loadHabits().find(h => h.id === linkedId && !h.archived);
+                    if (linked) {
+                        const partnerCompleted = isCompletedToday(linked);
+                        const aInner = renderHabitIconInner(habit, isLater, isCompleted);
+                        const bInner = renderHabitIconInner(linked, isLater, isCompleted || partnerCompleted);
+                        return `<div class="habit-icon-wrapper linked-pair companion-pair">${aInner}<div class="link-line"></div>${bInner}</div>`;
                     }
                 }
             }
@@ -3619,6 +3721,10 @@
 
             // Save auto-completes
             habit.autoCompletes = document.getElementById('editAutoCompletes')?.value.trim() || '';
+
+            // Save linked-habit (bidirectional companion)
+            const linkedRaw = document.getElementById('editLinkedHabit')?.value.trim() || '';
+            syncLinkedHabit(habits, habit.id, linkedRaw);
 
             saveHabits(habits);
             editMode = false;
