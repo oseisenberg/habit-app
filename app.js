@@ -204,7 +204,7 @@
             let freqInputsHtml = '';
             if (state.frequency === FREQ.EVERY_X_DAYS) {
                 const afterVal = state.everyXValue ?? habit?.frequency?.everyXDays ?? habit?.frequency?.everyXWeeks ?? habit?.frequency?.everyXMonths ?? DEFAULTS.EVERY_X_DAYS;
-                freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'E' : 'e'}veryXPeriod" value="${afterVal}" min="1" onfocus="this.select()">
+                freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'E' : 'e'}veryXPeriod" value="${afterVal}" min="1">
                     <div class="period-toggle">
                         <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.DAY}')">day</button>
                         <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.WEEK}')">wk</button>
@@ -213,7 +213,7 @@
             } else if (state.frequency === FREQ.TIMES_PER_PERIOD) {
                 if (state.isPointsMode) {
                     const ptsVal = state.pointsValue ?? habit?.frequency?.pointsPerDay ?? habit?.frequency?.pointsPerWeek ?? habit?.frequency?.pointsPerMonth ?? DEFAULTS.POINTS_PER_PERIOD;
-                    freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'P' : 'p'}ointsPerPeriod" value="${ptsVal}" min="1" onfocus="this.select()"><span style="color:#888">pts /</span>
+                    freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'P' : 'p'}ointsPerPeriod" value="${ptsVal}" min="1"><span style="color:#888">pts /</span>
                         <div class="period-toggle">
                             <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.DAY}')">day</button>
                             <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.WEEK}')">wk</button>
@@ -221,7 +221,7 @@
                         </div>`;
                 } else {
                     const timesVal = state.timesValue ?? habit?.frequency?.timesPerDay ?? habit?.frequency?.timesPerWeek ?? habit?.frequency?.timesPerMonth ?? DEFAULTS.TIMES_PER_PERIOD;
-                    freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'T' : 't'}imesPerPeriod" value="${timesVal}" min="1" max="31" onfocus="this.select()">
+                    freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'T' : 't'}imesPerPeriod" value="${timesVal}" min="1" max="31">
                         <div class="period-toggle">
                             <button type="button" class="period-toggle-btn ${state.timesPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('times', '${PERIOD.DAY}')">day</button>
                             <button type="button" class="period-toggle-btn ${state.timesPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('times', '${PERIOD.WEEK}')">wk</button>
@@ -4201,6 +4201,21 @@
         // Update scores on page load to persist momentum for missed days
         updateAllHabitScores();
         updateDisplay();
+
+        // When a number input gains focus, select its current value so the
+        // user can type to overwrite. Inline `onfocus="this.select()"` runs
+        // before the touch's cursor-positioning on mobile and gets overridden
+        // — deferring with setTimeout(0) lets the click finish first, so the
+        // selection sticks. Covers any number-like input (type="number" or
+        // inputmode="numeric") anywhere in the UI, current or future.
+        document.addEventListener('focusin', e => {
+            const t = e.target;
+            if (t.tagName !== 'INPUT') return;
+            if (t.type !== 'number' && t.inputMode !== 'numeric') return;
+            setTimeout(() => {
+                try { t.select(); } catch (_) {}
+            }, 0);
+        });
 
         // Initialize PWA and notifications.
         // Wait for the service worker to register before scheduling — otherwise
