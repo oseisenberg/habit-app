@@ -3997,9 +3997,10 @@
                         moveToTodayButton = `<button class="submit-btn secondary" style="flex:1" onclick="moveCompletionToToday(${habit.id})">Move to Today</button>`;
                     }
                 } else {
-                    // Already completed today: just show Undo. The earlier
-                    // greyed "Complete" button doubled as a status label and
-                    // felt redundant — Undo alone makes the state clear.
+                    // Already completed: keep the Complete button visible but
+                    // disabled/greyed so the layout stays consistent and it's
+                    // clear the action has been taken. Undo sits next to it.
+                    completeButton = `<button id="detailsCompleteBtn" class="submit-btn" style="flex:1;background:#2a2a3e;color:#666;opacity:0.6;cursor:default" disabled>Complete</button>`;
                     undoButton = `<button class="submit-btn secondary" style="flex:1" onclick="undoHabitCompletion(${habit.id})">Undo</button>`;
                 }
 
