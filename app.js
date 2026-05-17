@@ -3771,20 +3771,6 @@
             renderHabits();
         }
 
-        function toggleSubtaskFromDetails(habitId, subtaskId) {
-            const habits = loadHabits();
-            const habit = habits.find(h => h.id === habitId);
-            if (!habit || !habit.subtasks) return;
-
-            const { status } = applySubtaskToggle(habits, habit, subtaskId);
-            if (status === 'noop') return;
-
-            saveHabits(habits);
-            renderHabits();
-            if (status === 'completed') closeDetails();
-            else renderDetails();
-        }
-
         // Points popup functions
         let pointsPopupHabitId = null;
 
@@ -4267,7 +4253,7 @@
                         <div class="subtasks-scroll-container">
                             ${habit.subtasks.map(s => {
                                 const completed = isSubtaskCompleted(habit, s.id);
-                                return `<div class="subtask-item" onclick="toggleSubtaskFromDetails(${habit.id}, ${s.id})">
+                                return `<div class="subtask-item" style="cursor:default">
                                     <div class="subtask-checkbox ${completed ? 'checked' : ''}"></div>
                                     <span class="subtask-name ${completed ? 'completed' : ''}">${escapeHtml(s.name)}</span>
                                 </div>`;
