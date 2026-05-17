@@ -4232,12 +4232,12 @@
                 document.getElementById('detailsModal').innerHTML = `
                     <div class="modal-header"><span></span><button class="modal-close" onclick="closeDetails()">&times;</button></div>
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-                        <div class="details-icon-header" style="flex:1;margin-bottom:0">
+                        <div class="details-icon-header" style="flex:1 1 0;min-width:0;margin-bottom:0">
                             <div class="details-large-icon">${icon}</div>
                             <div class="details-habit-name">${escapeHtml(habit.name)}</div>
                             ${habit.description ? `<div style="color:#888;font-size:0.85rem;margin-top:4px">${formatDescription(habit.description)}</div>` : ''}
                         </div>
-                        ${!isReminder && !habit.noMomentum ? `<div class="momentum-display" style="margin-bottom:0;flex-shrink:0;min-width:92px">
+                        ${!isReminder && !habit.noMomentum ? `<div class="momentum-display" style="margin-bottom:0;flex:2 1 0">
                             <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
                             <div class="momentum-label">Momentum${recoveryText}</div>
                         </div>` : ''}
