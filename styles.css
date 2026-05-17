@@ -22,7 +22,7 @@
         /* Cap medium tile to the column slot it occupies so it can't bleed
          * past the grid padding on narrow phones (was a hard 200px). */
         .habit-icon-wrapper.medium .habit-ring { width: 100%; max-width: 184px; height: 78px; border-radius: 20px; box-sizing: border-box; }
-        .habit-icon-wrapper.medium .habit-ring::before { width: calc(100% - 12px); max-width: 172px; height: 66px; border-radius: 14px; }
+        .habit-icon-wrapper.medium .habit-ring::before { width: calc(100% - 12px); max-width: 172px; height: 66px; border-radius: 14px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
         /* Medium is a 184x78 rounded rect (20px corners), not a circle —
          * the base dot/indicator coords are tuned for the circle arc, so
          * re-anchor the badges to the rounded rect's top-right and
