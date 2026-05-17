@@ -352,7 +352,6 @@
                             const pills = [
                                 { id: 'subtasks',    label: 'Subtasks',      active: state.showSubtasks,        domId: isEdit ? 'editSubtasksPill' : 'subtasksPill',           onclick: 'toggleFormSubtasks()',          usage: count(h => h.subtasks?.length > 0) },
                                 { id: 'points',      label: 'Points',        active: state.isPointsMode,        domId: isEdit ? 'editPointsPill' : 'pointsPill',               onclick: 'toggleFormPointsMode()',        usage: count(h => h.usePoints), extraClass: pointsDisabled ? 'disabled' : '' },
-                                { id: 'optional',    label: 'Allow extra',   active: state.allowOptional,       domId: isEdit ? 'editOptionalPill' : 'optionalPill',           onclick: 'toggleFormAllowOptional()',     usage: count(h => h.allowOptional !== false) },
                                 { id: 'reminder',    label: 'Reminder',      active: state.isReminderMode,      domId: isEdit ? 'editReminderPill' : 'reminderPill',           onclick: 'toggleFormReminderMode()',      usage: count(h => h.isReminder || h.frequency?.type === FREQ.REMINDER) },
                                 { id: 'desc',        label: 'Description',   active: state.showDescription,     domId: isEdit ? 'editDescPill' : 'descPill',                   onclick: 'toggleFormDescription()',       usage: count(h => !!h.description) },
                                 { id: 'confirm',     label: 'Confirm',       active: state.confirmDescription,  domId: isEdit ? 'editConfirmDescPill' : 'confirmDescPill',     onclick: 'toggleFormConfirmDescription()',usage: count(h => h.confirmDescription),  activeStyle: 'border-color:#f59e0b;background:rgba(245,158,11,0.15)' },
@@ -643,7 +642,6 @@
         const TAG_GLOSSARY = [
             { label: 'Subtasks',      desc: 'Break the habit into a checklist; the habit auto-completes when every subtask is done.' },
             { label: 'Points',        desc: 'Score each completion (1, 2, or 3 points) and aim for a daily, weekly, or monthly target instead of a fixed count.' },
-            { label: 'Allow extra',   desc: 'After hitting the target, completions stay tickable in an Optional section so you can keep going without breaking the count.' },
             { label: 'Reminder',      desc: 'Treat as a recurring nudge rather than a streak — momentum resets to zero on completion instead of building up.' },
             { label: 'Description',   desc: 'Attach freeform notes that show on the details page.' },
             { label: 'Confirm',       desc: 'Ask for confirmation before completing — pops up the description so you can re-read it first.' },
