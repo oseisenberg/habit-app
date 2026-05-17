@@ -280,14 +280,15 @@
         .period-toggle { display: inline-flex; border: 1px solid #2a2a3e; border-radius: 8px; overflow: hidden; margin-left: auto; }
         .period-toggle-btn { padding: 8px 12px; font-size: 0.85rem; color: #666; cursor: pointer; border: none; background: #0a0a14; }
         .period-toggle-btn.active { background: #667eea; color: white; }
-        .frequency-row { display: flex; align-items: center; gap: 10px; }
+        .frequency-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; row-gap: 8px; }
+        .frequency-row select { min-width: 8.5rem; }
         .frequency-row #frequencyInputs, .frequency-row #editFrequencyInputs { display: flex; align-items: center; gap: 8px; min-height: 40px; }
         .frequency-row.dimmed { opacity: 0.5; }
         .task-options { display: flex; flex-wrap: wrap; gap: 8px; }
         .option-pill { display: inline-flex; align-items: center; gap: 5px; padding: 8px 14px; background: #0f0f1a; border: 1px solid #2a2a3e; border-radius: 18px; cursor: pointer; font-size: 0.9rem; color: #888; transition: all 0.15s; }
         .option-pill:hover:not(.disabled) { border-color: #444; }
         .option-pill.active { background: rgba(102, 126, 234, 0.15); border-color: #667eea; color: #667eea; }
-        .option-pill.disabled { opacity: 0.35; cursor: not-allowed; }
+        .option-pill.disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
         .option-pill-check { display: none; font-size: 0.75rem; }
         .option-pill.active .option-pill-check { display: inline; }
         .option-pill-more { color: #aaa; border-style: dashed; }
@@ -312,6 +313,26 @@
         .detail-label { color: #888; font-size: 0.75rem; }
         .detail-value { color: #fff; font-size: 0.75rem; }
 
+        .detail-grid { display: grid; gap: 4px; margin: 8px 0; }
+        .detail-cell { background: #0f0f1a; border-radius: 8px; padding: 8px 4px; text-align: center; }
+        .detail-cell .dc-label { font-size: 0.55rem; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+        .detail-cell .dc-value { font-size: 0.8rem; color: #fff; margin-top: 3px; font-weight: 600; }
+        .ah-select-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; cursor: pointer; }
+        .ah-select-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.6px; color: #666; padding-left: 2px; }
+        .ah-select {
+            -webkit-appearance: none; appearance: none; width: 100%;
+            background-color: #16162a; color: #cfcfe0;
+            border: 1px solid #2a2a40; border-radius: 8px;
+            font-size: 0.82rem; font-family: inherit; padding: 9px 28px 9px 10px; cursor: pointer;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M0 0l5 6 5-6z" fill="%23888"/></svg>');
+            background-repeat: no-repeat; background-position: right 10px center;
+        }
+        .ah-select:focus { outline: none; border-color: #667eea; }
+        .kebab-backdrop { position: fixed; inset: 0; z-index: 300; }
+        .kebab-menu { position: fixed; z-index: 301; background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 10px; padding: 6px; min-width: 168px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 2px; }
+        .kebab-menu button { width: 100%; text-align: left; padding: 11px 12px; background: transparent; border: none; color: #ccc; font-size: 0.9rem; cursor: pointer; border-radius: 6px; }
+        .kebab-menu button:active { background: #252540; }
+        .kebab-menu button.danger { color: #f87171; }
         .momentum-display { background: #0f0f1a; border-radius: 10px; padding: 12px; text-align: center; margin-bottom: 10px; }
         .momentum-score { font-size: 1.8rem; font-weight: 700; }
         .momentum-score.positive { color: #4ade80; }
@@ -531,8 +552,8 @@
         .snooze-option:hover { background: linear-gradient(180deg, #2a2a45 0%, #1e1e38 100%); border-color: #667eea; color: #fff; box-shadow: 0 2px 8px rgba(102,126,234,0.2); }
         .snooze-option:active { transform: scale(0.97); }
         .snooze-option-icon { font-size: 1.1rem; }
-        .skip-cycle-btn { background: linear-gradient(180deg, #1a3a2e 0%, #153025 100%) !important; border-color: #2d5a42 !important; color: #6fbc8f !important; }
-        .skip-cycle-btn:hover { background: linear-gradient(180deg, #2d5a42 0%, #1a3a2e 100%) !important; border-color: #40916c !important; color: #fff !important; box-shadow: 0 2px 8px rgba(64,145,108,0.25) !important; }
+        .skip-cycle-btn { background: linear-gradient(180deg, #1e1e32 0%, #16162a 100%) !important; border-color: #33493f !important; color: #8fae9d !important; }
+        .skip-cycle-btn:hover { background: linear-gradient(180deg, #243a31 0%, #1a2a24 100%) !important; border-color: #40916c !important; color: #cfe6da !important; box-shadow: 0 2px 8px rgba(64,145,108,0.15) !important; }
         .snooze-date-row { display: flex; gap: 6px; align-items: stretch; }
         .snooze-date-input { flex: 1; min-width: 0; padding: 12px 10px; border: 1px solid #2a2a40; border-radius: 10px; background: linear-gradient(180deg, #1e1e32 0%, #16162a 100%); color: #b0b0b0; font-size: 0.85rem; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); font-family: inherit; }
         .snooze-date-input:focus { outline: none; border-color: #667eea; color: #fff; }

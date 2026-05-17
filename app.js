@@ -216,9 +216,10 @@
             const currentIcon = state.icon || (habit?.icon) || '📌';
             const habitName = escapeHtml(formState.name || '');
             const habitDesc = escapeHtml(formState.description || '');
-            // Points disabled only for twice daily (morning & bedtime makes no sense with points)
+            // Points only applies to the "Within period" schedule
+            // (points per day/week/month) — disabled for every other type.
             const isTwiceDaily = state.frequency === FREQ.TWICE_DAILY;
-            const pointsDisabled = isTwiceDaily;
+            const pointsDisabled = state.frequency !== FREQ.TIMES_PER_PERIOD;
             // Allow Extra is now compatible with all frequencies
 
             // Build frequency inputs (use lowercase IDs for create, camelCase with 'edit' prefix for edit)
@@ -301,6 +302,10 @@
                 subtasksHtml = `
                     <div class="form-group" id="${isEdit ? 'editSubtasksArea' : 'subtasksInputArea'}" style="${showSubtasksArea ? '' : 'display:none'}">
                         <label class="form-label">Subtasks</label>
+                        <label style="display:flex;align-items:center;gap:8px;margin:2px 0 8px;color:#aaa;font-size:0.82rem;cursor:pointer">
+                            <input type="checkbox" ${state.sequentialSubtasks ? 'checked' : ''} onchange="setFormSequentialSubtasks(this.checked)" style="accent-color:#667eea">
+                            <span>Complete in order (sequential)</span>
+                        </label>
                         ${hasSubtasks ? `<div class="subtasks-scroll-container" id="${isEdit ? 'editSubtasksList' : 'newHabitSubtasksList'}">${subtaskItems}</div>` : `<div id="${isEdit ? 'editSubtasksList' : 'newHabitSubtasksList'}"></div>`}
                         <div class="add-subtask">
                             <input type="text" id="${isEdit ? 'editSubtaskInput' : 'newHabitSubtaskInput'}" placeholder="Add subtask..."
@@ -318,17 +323,12 @@
                     <button class="modal-close" onclick="${isEdit ? 'closeDetails' : 'closeModal'}()">&times;</button>
                 </div>
                 <div class="form-group">
-                    <div style="display:flex;gap:10px;margin-bottom:6px">
-                        <label class="form-label" style="margin:0;width:52px;flex-shrink:0">Icon</label>
-                        <label class="form-label" style="margin:0;flex:1">Name</label>
-                        <label class="form-label" style="margin:0;width:86px;flex-shrink:0;${isTwiceDaily ? 'opacity:0.4' : ''}">Time</label>
-                    </div>
-                    <div style="display:flex;gap:10px;align-items:stretch;height:48px">
-                        <div class="emoji-select-btn" onclick="openEmojiPopup('${isEdit ? 'edit' : 'new'}'${isEdit ? `, ${habit.id}` : ''})" style="flex-shrink:0;width:52px;justify-content:center;box-sizing:border-box;font-size:1.3rem">
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+                        <div class="emoji-select-btn" onclick="openEmojiPopup('${isEdit ? 'edit' : 'new'}'${isEdit ? `, ${habit.id}` : ''})" style="flex-shrink:0;width:64px;height:64px;border-radius:50%;justify-content:center;box-sizing:border-box;font-size:1.7rem">
                             <span class="emoji-select-icon" id="${isEdit ? 'editSelectedEmojiDisplay' : 'selectedEmojiDisplay'}" style="width:auto;height:auto">${currentIcon}</span>
                         </div>
-                        <input type="text" class="form-input" id="${isEdit ? 'editHabitName' : 'habitInput'}" value="${habitName}" placeholder="e.g., Brush teeth..." style="flex:1;margin:0;box-sizing:border-box" onkeypress="if(event.key==='Enter')${isEdit ? 'saveHabitEdit' : 'addHabit'}()" />
-                        <div class="time-toggle ${isTwiceDaily ? 'disabled' : ''}" id="${isEdit ? 'editTimeToggle' : 'timeToggle'}" style="height:100%">
+                        <input type="text" class="form-input" id="${isEdit ? 'editHabitName' : 'habitInput'}" value="${habitName}" placeholder="e.g., Brush teeth..." style="margin:0;box-sizing:border-box;width:100%;max-width:280px;text-align:center" onkeypress="if(event.key==='Enter')${isEdit ? 'saveHabitEdit' : 'addHabit'}()" />
+                        <div class="time-toggle ${isTwiceDaily ? 'disabled' : ''}" id="${isEdit ? 'editTimeToggle' : 'timeToggle'}">
                             <button type="button" class="time-toggle-btn ${state.time === PERIOD.MORNING ? 'active' : ''}" data-time="morning" onclick="${isTwiceDaily ? '' : `toggleFormTime('${PERIOD.MORNING}')`}">🌅</button>
                             <button type="button" class="time-toggle-btn ${state.time === PERIOD.NIGHT ? 'active' : ''}" data-time="night" onclick="${isTwiceDaily ? '' : `toggleFormTime('${PERIOD.NIGHT}')`}">🌙</button>
                         </div>
@@ -352,13 +352,10 @@
                             const pills = [
                                 { id: 'subtasks',    label: 'Subtasks',      active: state.showSubtasks,        domId: isEdit ? 'editSubtasksPill' : 'subtasksPill',           onclick: 'toggleFormSubtasks()',          usage: count(h => h.subtasks?.length > 0) },
                                 { id: 'points',      label: 'Points',        active: state.isPointsMode,        domId: isEdit ? 'editPointsPill' : 'pointsPill',               onclick: 'toggleFormPointsMode()',        usage: count(h => h.usePoints), extraClass: pointsDisabled ? 'disabled' : '' },
-                                { id: 'optional',    label: 'Allow extra',   active: state.allowOptional,       domId: isEdit ? 'editOptionalPill' : 'optionalPill',           onclick: 'toggleFormAllowOptional()',     usage: count(h => h.allowOptional !== false) },
                                 { id: 'reminder',    label: 'Reminder',      active: state.isReminderMode,      domId: isEdit ? 'editReminderPill' : 'reminderPill',           onclick: 'toggleFormReminderMode()',      usage: count(h => h.isReminder || h.frequency?.type === FREQ.REMINDER) },
                                 { id: 'desc',        label: 'Description',   active: state.showDescription,     domId: isEdit ? 'editDescPill' : 'descPill',                   onclick: 'toggleFormDescription()',       usage: count(h => !!h.description) },
-                                { id: 'confirm',     label: 'Confirm',       active: state.confirmDescription,  domId: isEdit ? 'editConfirmDescPill' : 'confirmDescPill',     onclick: 'toggleFormConfirmDescription()',usage: count(h => h.confirmDescription),  activeStyle: 'border-color:#f59e0b;background:rgba(245,158,11,0.15)' },
                                 { id: 'noMomentum',  label: 'No momentum',   active: state.noMomentum,          domId: isEdit ? 'editNoMomentumPill' : 'noMomentumPill',       onclick: 'toggleFormNoMomentum()',        usage: count(h => h.noMomentum) },
                                 { id: 'conflicts',   label: 'Conflicts',     active: state.showConflictsWith,   domId: isEdit ? 'editConflictsPill' : 'conflictsPill',         onclick: 'toggleFormConflictsWith()',     usage: count(h => !!h.conflictsWith) },
-                                { id: 'sequential',  label: 'Sequential',    active: state.sequentialSubtasks,  domId: isEdit ? 'editSequentialPill' : 'sequentialPill',       onclick: 'toggleFormSequentialSubtasks()',usage: count(h => !!h.sequentialSubtasks) },
                             ];
 
                             // Render every pill with its usage as data so the
@@ -386,6 +383,10 @@
                 ${state.showDescription ? `<div class="form-group">
                     <label class="form-label">Description</label>
                     <textarea class="form-input" id="${isEdit ? 'editHabitDesc' : 'habitDesc'}" placeholder="Add a description..." rows="2" style="resize:none;font-size:0.85rem">${habitDesc}</textarea>
+                    <label style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#aaa;font-size:0.82rem;cursor:pointer">
+                        <input type="checkbox" ${state.confirmDescription ? 'checked' : ''} onchange="setFormConfirmDescription(this.checked)" style="accent-color:#f59e0b">
+                        <span>Show description before completing</span>
+                    </label>
                 </div>` : ''}
                 ${state.showAutoCompletes ? `<div class="form-group">
                     <label class="form-label">Auto-completes another habit</label>
@@ -525,11 +526,9 @@
         }
 
         function toggleFormPointsMode() {
+            // Points only makes sense with the "Within period" schedule.
+            if (formState.frequency !== FREQ.TIMES_PER_PERIOD) return;
             formState.isPointsMode = !formState.isPointsMode;
-            // When enabling points, only auto-switch from twice daily (the only incompatible option)
-            if (formState.isPointsMode && formState.frequency === FREQ.TWICE_DAILY) {
-                formState.frequency = FREQ.TIMES_PER_PERIOD;
-            }
             rerenderForm();
         }
 
@@ -552,9 +551,11 @@
             rerenderForm();
         }
 
-        function toggleFormConfirmDescription() {
-            formState.confirmDescription = !formState.confirmDescription;
-            rerenderForm();
+        // Confirm is a sub-option of Description (checkbox under the
+        // textarea), not a standalone tag — no rerender needed since it
+        // doesn't change the form layout.
+        function setFormConfirmDescription(checked) {
+            formState.confirmDescription = !!checked;
         }
 
         function toggleFormNoMomentum() {
@@ -633,9 +634,10 @@
             document.querySelectorAll('.subtask-name-input').forEach(autoGrowSubtask);
         }
 
-        function toggleFormSequentialSubtasks() {
-            formState.sequentialSubtasks = !formState.sequentialSubtasks;
-            rerenderForm();
+        // Sequential is a sub-option of Subtasks (checkbox in the
+        // subtasks area), not a standalone tag — no rerender needed.
+        function setFormSequentialSubtasks(checked) {
+            formState.sequentialSubtasks = !!checked;
         }
 
         // Glossary describing every option pill so the user can look up what
@@ -643,13 +645,10 @@
         const TAG_GLOSSARY = [
             { label: 'Subtasks',      desc: 'Break the habit into a checklist; the habit auto-completes when every subtask is done.' },
             { label: 'Points',        desc: 'Score each completion (1, 2, or 3 points) and aim for a daily, weekly, or monthly target instead of a fixed count.' },
-            { label: 'Allow extra',   desc: 'After hitting the target, completions stay tickable in an Optional section so you can keep going without breaking the count.' },
             { label: 'Reminder',      desc: 'Treat as a recurring nudge rather than a streak — momentum resets to zero on completion instead of building up.' },
             { label: 'Description',   desc: 'Attach freeform notes that show on the details page.' },
-            { label: 'Confirm',       desc: 'Ask for confirmation before completing — pops up the description so you can re-read it first.' },
             { label: 'No momentum',   desc: 'Never tracks momentum — always neutral, no reward or penalty. Still appears in its normal sections like any habit.' },
             { label: 'Conflicts',     desc: 'Hide this habit on any day the chosen habit is due (e.g. skip serum on shampoo days). One-way; momentum is not penalized for those days.' },
-            { label: 'Sequential',    desc: 'Subtasks must be ticked top-to-bottom via a Complete Next button. Individual rows are not tappable; no Complete All shortcut.' },
         ];
 
         function openTagGlossary() {
@@ -724,8 +723,8 @@
             if (f === FREQ.TWICE_DAILY) {
                 formState.time = null;
             }
-            // Auto-disable points for daily/twiceDaily
-            if ((f === FREQ.DAILY || f === FREQ.TWICE_DAILY) && formState.isPointsMode) {
+            // Points only applies to "Within period"; clear it otherwise.
+            if (f !== FREQ.TIMES_PER_PERIOD && formState.isPointsMode) {
                 formState.isPointsMode = false;
             }
             rerenderForm();
@@ -1168,21 +1167,15 @@
             const s = getSettings();
             document.getElementById('morningStart').value = s.morningStart;
             document.getElementById('nightStart').value = s.nightStart;
-            document.getElementById('sortMethod').value = s.sortMethod || 'default';
             document.getElementById('notificationsEnabled').checked = s.notificationsEnabled;
             document.getElementById('morningReminderTime').value = s.morningReminderTime;
             document.getElementById('nightReminderTime').value = s.nightReminderTime;
             document.getElementById('momentumAlertEnabled').checked = s.momentumAlertEnabled;
             document.getElementById('momentumAlertTime').value = s.momentumAlertTime;
             document.getElementById('momentumAlertThreshold').value = s.momentumAlertThreshold;
-            document.getElementById('quietHoursEnabled').checked = s.quietHoursEnabled;
-            document.getElementById('quietHoursStart').value = s.quietHoursStart;
-            document.getElementById('quietHoursEnd').value = s.quietHoursEnd;
-            document.getElementById('weeklySummaryEnabled').checked = s.weeklySummaryEnabled;
             document.getElementById('separateBedtimeSection').checked = s.separateBedtimeSection;
             document.getElementById('notificationSettings').style.display = s.notificationsEnabled ? 'block' : 'none';
             document.getElementById('momentumAlertSettings').style.display = s.momentumAlertEnabled ? 'block' : 'none';
-            document.getElementById('quietHoursSettings').style.display = s.quietHoursEnabled ? 'block' : 'none';
             updateInstallPromptVisibility();
             showOverlay('settingsOverlay');
         }
@@ -1209,20 +1202,17 @@
                     alert('Notification permission denied. Please enable in browser settings.');
                 }
             }
+            const prev = getSettings();
             const settings = {
+                ...prev,
                 morningStart: parseInt(document.getElementById('morningStart').value) || 5,
                 nightStart: parseInt(document.getElementById('nightStart').value) || 18,
-                sortMethod: document.getElementById('sortMethod').value || 'default',
                 notificationsEnabled: document.getElementById('notificationsEnabled').checked,
                 morningReminderTime: parseInt(document.getElementById('morningReminderTime').value) || 5,
                 nightReminderTime: parseInt(document.getElementById('nightReminderTime').value) || 18,
                 momentumAlertEnabled: document.getElementById('momentumAlertEnabled').checked,
                 momentumAlertTime: parseInt(document.getElementById('momentumAlertTime').value) || 18,
                 momentumAlertThreshold: parseInt(document.getElementById('momentumAlertThreshold').value) || -20,
-                quietHoursEnabled: document.getElementById('quietHoursEnabled').checked,
-                quietHoursStart: parseInt(document.getElementById('quietHoursStart').value) || 22,
-                quietHoursEnd: parseInt(document.getElementById('quietHoursEnd').value) || 7,
-                weeklySummaryEnabled: document.getElementById('weeklySummaryEnabled').checked,
                 separateBedtimeSection: document.getElementById('separateBedtimeSection').checked
             };
             try {
@@ -1984,7 +1974,6 @@
             snoozePauseMomentum = pauseMomentum;
             const habit = loadHabits().find(h => h.id === id);
             const cycleDays = habit ? getHabitCycleDays(habit) : 1;
-            const cycleLabel = formatCycleDays(cycleDays);
 
             // Calculate tomorrow relative to the app's effective "today" so the
             // snooze date min/value match what the rest of the app considers today.
@@ -2034,7 +2023,7 @@
                     <div style="display:flex;gap:6px">
                         <button class="snooze-option skip-cycle-btn" onclick="snoozeHabit(${cycleDays})" style="flex:1;margin:0">
                             <span class="snooze-option-icon">⏭️</span>
-                            <span>Skip cycle (${cycleLabel})</span>
+                            <span>Skip cycle</span>
                         </button>
                         <button class="snooze-cancel" onclick="closeSnoozePopup()" style="flex:1;margin:0">Cancel</button>
                     </div>
@@ -3322,6 +3311,12 @@
                 const pct = Math.min(100, Math.round((status.points / status.target) * 100));
                 progress = `${pct}%`;
                 if (pct > 0) ringClass = 'partial';
+            } else if (habit.frequency.type === FREQ.TIMES_PER_DAY) {
+                // Fill the ring proportionally per completion (e.g. 1/3,
+                // 2/3); scales to whatever the daily target is.
+                const pct = Math.min(100, Math.round((status.count / status.target) * 100));
+                progress = `${pct}%`;
+                if (pct > 0) ringClass = 'partial';
             } else if (habit.frequency.type === FREQ.TIMES_PER_WEEK || habit.frequency.type === FREQ.TIMES_PER_MONTH ||
                        habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH) {
                 const today = getTodayString();
@@ -3631,11 +3626,11 @@
             const items = subtasks.map(s => ({
                 name: s.name,
                 completed: isSubtaskCompleted(habit, s.id),
-                // In sequential mode the user can only tick the next pending
-                // item via the Complete Next button — lock individual taps
-                // so they can't skip ahead.
-                locked: isSequential,
-                onclick: isSequential ? '' : `toggleSubtaskFromPopup(${habit.id}, ${s.id})`
+                // Rows are always tappable (mark off in any order). In
+                // sequential mode the "Complete Next" button is just a
+                // convenience that ticks the next unmarked one top-down.
+                locked: false,
+                onclick: `toggleSubtaskFromPopup(${habit.id}, ${s.id})`
             }));
 
             const allDone = subtasks.length > 0 && subtasks.every(s => isSubtaskCompleted(habit, s.id));
@@ -3768,20 +3763,6 @@
             renderHabits();
         }
 
-        function toggleSubtaskFromDetails(habitId, subtaskId) {
-            const habits = loadHabits();
-            const habit = habits.find(h => h.id === habitId);
-            if (!habit || !habit.subtasks) return;
-
-            const { status } = applySubtaskToggle(habits, habit, subtaskId);
-            if (status === 'noop') return;
-
-            saveHabits(habits);
-            renderHabits();
-            if (status === 'completed') closeDetails();
-            else renderDetails();
-        }
-
         // Points popup functions
         let pointsPopupHabitId = null;
 
@@ -3905,6 +3886,39 @@
             // Habits view stays closed so the user lands somewhere familiar
             // instead of being pushed back into a list.
             detailsOpenedFromAllHabits = false;
+        }
+
+        // "⋮" overflow menu in the details action bar. Anchored to the
+        // tapped button (opens upward from that point), not centered.
+        function closeDetailsMoreMenu() {
+            document.querySelectorAll('.kebab-backdrop, .kebab-menu').forEach(e => e.remove());
+        }
+        function openDetailsMoreMenu(event, id) {
+            event.stopPropagation();
+            closeDetailsMoreMenu();
+            const habit = loadHabits().find(h => h.id === id);
+            if (!habit) return;
+            const rect = event.currentTarget.getBoundingClientRect();
+            const backdrop = document.createElement('div');
+            backdrop.className = 'kebab-backdrop';
+            backdrop.onclick = closeDetailsMoreMenu;
+            const menu = document.createElement('div');
+            menu.className = 'kebab-menu';
+            menu.innerHTML = `
+                <button onclick="closeDetailsMoreMenu();freshStartHabit(${id})">Reset Momentum</button>
+                <button onclick="closeDetailsMoreMenu();resetHabitStats(${id})">Reset Stats</button>
+                <button onclick="closeDetailsMoreMenu();${habit.archived ? `unarchiveHabit(${id})` : `archiveHabit(${id})`}">${habit.archived ? 'Unarchive' : 'Archive'}</button>
+                <button class="danger" onclick="closeDetailsMoreMenu();deleteHabit(${id})">Delete</button>`;
+            document.body.appendChild(backdrop);
+            document.body.appendChild(menu);
+            // Measure, then anchor to the button (open upward/left).
+            const mw = menu.offsetWidth, mh = menu.offsetHeight;
+            let left = rect.right - mw;
+            if (left < 8) left = 8;
+            let top = rect.top - mh - 6;
+            if (top < 8) top = rect.bottom + 6;
+            menu.style.left = left + 'px';
+            menu.style.top = top + 'px';
         }
 
         function toggleEditMode() {
@@ -4131,7 +4145,7 @@
                 const afterLabel = habit.frequency.everyXWeeks ? `${habit.frequency.everyXWeeks} weeks after` :
                                    habit.frequency.everyXMonths ? `${habit.frequency.everyXMonths} months after` :
                                    `${habit.frequency.everyXDays || 2} days after`;
-                const freqLabel = { daily: 'Daily', reminder: `${habit.frequency.reminderDays || 1} days after`, twiceDaily: 'Twice daily', timesPerDay: `${habit.frequency.timesPerDay || 1}x within day`, timesPerWeek: `${habit.frequency.timesPerWeek || 3}x within week`, timesPerMonth: `${habit.frequency.timesPerMonth || 4}x within month`, everyXDays: afterLabel, pointsPerDay: `${habit.frequency.pointsPerDay || 4} pts within day`, pointsPerWeek: `${habit.frequency.pointsPerWeek || 12} pts within week`, pointsPerMonth: `${habit.frequency.pointsPerMonth || 30} pts within month` }[habit.frequency.type];
+                const freqLabel = { daily: 'Daily', reminder: `${habit.frequency.reminderDays || 1} days after`, twiceDaily: 'Twice daily', timesPerDay: `${habit.frequency.timesPerDay || 1}× / day`, timesPerWeek: `${habit.frequency.timesPerWeek || 3}× / wk`, timesPerMonth: `${habit.frequency.timesPerMonth || 4}× / mo`, everyXDays: afterLabel, pointsPerDay: `${habit.frequency.pointsPerDay || 4} pts / day`, pointsPerWeek: `${habit.frequency.pointsPerWeek || 12} pts / wk`, pointsPerMonth: `${habit.frequency.pointsPerMonth || 30} pts / mo` }[habit.frequency.type];
                 const timeLabel = habit.timeOfDay ? { morning: 'Morning', night: 'Bedtime' }[habit.timeOfDay] : 'Anytime';
 
                 // Momentum score
@@ -4199,19 +4213,27 @@
 
                 document.getElementById('detailsModal').innerHTML = `
                     <div class="modal-header"><span></span><button class="modal-close" onclick="closeDetails()">&times;</button></div>
-                    <div class="details-icon-header">
-                        <div class="details-large-icon">${icon}</div>
-                        <div class="details-habit-name">${escapeHtml(habit.name)}</div>
-                        ${habit.description ? `<div style="color:#888;font-size:0.85rem;margin-top:4px">${formatDescription(habit.description)}</div>` : ''}
+                    <div style="margin-bottom:12px">
+                        <div style="display:flex;align-items:center;gap:12px">
+                            <div class="details-large-icon" style="margin-bottom:0;flex-shrink:0">${icon}</div>
+                            <div class="details-habit-name" style="text-align:left;flex:1;min-width:0">${escapeHtml(habit.name)}</div>
+                        </div>
+                        ${habit.description ? `<div style="color:#888;font-size:0.85rem;margin-top:8px">${formatDescription(habit.description)}</div>` : ''}
+                        ${!isReminder && !habit.noMomentum ? `<div class="momentum-display" style="margin-top:10px;margin-bottom:0">
+                            <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
+                            <div class="momentum-label">Momentum${recoveryText}</div>
+                        </div>` : ''}
                     </div>
-                    ${!isReminder && !habit.noMomentum ? `<div class="momentum-display">
-                        <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
-                        <div class="momentum-label">Momentum${recoveryText}</div>
-                    </div>` : ''}
-                    <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" style="color:${statusColor}">${habitStatus}</span></div>
-                    <div class="detail-row"><span class="detail-label">Time</span><span class="detail-value">${timeLabel}</span></div>
-                    <div class="detail-row"><span class="detail-label">Frequency</span><span class="detail-value">${freqLabel}</span></div>
-                    ${(habit.frequency.type === FREQ.POINTS_PER_DAY || habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH) ? `<div class="detail-row"><span class="detail-label">Progress</span><span class="detail-value">${getCompletionStatus(habit).text}</span></div>` : ''}
+                    ${(() => {
+                        const isPts = habit.frequency.type === FREQ.POINTS_PER_DAY || habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH;
+                        const cells = [
+                            `<div class="detail-cell"><div class="dc-label">Status</div><div class="dc-value" style="color:${statusColor}">${habitStatus}</div></div>`,
+                            `<div class="detail-cell"><div class="dc-label">Time</div><div class="dc-value">${timeLabel}</div></div>`,
+                            `<div class="detail-cell"><div class="dc-label">Frequency</div><div class="dc-value">${freqLabel}</div></div>`,
+                        ];
+                        if (isPts) cells.push(`<div class="detail-cell"><div class="dc-label">Progress</div><div class="dc-value">${getCompletionStatus(habit).text}</div></div>`);
+                        return `<div class="detail-grid" style="grid-template-columns:repeat(${cells.length},1fr)">${cells.join('')}</div>`;
+                    })()}
                     ${!isReminder ? `<div class="stats-grid">
                         <div class="stat-box"><div class="stat-number">${total}</div><div class="stat-label">Total</div></div>
                         <div class="stat-box"><div class="stat-number">${rate}%</div><div class="stat-label">Rate</div></div>
@@ -4223,7 +4245,7 @@
                         <div class="subtasks-scroll-container">
                             ${habit.subtasks.map(s => {
                                 const completed = isSubtaskCompleted(habit, s.id);
-                                return `<div class="subtask-item" onclick="toggleSubtaskFromDetails(${habit.id}, ${s.id})">
+                                return `<div class="subtask-item" style="cursor:default">
                                     <div class="subtask-checkbox ${completed ? 'checked' : ''}"></div>
                                     <span class="subtask-name ${completed ? 'completed' : ''}">${escapeHtml(s.name)}</span>
                                 </div>`;
@@ -4231,22 +4253,17 @@
                         </div>
                     </div>` : ''}
                     <div class="action-buttons">
-                        <div style="display:flex;gap:6px;flex-wrap:wrap">
+                        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
                             ${completeButton}
                             ${undoButton}
                             ${moveToTodayButton}
                             <button class="submit-btn secondary" style="flex:1" onclick="toggleEditMode()">Edit</button>
-                            ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id}, true)">Snooze</button>` : ''}
-                            ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id}, false)">Ignore</button>` : ''}
-                            ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
                         </div>
-                        <div style="display:flex;gap:6px;flex-wrap:wrap">
-                            <button class="submit-btn secondary" style="flex:1" onclick="freshStartHabit(${habit.id})">Fresh Start</button>
-                            ${total > 0 ? `<button class="submit-btn secondary" style="flex:1" onclick="resetHabitStats(${habit.id})">Reset Stats</button>` : ''}
-                            ${habit.archived
-                                ? `<button class="submit-btn secondary" style="flex:1" onclick="unarchiveHabit(${habit.id})">Unarchive</button>`
-                                : `<button class="submit-btn secondary" style="flex:1" onclick="archiveHabit(${habit.id})">Archive</button>`}
-                            <button class="submit-btn danger" style="flex:1" onclick="deleteHabit(${habit.id})">Delete</button>
+                        <div style="display:flex;gap:6px;margin-top:6px">
+                            ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id}, true)">Snooze</button>
+                            <button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id}, false)">Ignore</button>` : ''}
+                            ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
+                            <button class="submit-btn secondary" style="flex:0 0 48px;margin-left:auto" aria-label="More actions" onclick="openDetailsMoreMenu(event, ${habit.id})">⋮</button>
                         </div>
                     </div>`;
             }
@@ -4454,26 +4471,35 @@
                         <input type="text" id="allHabitsSearch" class="form-input" placeholder="Search habits..."
                             oninput="onAllHabitsSearch(this.value)" value="${escapeHtml(allHabitsSearchQuery)}" />
                     </div>
-                    <div style="display:flex;gap:6px;padding:0 14px 6px">
-                        <select class="form-input" style="flex:1;font-size:0.8rem" onchange="setAllHabitsSort(this.value)">
-                            <option value="status" ${allHabitsSort === 'status' ? 'selected' : ''}>Sort: Status</option>
-                            <option value="alpha" ${allHabitsSort === 'alpha' ? 'selected' : ''}>Sort: A–Z</option>
-                            <option value="momentum" ${allHabitsSort === 'momentum' ? 'selected' : ''}>Sort: Momentum</option>
-                            <option value="overdue" ${allHabitsSort === 'overdue' ? 'selected' : ''}>Sort: Most overdue</option>
-                        </select>
-                        <select class="form-input" style="flex:1;font-size:0.8rem" onchange="setAllHabitsFilter(this.value)">
-                            <option value="all" ${allHabitsFilter === 'all' ? 'selected' : ''}>Filter: All</option>
-                            <option value="reminders" ${allHabitsFilter === 'reminders' ? 'selected' : ''}>Filter: Reminders</option>
-                            <option value="subtasks" ${allHabitsFilter === 'subtasks' ? 'selected' : ''}>Filter: Has subtasks</option>
-                            <option value="snoozed" ${allHabitsFilter === 'snoozed' ? 'selected' : ''}>Filter: Snoozed</option>
-                            <option value="negative" ${allHabitsFilter === 'negative' ? 'selected' : ''}>Filter: Negative</option>
-                            <option value="archived" ${allHabitsFilter === 'archived' ? 'selected' : ''}>Filter: Archived</option>
-                        </select>
+                    <div style="display:flex;gap:8px;padding:0 14px 8px">
+                        <label class="ah-select-wrap">
+                            <span class="ah-select-label">Sort</span>
+                            <select class="ah-select" onchange="setAllHabitsSort(this.value)">
+                                <option value="status" ${allHabitsSort === 'status' ? 'selected' : ''}>Status</option>
+                                <option value="alpha" ${allHabitsSort === 'alpha' ? 'selected' : ''}>A–Z</option>
+                                <option value="momentum" ${allHabitsSort === 'momentum' ? 'selected' : ''}>Momentum</option>
+                                <option value="overdue" ${allHabitsSort === 'overdue' ? 'selected' : ''}>Most overdue</option>
+                            </select>
+                        </label>
+                        <label class="ah-select-wrap">
+                            <span class="ah-select-label">Filter</span>
+                            <select class="ah-select" onchange="setAllHabitsFilter(this.value)">
+                                <option value="all" ${allHabitsFilter === 'all' ? 'selected' : ''}>All</option>
+                                <option value="reminders" ${allHabitsFilter === 'reminders' ? 'selected' : ''}>Reminders</option>
+                                <option value="subtasks" ${allHabitsFilter === 'subtasks' ? 'selected' : ''}>Has subtasks</option>
+                                <option value="snoozed" ${allHabitsFilter === 'snoozed' ? 'selected' : ''}>Snoozed</option>
+                                <option value="negative" ${allHabitsFilter === 'negative' ? 'selected' : ''}>Negative</option>
+                                <option value="archived" ${allHabitsFilter === 'archived' ? 'selected' : ''}>Archived</option>
+                            </select>
+                        </label>
                     </div>
-                    <label style="display:flex;align-items:center;gap:8px;padding:6px 14px;color:#888;font-size:0.8rem;cursor:pointer">
-                        <input type="checkbox" ${allHabitsMomentumRings ? 'checked' : ''} onchange="toggleAllHabitsMomentum(this.checked)" style="accent-color:#667eea">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 14px 10px;color:#aaa;font-size:0.82rem">
                         <span>Show momentum rings</span>
-                    </label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" ${allHabitsMomentumRings ? 'checked' : ''} onchange="toggleAllHabitsMomentum(this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
                 <div class="all-habits-scroll-area">
                     <div id="allHabitsNoResults" class="empty-state" style="display:none;padding:20px 0">
