@@ -130,6 +130,10 @@ console.log('A. everyXDays(2) due cadence');
   ok('3 days ago -> due & 1 overdue', s3.due === true && s3.daysOverdue === 1, s3);
 }
 
+// === B & C. auto-complete tests — DISABLED ===========================
+// The auto-complete feature is commented out in app.js (triggerAutoComplete
+// is a no-op). These tests are kept commented for future re-enable.
+/*
 // === B. auto-complete records linked habit with correct delay ========
 console.log('\nB. auto-complete delay');
 {
@@ -165,6 +169,7 @@ console.log('\nC. daily trigger auto-completing a 3-day target');
     '(false means a daily trigger keeps resetting B so it never comes due)');
   ok('C scenario executed', true);
 }
+*/
 
 // === D. momentum sanity for everyXDays (kept vs missed) =============
 console.log('\nD. momentum direction');
