@@ -3198,8 +3198,6 @@
             const drop = arr => arr.filter(h => !consumedLinkedIds.has(h.id));
             const nowHabits = drop(cat.now);
             const optionalHabits = drop(cat.optional);
-            const laterHabits = drop(cat.later);
-            const completedHabits = drop(cat.done);
             const morningSpecific = drop(cat.morning);
             const bedtimeSpecific = drop(cat.bedtime);
             const anytimeHabits = drop(cat.anytime);
@@ -3255,10 +3253,10 @@
                 </div>`;
             }
 
-            // Collapsible sections using helper
+            // Collapsible sections using helper. "Tonight" (later) and
+            // "Finished" (completed) are intentionally not shown on the main
+            // screen — use the All Habits view to review those.
             html += renderSection(optionalHabits, 'optional', '⭐', 'Optional', false, { inactive: true });
-            html += renderSection(laterHabits, 'later', '🌙', 'Tonight', true, { inactive: true, isLater: true });
-            html += renderSection(completedHabits, 'completed', '✓', 'Finished', true, { inactive: true, isCompleted: true });
 
             if (!html) html = '<div class="habits-section"><div class="empty-state"><div class="empty-state-icon">✓</div><div>All done!</div></div></div>';
             container.innerHTML = html;
@@ -3990,7 +3988,14 @@
             backdrop.onclick = closeDetailsMoreMenu;
             const menu = document.createElement('div');
             menu.className = 'kebab-menu';
+            // "Move to Today" is always offered here and always pressable.
+            // It pulls the most recent past completion forward; when the
+            // habit is scheduled for a future day it drops the blocking
+            // completion (so today becomes due) instead. A no-op when there
+            // is nothing to move (e.g. already due/completed today).
+            const moveFutureDue = habit.completions.some(c => c.date !== getTodayString()) && !isDueToday(habit);
             menu.innerHTML = `
+                <button onclick="closeDetailsMoreMenu();${moveFutureDue ? `moveScheduleToToday(${id})` : `moveCompletionToToday(${id})`}">Move to Today</button>
                 <button onclick="closeDetailsMoreMenu();freshStartHabit(${id})">Reset Momentum</button>
                 <button onclick="closeDetailsMoreMenu();resetHabitStats(${id})">Reset Stats</button>
                 <button onclick="closeDetailsMoreMenu();${habit.archived ? `unarchiveHabit(${id})` : `archiveHabit(${id})`}">${habit.archived ? 'Unarchive' : 'Archive'}</button>
@@ -4266,18 +4271,12 @@
 
                 let completeButton = '';
                 let undoButton = '';
-                let moveToTodayButton = '';
                 if (!completedToday) {
-                    const pastCompletions = habit.completions.filter(c => c.date !== today);
-                    // Already completed in the past and won't be due again
-                    // until a future day. Replace the green Complete with an
-                    // orange "Move to Today" — tapping it pulls the schedule
-                    // forward (drops the blocking past completion) so today
-                    // becomes due, leaving the user to tap Complete next.
-                    const futureDue = pastCompletions.length > 0 && !isDueToday(habit);
-                    if (futureDue) {
-                        completeButton = `<button id="detailsCompleteBtn" class="submit-btn" style="flex:1;background:#ea580c" onclick="moveScheduleToToday(${habit.id})">Move to Today</button>`;
-                    } else if (isPointsBased) {
+                    // "Move to Today" (for habits with past completions /
+                    // scheduled for a future day) now lives in the ⋮ menu
+                    // only — see openDetailsMoreMenu. The main bar always
+                    // shows the normal Complete action.
+                    if (isPointsBased) {
                         completeButton = `<button id="detailsCompleteBtn" class="submit-btn" style="flex:1;background:#4ade80" onclick="closeDetails();openPointsPopup(${habit.id})">Complete</button>`;
                     } else if (isTwiceDaily) {
                         const canComplete = !status.morningDone || !status.nightDone;
@@ -4286,13 +4285,6 @@
                         }
                     } else {
                         completeButton = `<button id="detailsCompleteBtn" class="submit-btn" style="flex:1;background:#4ade80" onclick="completeHabitFromDetails(${habit.id})">Complete</button>`;
-                    }
-                    // Show secondary "Move to Today" only when the habit is
-                    // already due today and has past completions to bring
-                    // forward — when futureDue, the orange primary already
-                    // covers the move action.
-                    if (!futureDue && pastCompletions.length > 0) {
-                        moveToTodayButton = `<button class="submit-btn secondary" style="flex:1" onclick="moveCompletionToToday(${habit.id})">Move to Today</button>`;
                     }
                 } else {
                     // Already completed: keep the Complete button visible but
@@ -4344,7 +4336,6 @@
                         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
                             ${completeButton}
                             ${undoButton}
-                            ${moveToTodayButton}
                             <button class="submit-btn secondary" style="flex:1" onclick="toggleEditMode()">Edit</button>
                         </div>
                         <div style="display:flex;gap:6px;margin-top:6px">
