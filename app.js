@@ -440,14 +440,14 @@
                         </select>
                         <div id="${isEdit ? 'editFrequencyInputs' : 'frequencyInputs'}">${freqInputsHtml}</div>
                     </div>
+                    ${(state.frequency === FREQ.DAILY && (state.dailyTimesValue ?? habit?.frequency?.timesPerDay ?? 1) > 1) ? `<div class="frequency-row" style="justify-content:space-between;margin-top:8px">
+                        <span style="color:#aaa;font-size:0.85rem">Hide after each completion</span>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <input type="number" class="frequency-input" id="${isEdit ? 'editDelayHours' : 'delayHours'}" value="${state.delayHoursValue ?? habit?.frequency?.delayHours ?? 0}" min="0" max="24">
+                            <span style="color:#888">hours</span>
+                        </div>
+                    </div>` : ''}
                 </div>
-                ${(state.frequency === FREQ.DAILY && (state.dailyTimesValue ?? habit?.frequency?.timesPerDay ?? 1) > 1) ? `<div class="form-group">
-                    <label class="form-label">Hide after each completion</label>
-                    <div class="frequency-row">
-                        <input type="number" class="frequency-input" id="${isEdit ? 'editDelayHours' : 'delayHours'}" value="${state.delayHoursValue ?? habit?.frequency?.delayHours ?? 0}" min="0" max="24">
-                        <span style="color:#888">hours</span>
-                    </div>
-                </div>` : ''}
                 ${subtasksHtml}
                 <div class="action-buttons">
                     ${isEdit
