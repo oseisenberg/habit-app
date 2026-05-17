@@ -204,5 +204,17 @@ console.log('\nE. Conflicts tag (serum hidden on shampoo-due days)');
   eq('habit with no conflictsWith not suppressed', F.isConflictSuppressed(lone), false);
 }
 
+// === F. timesPerDay (Daily x N) completion semantics ================
+console.log('\nF. timesPerDay completion');
+{
+  const h = mkHabit({ id: 70, frequency: { type: 'timesPerDay', timesPerDay: 3 },
+    completions: [{ date: today }, { date: today }] });
+  const s = F.getCompletionStatus(h);
+  ok('2/3 today -> not complete, due', s.completed === false && F.isDueToday(h) === true, s);
+  const h2 = mkHabit({ id: 71, frequency: { type: 'timesPerDay', timesPerDay: 3 },
+    completions: [{ date: today }, { date: today }, { date: today }] });
+  eq('3/3 today -> complete', F.getCompletionStatus(h2).completed, true);
+}
+
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
 if (fail) { console.log('FAILED:', fails.join(', ')); process.exit(1); }
