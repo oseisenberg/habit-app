@@ -385,7 +385,7 @@
                     <textarea class="form-input" id="${isEdit ? 'editHabitDesc' : 'habitDesc'}" placeholder="Add a description..." rows="2" style="resize:none;font-size:0.85rem">${habitDesc}</textarea>
                     <label style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#aaa;font-size:0.82rem;cursor:pointer">
                         <input type="checkbox" ${state.confirmDescription ? 'checked' : ''} onchange="setFormConfirmDescription(this.checked)" style="accent-color:#f59e0b">
-                        <span>Ask for confirmation before completing</span>
+                        <span>Show description before completing</span>
                     </label>
                 </div>` : ''}
                 ${state.showAutoCompletes ? `<div class="form-group">
