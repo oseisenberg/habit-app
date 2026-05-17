@@ -4246,6 +4246,31 @@
             renderAllHabitsGrid();
         }
 
+        let allHabitsSort = 'status';   // status | alpha | momentum | overdue
+        let allHabitsFilter = 'all';    // all | reminders | subtasks | snoozed | negative | archived
+        function setAllHabitsSort(v) { allHabitsSort = v; renderAllHabitsGrid(); }
+        function setAllHabitsFilter(v) { allHabitsFilter = v; renderAllHabitsGrid(); }
+
+        function allHabitsFilterPredicate(h) {
+            switch (allHabitsFilter) {
+                case 'reminders': return !h.archived && (h.isReminder || h.frequency?.type === FREQ.REMINDER);
+                case 'subtasks':  return !h.archived && h.subtasks && h.subtasks.length > 0;
+                case 'snoozed':   return !!h.snoozedUntil;
+                case 'negative':  return !h.archived && h.isNegative;
+                case 'archived':  return !!h.archived;
+                default:          return !h.archived; // 'all'
+            }
+        }
+        function allHabitsSortCompare(a, b) {
+            if (allHabitsSort === 'alpha') return a.name.localeCompare(b.name);
+            if (allHabitsSort === 'momentum') return calculateMomentumScore(a).raw - calculateMomentumScore(b).raw;
+            if (allHabitsSort === 'overdue') return getDaysOverdue(b) - getDaysOverdue(a) || getHabitStatusOrder(a) - getHabitStatusOrder(b);
+            // 'status'
+            return getHabitStatusOrder(a) - getHabitStatusOrder(b)
+                || getSnoozeDate(a).localeCompare(getSnoozeDate(b))
+                || a.name.localeCompare(b.name);
+        }
+
         function openAllHabits() {
             allHabitsSearchQuery = '';
             renderAllHabits();
@@ -4305,17 +4330,17 @@
             const noResults = document.getElementById('allHabitsNoResults');
             if (!grid) return;
 
-            // Filter and sort by status, then by snooze date, then by name
+            // Apply search, then the attribute filter, then the chosen sort.
             let filtered = habits;
             if (allHabitsSearchQuery) {
                 filtered = habits
                     .map(h => ({ habit: h, ...fuzzyMatch(h.name, allHabitsSearchQuery) }))
                     .filter(h => h.match)
-                    .sort((a, b) => getHabitStatusOrder(a.habit) - getHabitStatusOrder(b.habit) || getSnoozeDate(a.habit).localeCompare(getSnoozeDate(b.habit)) || a.habit.name.localeCompare(b.habit.name))
                     .map(h => h.habit);
             } else {
-                filtered = [...habits].sort((a, b) => getHabitStatusOrder(a) - getHabitStatusOrder(b) || getSnoozeDate(a).localeCompare(getSnoozeDate(b)) || a.name.localeCompare(b.name));
+                filtered = [...habits];
             }
+            filtered = filtered.filter(allHabitsFilterPredicate).sort(allHabitsSortCompare);
 
             if (!filtered.length) {
                 grid.innerHTML = '';
@@ -4361,17 +4386,23 @@
             };
 
             let html = '';
-            if (nowHabits.length) {
-                html += `<div class="all-habits-section-header">Now</div>`;
-                html += `<div class="habits-grid">${nowHabits.map(renderHabitItem).join('')}</div>`;
-            }
-            if (otherHabits.length) {
-                html += `<div class="all-habits-section-header" style="margin-top:16px">Other</div>`;
-                html += `<div class="habits-grid">${otherHabits.map(renderHabitItem).join('')}</div>`;
-            }
-            if (archivedHabits.length) {
-                html += `<div class="all-habits-section-header" style="margin-top:16px;color:#666">Archived</div>`;
-                html += `<div class="habits-grid">${archivedHabits.map(renderHabitItem).join('')}</div>`;
+            if (allHabitsSort === 'status' && allHabitsFilter === 'all') {
+                // Default view keeps the Now / Other / Archived sections.
+                if (nowHabits.length) {
+                    html += `<div class="all-habits-section-header">Now</div>`;
+                    html += `<div class="habits-grid">${nowHabits.map(renderHabitItem).join('')}</div>`;
+                }
+                if (otherHabits.length) {
+                    html += `<div class="all-habits-section-header" style="margin-top:16px">Other</div>`;
+                    html += `<div class="habits-grid">${otherHabits.map(renderHabitItem).join('')}</div>`;
+                }
+                if (archivedHabits.length) {
+                    html += `<div class="all-habits-section-header" style="margin-top:16px;color:#666">Archived</div>`;
+                    html += `<div class="habits-grid">${archivedHabits.map(renderHabitItem).join('')}</div>`;
+                }
+            } else {
+                // Any active sort/filter: one flat grid in the chosen order.
+                html += `<div class="habits-grid">${filtered.map(renderHabitItem).join('')}</div>`;
             }
             grid.innerHTML = html;
         }
@@ -4402,6 +4433,22 @@
                     <div class="all-habits-search-wrapper">
                         <input type="text" id="allHabitsSearch" class="form-input" placeholder="Search habits..."
                             oninput="onAllHabitsSearch(this.value)" value="${escapeHtml(allHabitsSearchQuery)}" />
+                    </div>
+                    <div style="display:flex;gap:6px;padding:0 14px 6px">
+                        <select class="form-input" style="flex:1;font-size:0.8rem" onchange="setAllHabitsSort(this.value)">
+                            <option value="status" ${allHabitsSort === 'status' ? 'selected' : ''}>Sort: Status</option>
+                            <option value="alpha" ${allHabitsSort === 'alpha' ? 'selected' : ''}>Sort: A–Z</option>
+                            <option value="momentum" ${allHabitsSort === 'momentum' ? 'selected' : ''}>Sort: Momentum</option>
+                            <option value="overdue" ${allHabitsSort === 'overdue' ? 'selected' : ''}>Sort: Most overdue</option>
+                        </select>
+                        <select class="form-input" style="flex:1;font-size:0.8rem" onchange="setAllHabitsFilter(this.value)">
+                            <option value="all" ${allHabitsFilter === 'all' ? 'selected' : ''}>Filter: All</option>
+                            <option value="reminders" ${allHabitsFilter === 'reminders' ? 'selected' : ''}>Filter: Reminders</option>
+                            <option value="subtasks" ${allHabitsFilter === 'subtasks' ? 'selected' : ''}>Filter: Has subtasks</option>
+                            <option value="snoozed" ${allHabitsFilter === 'snoozed' ? 'selected' : ''}>Filter: Snoozed</option>
+                            <option value="negative" ${allHabitsFilter === 'negative' ? 'selected' : ''}>Filter: Negative</option>
+                            <option value="archived" ${allHabitsFilter === 'archived' ? 'selected' : ''}>Filter: Archived</option>
+                        </select>
                     </div>
                     <label style="display:flex;align-items:center;gap:8px;padding:6px 14px;color:#888;font-size:0.8rem;cursor:pointer">
                         <input type="checkbox" ${allHabitsMomentumRings ? 'checked' : ''} onchange="toggleAllHabitsMomentum(this.checked)" style="accent-color:#667eea">
