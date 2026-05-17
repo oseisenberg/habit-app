@@ -35,10 +35,14 @@
             overflow: hidden;
         }
         .habit-icon-wrapper.linked-pair .habit-icon {
-            flex: 0 0 auto;
+            flex: 1 1 0;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .habit-icon-wrapper.linked-pair .link-line {
-            flex: 0 1 12px;
+            flex: 0 0 12px;
             min-width: 6px;
             height: 3px;
             background: #4a4a5e;
