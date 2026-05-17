@@ -625,17 +625,14 @@
                 </div>`
             ).join('');
             document.getElementById('tagGlossaryPopup').innerHTML = `
-                <div class="points-popup-header">
-                    <span>Options reference</span>
-                    <button class="subtask-popup-close" style="margin-left:auto" onclick="closeTagGlossary()">&times;</button>
-                </div>
+                ${popupHeader({ title: 'Options reference', onClose: 'closeTagGlossary()' })}
                 <div style="max-height:60vh;overflow-y:auto;padding:0 4px">${rows}</div>
                 <button class="submit-btn" style="margin-top:12px;width:100%" onclick="closeTagGlossary()">Close</button>`;
-            document.getElementById('tagGlossaryOverlay').classList.add('active');
+            showOverlay('tagGlossaryOverlay');
         }
 
         function closeTagGlossary() {
-            document.getElementById('tagGlossaryOverlay').classList.remove('active');
+            hideOverlay('tagGlossaryOverlay');
         }
 
         // Bidirectionally sync the linkedHabit field. When habit A links to
@@ -708,11 +705,11 @@
             emojiPopupMode = mode;
             editModeHabitId = habitId;
             renderEmojiPopup();
-            document.getElementById('emojiPopupOverlay').classList.add('active');
+            showOverlay('emojiPopupOverlay');
         }
 
         function closeEmojiPopup() {
-            document.getElementById('emojiPopupOverlay').classList.remove('active');
+            hideOverlay('emojiPopupOverlay');
             emojiPopupMode = null;
             editModeHabitId = null;
         }
@@ -1082,6 +1079,27 @@
 
         function handleOverlayClick(e, id, closeFn) { if (e.target === document.getElementById(id)) closeFn(); }
 
+        function showOverlay(id) { document.getElementById(id).classList.add('active'); }
+        function hideOverlay(id) { document.getElementById(id).classList.remove('active'); }
+        function isOverlayActive(id) { return !!document.getElementById(id)?.classList.contains('active'); }
+
+        // Shared popup header. `variant` 'subtask' (left-aligned, optional
+        // close X) is the canonical look; 'points' keeps the centered,
+        // close-less points-popup header so that popup stays pixel-identical.
+        function popupHeader({ icon, title, onClose, variant = 'subtask' }) {
+            if (variant === 'points') {
+                return `<div class="points-popup-header">
+                    ${icon ? `<span class="points-popup-icon">${icon}</span>` : ''}
+                    <span class="points-popup-title">${escapeHtml(title)}</span>
+                </div>`;
+            }
+            return `<div class="subtask-popup-header">
+                    ${icon ? `<span class="subtask-popup-icon">${icon}</span>` : ''}
+                    <span class="subtask-popup-title">${escapeHtml(title)}</span>
+                    ${onClose ? `<button class="subtask-popup-close" onclick="${onClose}">&times;</button>` : ''}
+                </div>`;
+        }
+
         function openModal() {
             // Reset state for create mode
             formMode = 'create';
@@ -1093,13 +1111,13 @@
             formState.icon = HABIT_EMOJIS.find(e => !usedIcons.has(e)) || HABIT_EMOJIS[0];
             // Render the form
             document.getElementById('createModal').innerHTML = renderHabitForm();
-            document.getElementById('modalOverlay').classList.add('active');
+            showOverlay('modalOverlay');
             fitOptionsToTwoLines();
             document.getElementById('habitInput').focus();
         }
 
         function closeModal() {
-            document.getElementById('modalOverlay').classList.remove('active');
+            hideOverlay('modalOverlay');
             // Reset state
             formMode = 'create';
             formHabitId = null;
@@ -1127,9 +1145,9 @@
             document.getElementById('momentumAlertSettings').style.display = s.momentumAlertEnabled ? 'block' : 'none';
             document.getElementById('quietHoursSettings').style.display = s.quietHoursEnabled ? 'block' : 'none';
             updateInstallPromptVisibility();
-            document.getElementById('settingsOverlay').classList.add('active');
+            showOverlay('settingsOverlay');
         }
-        function closeSettings() { document.getElementById('settingsOverlay').classList.remove('active'); }
+        function closeSettings() { hideOverlay('settingsOverlay'); }
         function toggleMomentumSettings() {
             const enabled = document.getElementById('momentumAlertEnabled').checked;
             document.getElementById('momentumAlertSettings').style.display = enabled ? 'block' : 'none';
@@ -1953,11 +1971,11 @@
                     </button>
                     <button class="snooze-cancel" onclick="closeSnoozePopup()">Cancel</button>
                 </div>`;
-            document.getElementById('snoozePopupOverlay').classList.add('active');
+            showOverlay('snoozePopupOverlay');
         }
 
         function closeSnoozePopup() {
-            document.getElementById('snoozePopupOverlay').classList.remove('active');
+            hideOverlay('snoozePopupOverlay');
             snoozePopupHabitId = null;
         }
 
@@ -2573,11 +2591,11 @@
                     <button class="submit-btn" onclick="confirmAndCompleteHabit()" style="flex:1;background:#4ade80">Complete</button>
                 </div>`
             });
-            document.getElementById('confirmDescPopupOverlay').classList.add('active');
+            showOverlay('confirmDescPopupOverlay');
         }
 
         function closeConfirmDescPopup() {
-            document.getElementById('confirmDescPopupOverlay').classList.remove('active');
+            hideOverlay('confirmDescPopupOverlay');
             confirmDescHabitId = null;
             confirmDescPeriod = null;
         }
@@ -2587,7 +2605,7 @@
             const period = confirmDescPeriod;
             closeConfirmDescPopup();
             doCompleteHabit(id, period, true);
-            if (document.getElementById('detailsOverlay').classList.contains('active')) closeDetails();
+            if (isOverlayActive('detailsOverlay')) closeDetails();
         }
 
         function completeHabit(id, period = null) {
@@ -2630,6 +2648,24 @@
                 linkedHabit.snoozedUntil = null;
                 delete linkedHabit.snoozedUntilPeriod;
             }
+        }
+
+        // Record a habit completion driven by finishing its subtasks.
+        // Pushes the completion, applies the +15 momentum boost, arms
+        // undo (rolling back today's subtask ticks), and fires any
+        // auto-complete link once the habit is fully done. `period` is
+        // the twice-daily period or null. Mutates `habits`; caller saves.
+        function recordCompletion(habits, habit, period, periodKey) {
+            const today = getTodayString();
+            const timestamp = Date.now();
+            const completion = { date: today, timestamp };
+            if (period) completion.period = period;
+            habit.completions.push(completion);
+            habit.momentumScore = (habit.momentumScore || 0) + 15;
+            habit.lastScoreUpdate = today;
+            lastCompletion = { habitId: habit.id, date: today, period: period || null, timestamp, type: 'complete', resetSubtasks: true, periodKey };
+            showUndoToast();
+            if (isCompletedToday(habit)) triggerAutoComplete(habits, habit);
         }
 
         function doCompleteHabit(id, period = null, skipSubtaskCheck = false) {
@@ -3085,7 +3121,7 @@
             if (!habits.length) return '';
             if (collapsedSections[sectionId] === undefined) collapsedSections[sectionId] = defaultCollapsed;
             // Auto-expand all sections when debug mode is active
-            const debugActive = document.getElementById('debugPanel')?.classList.contains('active');
+            const debugActive = isOverlayActive('debugPanel');
             const collapsed = debugActive ? false : collapsedSections[sectionId];
             const contentClass = collapsed ? 'section-content collapsed' : 'section-content';
             const headerClass = collapsed ? 'section-header collapsible collapsed' : 'section-header collapsible';
@@ -3432,11 +3468,11 @@
         function openSubtaskPopup(habitId) {
             subtaskPopupHabitId = habitId;
             renderSubtaskPopup();
-            document.getElementById('subtaskPopupOverlay').classList.add('active');
+            showOverlay('subtaskPopupOverlay');
         }
 
         function closeSubtaskPopup() {
-            document.getElementById('subtaskPopupOverlay').classList.remove('active');
+            hideOverlay('subtaskPopupOverlay');
             subtaskPopupHabitId = null;
         }
 
@@ -3458,11 +3494,7 @@
             }).join('');
 
             document.getElementById(targetId).innerHTML = `
-                <div class="subtask-popup-header">
-                    <span class="subtask-popup-icon">${icon}</span>
-                    <span class="subtask-popup-title">${escapeHtml(title)}</span>
-                    <button class="subtask-popup-close" onclick="${onClose}">&times;</button>
-                </div>
+                ${popupHeader({ icon, title, onClose })}
                 <div class="subtask-popup-list">${rows}</div>
                 ${footer}`;
         }
@@ -3511,15 +3543,65 @@
             toggleSubtaskFromPopup(habitId, next.id);
         }
 
+        // Shared core for ticking a single subtask. Mutates `habits` in
+        // place and returns { status, period }:
+        //   'noop'      — subtask not found, caller does nothing
+        //   'toggled'   — subtask flipped, habit not (un)completed
+        //   'completed' — last subtask ticked, habit recorded complete
+        //   'confirm'   — last subtask ticked but a description must be
+        //                 confirmed first; caller saves + opens the popup
+        // `period` is the twice-daily period (or null) for the completion.
+        function applySubtaskToggle(habits, habit, subtaskId) {
+            const subtask = habit.subtasks.find(s => s.id === subtaskId);
+            if (!subtask) return { status: 'noop', period: null };
+
+            const periodKey = getSubtaskPeriodKey(habit);
+            if (!subtask.completedPeriods) subtask.completedPeriods = {};
+
+            const wasCompleted = subtask.completedPeriods[periodKey];
+            const today = getTodayString();
+            const isTwiceDaily = habit.frequency.type === FREQ.TWICE_DAILY;
+            const currentPeriod = getTimeOfDayNow() === PERIOD.MORNING ? PERIOD.MORNING : PERIOD.NIGHT;
+            const period = isTwiceDaily ? currentPeriod : null;
+
+            if (wasCompleted) {
+                delete subtask.completedPeriods[periodKey];
+                // Unticking a subtask drops the habit's completion for this period.
+                if (isTwiceDaily) {
+                    habit.completions = habit.completions.filter(c => !(c.date === today && c.period === currentPeriod));
+                } else {
+                    habit.completions = habit.completions.filter(c => c.date !== today);
+                }
+                return { status: 'toggled', period };
+            }
+
+            subtask.completedPeriods[periodKey] = Date.now();
+            hapticFeedback();
+
+            const allCompleted = habit.subtasks.every(s => s.completedPeriods && s.completedPeriods[periodKey]);
+            const alreadyCompleted = isTwiceDaily
+                ? habit.completions.some(c => c.date === today && c.period === currentPeriod)
+                : habit.completions.some(c => c.date === today);
+
+            if (allCompleted && !alreadyCompleted) {
+                if (habit.confirmDescription && habit.description) {
+                    return { status: 'confirm', period };
+                }
+                recordCompletion(habits, habit, period, periodKey);
+                return { status: 'completed', period };
+            }
+            return { status: 'toggled', period };
+        }
+
         function completeHabitWithAllSubtasks(habitId) {
             const habits = loadHabits();
             const habit = habits.find(h => h.id === habitId);
             if (!habit) return;
 
-            const today = getTodayString();
             const periodKey = getSubtaskPeriodKey(habit);
             const isTwiceDaily = habit.frequency.type === FREQ.TWICE_DAILY;
             const currentPeriod = getTimeOfDayNow() === PERIOD.MORNING ? PERIOD.MORNING : PERIOD.NIGHT;
+            const period = isTwiceDaily ? currentPeriod : null;
 
             // Complete all subtasks
             if (habit.subtasks) {
@@ -3533,34 +3615,17 @@
             if (habit.confirmDescription && habit.description) {
                 saveHabits(habits);
                 closeSubtaskPopup();
-                openConfirmDescPopup(habitId, isTwiceDaily ? currentPeriod : null);
+                openConfirmDescPopup(habitId, period);
                 renderHabits();
                 return;
             }
 
-            // Complete the habit itself (include period for twiceDaily)
-            const timestamp = Date.now();
-            const completion = { date: today, timestamp };
-            if (isTwiceDaily) {
-                completion.period = currentPeriod;
-            }
-            habit.completions.push(completion);
-            habit.momentumScore = (habit.momentumScore || 0) + 15;
-            habit.lastScoreUpdate = today;
             hapticFeedback();
-
-            // Track for undo. resetSubtasks rolls back the bulk subtask
-            // ticks too if the user hits Undo, so the habit returns to
-            // its pre-tap state instead of being left "all subtasks done".
-            lastCompletion = { habitId, date: today, period: isTwiceDaily ? currentPeriod : null, timestamp, type: 'complete', resetSubtasks: true, periodKey };
-            showUndoToast();
-
-            // Fire auto-complete now that the habit is fully done for today
-            if (isCompletedToday(habit)) triggerAutoComplete(habits, habit);
+            recordCompletion(habits, habit, period, periodKey);
 
             saveHabits(habits);
             closeSubtaskPopup();
-            if (document.getElementById('detailsOverlay').classList.contains('active')) closeDetails();
+            if (isOverlayActive('detailsOverlay')) closeDetails();
             renderHabits();
         }
 
@@ -3569,67 +3634,21 @@
             const habit = habits.find(h => h.id === habitId);
             if (!habit || !habit.subtasks) return;
 
-            const subtask = habit.subtasks.find(s => s.id === subtaskId);
-            if (!subtask) return;
+            const { status, period } = applySubtaskToggle(habits, habit, subtaskId);
+            if (status === 'noop') return;
 
-            const periodKey = getSubtaskPeriodKey(habit);
-            if (!subtask.completedPeriods) subtask.completedPeriods = {};
-
-            const wasCompleted = subtask.completedPeriods[periodKey];
-            const today = getTodayString();
-            const isTwiceDaily = habit.frequency.type === FREQ.TWICE_DAILY;
-            const currentPeriod = getTimeOfDayNow() === PERIOD.MORNING ? PERIOD.MORNING : PERIOD.NIGHT;
-            let habitJustCompleted = false;
-
-            if (wasCompleted) {
-                delete subtask.completedPeriods[periodKey];
-                // When unchecking a subtask, remove completion entry for current period
-                if (isTwiceDaily) {
-                    habit.completions = habit.completions.filter(c => !(c.date === today && c.period === currentPeriod));
-                } else {
-                    habit.completions = habit.completions.filter(c => c.date !== today);
-                }
-            } else {
-                subtask.completedPeriods[periodKey] = Date.now();
-                hapticFeedback();
-
-                // Auto-complete habit when all subtasks done
-                const allCompleted = habit.subtasks.every(s => s.completedPeriods && s.completedPeriods[periodKey]);
-                const alreadyCompleted = isTwiceDaily
-                    ? habit.completions.some(c => c.date === today && c.period === currentPeriod)
-                    : habit.completions.some(c => c.date === today);
-
-                if (allCompleted && !alreadyCompleted) {
-                    // Show confirm description popup if applicable
-                    if (habit.confirmDescription && habit.description) {
-                        saveHabits(habits);
-                        closeSubtaskPopup();
-                        openConfirmDescPopup(habitId, isTwiceDaily ? currentPeriod : null);
-                        renderHabits();
-                        return;
-                    }
-                    const timestamp = Date.now();
-                    const completion = { date: today, timestamp };
-                    if (isTwiceDaily) completion.period = currentPeriod;
-                    habit.completions.push(completion);
-                    habit.momentumScore = (habit.momentumScore || 0) + 15;
-                    habit.lastScoreUpdate = today;
-                    // Track the just-completed habit for undo. resetSubtasks
-                    // rolls back today's subtask ticks too so undo restores
-                    // the pre-tap state cleanly.
-                    lastCompletion = { habitId, date: today, period: isTwiceDaily ? currentPeriod : null, timestamp, type: 'complete', resetSubtasks: true, periodKey };
-                    showUndoToast();
-                    // Fire auto-complete once the habit is fully done for today
-                    // (for twice-daily this requires both periods complete).
-                    if (isCompletedToday(habit)) triggerAutoComplete(habits, habit);
-                    habitJustCompleted = true;
-                }
+            if (status === 'confirm') {
+                saveHabits(habits);
+                closeSubtaskPopup();
+                openConfirmDescPopup(habitId, period);
+                renderHabits();
+                return;
             }
 
             saveHabits(habits);
-            if (habitJustCompleted) {
+            if (status === 'completed') {
                 closeSubtaskPopup();
-                if (document.getElementById('detailsOverlay').classList.contains('active')) closeDetails();
+                if (isOverlayActive('detailsOverlay')) closeDetails();
             } else {
                 renderSubtaskPopup();
             }
@@ -3641,36 +3660,20 @@
             const habit = habits.find(h => h.id === habitId);
             if (!habit || !habit.subtasks) return;
 
-            const subtask = habit.subtasks.find(s => s.id === subtaskId);
-            if (!subtask) return;
+            const { status, period } = applySubtaskToggle(habits, habit, subtaskId);
+            if (status === 'noop') return;
 
-            const periodKey = getSubtaskPeriodKey(habit);
-            if (!subtask.completedPeriods) subtask.completedPeriods = {};
-
-            const wasCompleted = subtask.completedPeriods[periodKey];
-            const today = getTodayString();
-            const isTwiceDaily = habit.frequency.type === FREQ.TWICE_DAILY;
-            const currentPeriod = getTimeOfDayNow() === PERIOD.MORNING ? PERIOD.MORNING : PERIOD.NIGHT;
-
-            const wasHabitCompleted = isCompletedToday(habit);
-            if (wasCompleted) {
-                delete subtask.completedPeriods[periodKey];
-                if (isTwiceDaily) {
-                    habit.completions = habit.completions.filter(c => !(c.date === today && c.period === currentPeriod));
-                } else {
-                    habit.completions = habit.completions.filter(c => c.date !== today);
-                }
-            } else {
-                subtask.completedPeriods[periodKey] = Date.now();
-                hapticFeedback();
-                // Fire auto-complete the first time all subtasks finish the habit
-                if (!wasHabitCompleted && isCompletedToday(habit)) triggerAutoComplete(habits, habit);
+            if (status === 'confirm') {
+                saveHabits(habits);
+                closeDetails();
+                openConfirmDescPopup(habitId, period);
+                renderHabits();
+                return;
             }
 
             saveHabits(habits);
-            const justCompleted = !wasHabitCompleted && isCompletedToday(habit);
             renderHabits();
-            if (justCompleted) closeDetails();
+            if (status === 'completed') closeDetails();
             else renderDetails();
         }
 
@@ -3680,11 +3683,11 @@
         function openPointsPopup(habitId) {
             pointsPopupHabitId = habitId;
             renderPointsPopup();
-            document.getElementById('pointsPopupOverlay').classList.add('active');
+            showOverlay('pointsPopupOverlay');
         }
 
         function closePointsPopup() {
-            document.getElementById('pointsPopupOverlay').classList.remove('active');
+            hideOverlay('pointsPopupOverlay');
             pointsPopupHabitId = null;
         }
 
@@ -3700,10 +3703,7 @@
             const period = isDaily ? PERIOD.DAY : isWeekly ? PERIOD.WEEK : PERIOD.MONTH;
 
             document.getElementById('pointsPopup').innerHTML = `
-                <div class="points-popup-header">
-                    <span class="points-popup-icon">${icon}</span>
-                    <span class="points-popup-title">${escapeHtml(habit.name)}</span>
-                </div>
+                ${popupHeader({ icon, title: habit.name, variant: 'points' })}
                 <div class="points-popup-target">Target: ${target} pts / ${period}</div>
                 <div class="points-popup-buttons">
                     <button class="points-btn" onclick="completeWithPoints(${habit.id}, 1)">1</button>
@@ -3755,15 +3755,15 @@
             // close. This covers any caller that lands here from the All
             // Habits view without going through openDetailsFromAllHabits
             // explicitly.
-            const fromAllHabits = document.getElementById('allHabitsOverlay').classList.contains('active');
+            const fromAllHabits = isOverlayActive('allHabitsOverlay');
             detailsOpenedFromAllHabits = fromAllHabits;
             if (fromAllHabits) {
-                document.getElementById('allHabitsOverlay').classList.remove('active');
+                hideOverlay('allHabitsOverlay');
             }
             editMode = false;
             formMode = 'create';
             renderDetails();
-            document.getElementById('detailsOverlay').classList.add('active');
+            showOverlay('detailsOverlay');
         }
 
         function openDetailsFromAllHabits(id) {
@@ -3772,9 +3772,9 @@
             editMode = false;
             formMode = 'create';
             // Close All Habits overlay first so details can be seen
-            document.getElementById('allHabitsOverlay').classList.remove('active');
+            hideOverlay('allHabitsOverlay');
             renderDetails();
-            document.getElementById('detailsOverlay').classList.add('active');
+            showOverlay('detailsOverlay');
         }
 
         function openDetailsEdit(id) {
@@ -3786,11 +3786,11 @@
             formHabitId = id;
             initFormStateFromHabit(habit);
             renderDetails();
-            document.getElementById('detailsOverlay').classList.add('active');
+            showOverlay('detailsOverlay');
         }
 
         function closeDetails() {
-            document.getElementById('detailsOverlay').classList.remove('active');
+            hideOverlay('detailsOverlay');
             selectedHabitId = null;
             editMode = false;
             formMode = 'create';
@@ -4152,12 +4152,12 @@
         function openAllHabits() {
             allHabitsSearchQuery = '';
             renderAllHabits();
-            document.getElementById('allHabitsOverlay').classList.add('active');
+            showOverlay('allHabitsOverlay');
             setTimeout(() => document.getElementById('allHabitsSearch')?.focus(), 100);
         }
 
         function closeAllHabits() {
-            document.getElementById('allHabitsOverlay').classList.remove('active');
+            hideOverlay('allHabitsOverlay');
             allHabitsSearchQuery = '';
         }
 
@@ -4387,7 +4387,7 @@
                 ['allHabitsOverlay', closeAllHabits],
             ];
             for (const [id, close] of closers) {
-                if (document.getElementById(id)?.classList.contains('active')) {
+                if (isOverlayActive(id)) {
                     close();
                     return;
                 }
@@ -4534,14 +4534,14 @@
                 // modal continues its inline translate animation.
                 swipeElement.style.transition = 'transform 0.2s ease-out';
                 swipeElement.style.transform = 'translateY(100%)';
-                if (document.getElementById('modalOverlay').classList.contains('active')) closeModal();
-                else if (document.getElementById('detailsOverlay').classList.contains('active')) closeDetails();
-                else if (document.getElementById('settingsOverlay').classList.contains('active')) closeSettings();
-                else if (document.getElementById('subtaskPopupOverlay').classList.contains('active')) closeSubtaskPopup();
-                else if (document.getElementById('pointsPopupOverlay').classList.contains('active')) closePointsPopup();
-                else if (document.getElementById('emojiPopupOverlay').classList.contains('active')) closeEmojiPopup();
-                else if (document.getElementById('snoozePopupOverlay').classList.contains('active')) closeSnoozePopup();
-                else if (document.getElementById('allHabitsOverlay').classList.contains('active')) closeAllHabits();
+                if (isOverlayActive('modalOverlay')) closeModal();
+                else if (isOverlayActive('detailsOverlay')) closeDetails();
+                else if (isOverlayActive('settingsOverlay')) closeSettings();
+                else if (isOverlayActive('subtaskPopupOverlay')) closeSubtaskPopup();
+                else if (isOverlayActive('pointsPopupOverlay')) closePointsPopup();
+                else if (isOverlayActive('emojiPopupOverlay')) closeEmojiPopup();
+                else if (isOverlayActive('snoozePopupOverlay')) closeSnoozePopup();
+                else if (isOverlayActive('allHabitsOverlay')) closeAllHabits();
                 setTimeout(() => {
                     elementToReset.style.transform = '';
                     elementToReset.style.transition = '';
