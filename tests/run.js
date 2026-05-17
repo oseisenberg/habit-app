@@ -279,5 +279,113 @@ console.log('\nH. Daily×N delay-after-completion');
       { completed: true }), false);
 }
 
+// === I. Disabled features stay inert (guards intentional removal) =====
+console.log('\nI. auto-complete & linked-habit disabled');
+{
+  const defs = F.getDefaultHabits();
+  eq('no seed habit carries autoCompletes', defs.some(h => 'autoCompletes' in h), false);
+  eq('no seed habit carries linkedHabit', defs.some(h => 'linkedHabit' in h), false);
+
+  // triggerAutoComplete must be a no-op: trigger A (autoCompletes -> 20),
+  // B(id 20) is due, yet B must gain no completion / hidden flag.
+  const A = mkHabit({ id: 10, name: 'Trigger', frequency: { type: 'everyXDays', everyXDays: 2 }, autoCompletes: '20' });
+  const B = mkHabit({ id: 20, name: 'Target', frequency: { type: 'everyXDays', everyXDays: 2 }, completions: [{ date: dayOff(-5) }] });
+  const arr = [A, B];
+  seed(arr);
+  F.triggerAutoComplete(arr, A);
+  eq('triggerAutoComplete adds no completion', B.completions.filter(c => c.date === today).length, 0);
+  eq('triggerAutoComplete sets no autoCompletedToday', B.autoCompletedToday, undefined);
+
+  // syncLinkedHabit must not mutate either side.
+  const L1 = mkHabit({ id: 30, linkedHabit: '' });
+  const L2 = mkHabit({ id: 31, linkedHabit: '' });
+  const larr = [L1, L2];
+  F.syncLinkedHabit(larr, 30, '31');
+  eq('syncLinkedHabit leaves source link empty', L1.linkedHabit, '');
+  eq('syncLinkedHabit leaves partner link empty', L2.linkedHabit, '');
+}
+
+// === J. Delay feature extra edges ====================================
+console.log('\nJ. Daily×N delay edges');
+{
+  const HOUR = 3600000, now = Date.now();
+  const base = { frequency: { type: 'timesPerDay', timesPerDay: 3, delayHours: 4 } };
+
+  // Exactly at the boundary (elapsed >= window) -> not hidden.
+  eq('elapsed == delay window -> not hidden',
+    F.isDelayHidden(mkHabit({ id: 40, ...base, completions: [{ date: today, timestamp: now - 4 * HOUR }] })), false);
+
+  // Multiple completions today: the LATEST timestamp decides.
+  eq('latest completion still within window -> hidden',
+    F.isDelayHidden(mkHabit({ id: 41, ...base, completions: [
+      { date: today, timestamp: now - 10 * HOUR }, { date: today, timestamp: now - 1 * HOUR }] })), true);
+  eq('latest completion past window -> not hidden',
+    F.isDelayHidden(mkHabit({ id: 42, ...base, completions: [
+      { date: today, timestamp: now - 10 * HOUR }, { date: today, timestamp: now - 5 * HOUR }] })), false);
+
+  // anyDelayPending() reflects seeded state.
+  ok('anyDelayPending is a function', typeof F.anyDelayPending === 'function');
+  seed([mkHabit({ id: 43, ...base, completions: [{ date: today, timestamp: now - 1 * HOUR }] })]);
+  eq('anyDelayPending true when a habit is hidden', F.anyDelayPending(), true);
+  seed([mkHabit({ id: 44, frequency: { type: 'daily' } })]);
+  eq('anyDelayPending false with no delay habits', F.anyDelayPending(), false);
+}
+
+// === K. categorizeHabits integration =================================
+console.log('\nK. categorizeHabits buckets');
+{
+  const allIds = c => new Set([...c.now, ...c.optional, ...c.later, ...c.done].map(h => h.id));
+
+  // A plain due daily habit is visible in the Now bucket.
+  const daily = mkHabit({ id: 50, frequency: { type: 'daily' }, completions: [] });
+  seed([daily]);
+  let cat = F.categorizeHabits(F.loadHabits());
+  ok('due daily habit lands in Now', cat.now.some(h => h.id === 50), [...allIds(cat)]);
+
+  // A delay-hidden Daily×N habit is absent from every bucket.
+  const HOUR = 3600000, now = Date.now();
+  const hidden = mkHabit({ id: 51, frequency: { type: 'timesPerDay', timesPerDay: 3, delayHours: 4 },
+    completions: [{ date: today, timestamp: now - 1 * HOUR }] });
+  seed([hidden]);
+  cat = F.categorizeHabits(F.loadHabits());
+  eq('delay-hidden habit absent from all buckets', allIds(cat).has(51), false);
+
+  // Skipped-today habit is not offered in Now.
+  const skipped = mkHabit({ id: 52, frequency: { type: 'daily' }, skippedDates: [today] });
+  seed([skipped]);
+  cat = F.categorizeHabits(F.loadHabits());
+  eq('skipped habit not in Now', cat.now.some(h => h.id === 52), false);
+}
+
+// === L. Core frequency-type regressions ==============================
+console.log('\nL. twiceDaily / reminder / timesPerWeek status');
+{
+  // twiceDaily: morning-only is partial, both periods completes.
+  const tdPartial = mkHabit({ id: 60, frequency: { type: 'twiceDaily' },
+    completions: [{ date: today, period: 'morning' }] });
+  const sp = F.getCompletionStatus(tdPartial);
+  ok('twiceDaily morning-only: not completed, morningDone',
+    sp.completed === false && sp.morningDone === true && sp.nightDone === false, sp);
+  eq('twiceDaily morning-only -> isCompletedToday false', F.isCompletedToday(tdPartial), false);
+  const tdFull = mkHabit({ id: 61, frequency: { type: 'twiceDaily' },
+    completions: [{ date: today, period: 'morning' }, { date: today, period: 'night' }] });
+  eq('twiceDaily both periods -> completed', F.getCompletionStatus(tdFull).completed, true);
+  eq('twiceDaily both periods -> isCompletedToday true', F.isCompletedToday(tdFull), true);
+
+  // reminder cadence (reminderDays interval drives due).
+  const remDue = mkHabit({ id: 62, frequency: { type: 'reminder', reminderDays: 3 },
+    completions: [{ date: dayOff(-3) }] });
+  eq('reminder 3d ago -> due', F.getCompletionStatus(remDue).due, true);
+  const remNot = mkHabit({ id: 63, frequency: { type: 'reminder', reminderDays: 3 },
+    completions: [{ date: dayOff(-1) }] });
+  eq('reminder 1d ago -> not due', F.getCompletionStatus(remNot).due, false);
+
+  // timesPerWeek: fresh habit not completed, count 0, target carried.
+  const tpw = mkHabit({ id: 64, frequency: { type: 'timesPerWeek', timesPerWeek: 3 }, completions: [] });
+  const tw = F.getCompletionStatus(tpw);
+  ok('timesPerWeek fresh: 0/3 not completed',
+    tw.completed === false && tw.count === 0 && tw.target === 3, tw);
+}
+
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
 if (fail) { console.log('FAILED:', fails.join(', ')); process.exit(1); }
