@@ -4196,6 +4196,14 @@
         // ========================================
 
         let allHabitsSearchQuery = '';
+        // Momentum-ring overlay: only available in the All Habits menu.
+        let allHabitsMomentumRings = localStorage.getItem('allHabitsMomentumRings') === '1';
+
+        function toggleAllHabitsMomentum(on) {
+            allHabitsMomentumRings = on;
+            localStorage.setItem('allHabitsMomentumRings', on ? '1' : '0');
+            renderAllHabitsGrid();
+        }
 
         function openAllHabits() {
             allHabitsSearchQuery = '';
@@ -4287,9 +4295,18 @@
             const renderHabitItem = (habit) => {
                 const icon = habit.icon || '📌';
                 const opacity = habit.archived ? 'opacity: 0.5;' : '';
+                let ringStyle = '--progress: 0%; background: #2a2a3e;';
+                if (allHabitsMomentumRings) {
+                    // Map momentum (-100..100) to a 0..100% perimeter fill;
+                    // higher momentum = more of the ring coloured.
+                    const raw = Math.max(-100, Math.min(100, calculateMomentumScore(habit).raw));
+                    const pct = Math.round((raw + 100) / 2);
+                    const color = raw > 0 ? '#4ade80' : (raw < 0 ? '#dc2626' : '#667eea');
+                    ringStyle = `--progress: ${pct}%; background: conic-gradient(${color} ${pct}%, #2a2a3e ${pct}%);`;
+                }
                 return `<div class="habit-icon-wrapper" style="${opacity}">
                     <div class="habit-icon" onclick="openDetailsFromAllHabits(${habit.id})">
-                        <div class="habit-ring" style="--progress: 0%; background: #2a2a3e;">
+                        <div class="habit-ring" style="${ringStyle}">
                             <span class="habit-emoji">${icon}</span>
                         </div>
                     </div>
@@ -4340,6 +4357,10 @@
                         <input type="text" id="allHabitsSearch" class="form-input" placeholder="Search habits..."
                             oninput="onAllHabitsSearch(this.value)" value="${escapeHtml(allHabitsSearchQuery)}" />
                     </div>
+                    <label style="display:flex;align-items:center;gap:8px;padding:6px 14px;color:#888;font-size:0.8rem;cursor:pointer">
+                        <input type="checkbox" ${allHabitsMomentumRings ? 'checked' : ''} onchange="toggleAllHabitsMomentum(this.checked)" style="accent-color:#667eea">
+                        <span>Show momentum rings</span>
+                    </label>
                 </div>
                 <div class="all-habits-scroll-area">
                     <div id="allHabitsNoResults" class="empty-state" style="display:none;padding:20px 0">
