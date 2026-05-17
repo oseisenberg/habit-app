@@ -3033,18 +3033,28 @@
         // each completion it is hidden from the day's list until that many
         // hours have elapsed, then it reappears (same day) until the daily
         // target is met. Recomputed on every render, so no timer is needed.
-        function isDelayHidden(habit) {
+        function isDelayHidden(habit, status) {
             if (habit.frequency.type !== FREQ.TIMES_PER_DAY) return false;
             const delayHours = habit.frequency.delayHours;
             if (!delayHours || delayHours <= 0) return false;
             // Target met → fall through to normal Done/Optional handling.
-            if (getCompletionStatus(habit).completed) return false;
+            // Reuse caller's status when provided to avoid recomputing it.
+            if ((status || getCompletionStatus(habit)).completed) return false;
             const today = getTodayString();
             const todaysCompletions = habit.completions.filter(c => c.date === today);
             if (!todaysCompletions.length) return false;
+            // Mixed data: untimestamped taps are ignored here; if every
+            // completion lacks a timestamp the habit shows (legacy-safe).
             const lastTs = Math.max(...todaysCompletions.map(c => c.timestamp || 0));
             if (!lastTs) return false; // legacy completion with no timestamp → show
             return (Date.now() - lastTs) < delayHours * 3600000;
+        }
+
+        // True if any habit is currently inside its post-completion delay
+        // window. Used by the minute tick to re-render the day view on its
+        // own once a delay elapses (no dedicated timer).
+        function anyDelayPending() {
+            return loadHabits().some(h => isDelayHidden(h));
         }
 
         // Categorize habits into sections (Now, Optional, Later, Done) - each habit in ONE section only
@@ -3072,7 +3082,7 @@
 
                 // Daily×N with a post-completion delay: hide until enough
                 // hours have passed since the last completion today.
-                if (isDelayHidden(h)) return;
+                if (isDelayHidden(h, status)) return;
 
                 // Twice daily: special handling
                 if (h.frequency.type === FREQ.TWICE_DAILY) {
@@ -4928,16 +4938,23 @@
         // Track current period to detect changes
         let lastPeriod = getTimeOfDayNow();
         let lastDate = getTodayString();
+        let lastDelayPending = false;
 
         // Check every minute if period or date changed
         setInterval(() => {
             updateBadge();
             const currentPeriod = getTimeOfDayNow();
             const currentDate = getTodayString();
+            const delayPending = anyDelayPending();
             if (currentPeriod !== lastPeriod || currentDate !== lastDate) {
                 lastPeriod = currentPeriod;
                 lastDate = currentDate;
                 updateDisplay();
                 scheduleNotifications();
+            } else if (delayPending || lastDelayPending) {
+                // A Daily×N habit is (or just was) within its hide window —
+                // re-render so it reappears on its own when the delay elapses.
+                updateDisplay();
             }
+            lastDelayPending = delayPending;
         }, 60000);

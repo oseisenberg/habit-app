@@ -271,6 +271,12 @@ console.log('\nH. Daily×N delay-after-completion');
   eq('daily (1x) habit -> not hidden',
     F.isDelayHidden(mkHabit({ id: 92, frequency: { type: 'daily', delayHours: 4 },
       completions: [{ date: today, timestamp: now }] })), false);
+
+  // Optional status param: a passed-in completed status short-circuits
+  // to "not hidden" (same result as the internal compute path).
+  eq('passed completed status -> not hidden',
+    F.isDelayHidden(mkHabit({ ...base, completions: [{ date: today, timestamp: now - 1 * HOUR }] }),
+      { completed: true }), false);
 }
 
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
