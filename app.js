@@ -4322,11 +4322,16 @@
                 let ringStyle = '--progress: 0%; background: #2a2a3e;';
                 if (allHabitsMomentumRings) {
                     // Map momentum (-100..100) to a 0..100% perimeter fill;
-                    // higher momentum = more of the ring coloured.
+                    // higher momentum = more of the ring coloured. Hue runs
+                    // red -> amber -> green so the colour itself reads as
+                    // low/mid/high, with a soft track and a faint glow.
                     const raw = Math.max(-100, Math.min(100, calculateMomentumScore(habit).raw));
                     const pct = Math.round((raw + 100) / 2);
-                    const color = raw > 0 ? '#4ade80' : (raw < 0 ? '#dc2626' : '#667eea');
-                    ringStyle = `--progress: ${pct}%; background: conic-gradient(${color} ${pct}%, #2a2a3e ${pct}%);`;
+                    const hue = Math.round((pct / 100) * 130); // 0=red .. 130=green
+                    const color = `hsl(${hue} 70% 55%)`;
+                    ringStyle = `--progress: ${pct}%;`
+                        + `background: conic-gradient(${color} ${pct}%, #23233a ${pct}%);`
+                        + `box-shadow: 0 0 0 1px #23233a inset, 0 0 8px -2px ${color};`;
                 }
                 return `<div class="habit-icon-wrapper" style="${opacity}">
                     <div class="habit-icon" onclick="openDetailsFromAllHabits(${habit.id})">
