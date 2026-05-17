@@ -953,7 +953,8 @@
         }
 
         function updateBadge() {
-            if (!('setAppBadge' in navigator)) return;
+            const native = !!(window.AppPlatform && AppPlatform.isNative());
+            if (!native && !('setAppBadge' in navigator)) return;
             const habits = loadHabits().filter(h => !h.archived);
             const cat = categorizeHabits(habits);
             // In the morning, badge counts only the morning-tagged tasks
@@ -963,7 +964,9 @@
             const count = cat.timeOfDay === PERIOD.MORNING
                 ? cat.morning.length
                 : cat.bedtime.length + cat.anytime.length;
-            if (count > 0) {
+            if (native) {
+                AppPlatform.setBadge(count);
+            } else if (count > 0) {
                 navigator.setAppBadge(count).catch(() => {});
             } else {
                 navigator.clearAppBadge().catch(() => {});
@@ -1280,6 +1283,9 @@
         }
 
         async function requestNotificationPermission() {
+            if (window.AppPlatform && AppPlatform.isNative()) {
+                return await AppPlatform.requestNotificationPermission();
+            }
             if (!('Notification' in window)) {
                 return 'denied';
             }
@@ -1295,6 +1301,7 @@
         function clearNotificationTimers() {
             notificationTimers.forEach(timer => clearTimeout(timer));
             notificationTimers = [];
+            if (window.AppPlatform && AppPlatform.isNative()) AppPlatform.cancelNotifications();
         }
 
         // Track last notification to prevent duplicates
@@ -1353,6 +1360,13 @@
             clearNotificationTimers();
 
             const settings = getSettings();
+            // In the Capacitor iOS app, schedule native local
+            // notifications (they fire in the background) and skip the
+            // web setTimeout path entirely.
+            if (window.AppPlatform && AppPlatform.isNative()) {
+                AppPlatform.scheduleNotifications(settings);
+                return;
+            }
             if (!settings.notificationsEnabled) return;
 
             const now = new Date();
@@ -4779,6 +4793,7 @@
         // race ahead of swRegistration being set, fall through to the basic
         // Notification API, and silently fail in standalone PWA contexts.
         (async () => {
+            if (window.AppPlatform) await AppPlatform.init();
             await registerServiceWorker();
             if (getSettings().notificationsEnabled) {
                 scheduleNotifications();
