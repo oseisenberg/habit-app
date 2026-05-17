@@ -792,7 +792,7 @@
                 quietHoursStart: 22,
                 quietHoursEnd: 7,
                 weeklySummaryEnabled: false,
-                separateBedtimeSection: false
+                separateBedtimeSection: true
             };
             try {
                 const s = localStorage.getItem('habit_settings');
