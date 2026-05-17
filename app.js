@@ -3165,10 +3165,15 @@
                     else if (freq.everyXMonths) expectedCycle = freq.everyXMonths * 30;
                     else if (freq.everyXDays) expectedCycle = freq.everyXDays;
 
+                    // Neglect is counted from the reminder's last APPEARANCE
+                    // (referenceDate + one interval), not its last completion —
+                    // the dormant waiting period before it reappears is not
+                    // neglect. Each full interval ignored past reappearance is
+                    // one dot (so a daily reminder ignored for one day = 1 dot).
+                    const interval = expectedCycle || 1;
                     const daysSince = daysBetween(referenceDate, getTodayString());
-                    if (daysSince >= expectedCycle * 1.75) neglectLevel = 3;
-                    else if (daysSince >= expectedCycle) neglectLevel = 2;
-                    else if (daysSince >= expectedCycle * 0.5) neglectLevel = 1;
+                    const daysIgnored = daysSince - interval;
+                    neglectLevel = daysIgnored > 0 ? Math.min(3, Math.floor(daysIgnored / interval)) : 0;
                 }
             } else {
                 neglectLevel = hasHistory && scoreData.display < 0 ? Math.min(3, Math.abs(scoreData.display)) : 0;
