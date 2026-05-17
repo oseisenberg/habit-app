@@ -494,6 +494,15 @@
         .subtask-popup-item-locked:active { background: #0f0f1a; }
         .subtask-popup-item .subtask-checkbox { width: 20px; height: 20px; }
         .subtask-popup-item .subtask-name { font-size: 0.85rem; }
+        /* Bullet used by the Confirm-description popup in place of a
+         * checkbox — same row layout as subtasks, read-only. */
+        .confirm-desc-bullet {
+            width: 20px; height: 20px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .confirm-desc-bullet::before {
+            content: ''; width: 6px; height: 6px; border-radius: 50%; background: #667eea;
+        }
 
         /* Points selection popup */
         .points-popup-overlay {
