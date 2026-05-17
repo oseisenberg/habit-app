@@ -312,6 +312,15 @@
         .detail-label { color: #888; font-size: 0.75rem; }
         .detail-value { color: #fff; font-size: 0.75rem; }
 
+        .detail-grid { display: grid; gap: 4px; margin: 8px 0; }
+        .detail-cell { background: #0f0f1a; border-radius: 8px; padding: 8px 4px; text-align: center; }
+        .detail-cell .dc-label { font-size: 0.55rem; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+        .detail-cell .dc-value { font-size: 0.8rem; color: #fff; margin-top: 3px; font-weight: 600; }
+        .kebab-backdrop { position: fixed; inset: 0; z-index: 300; }
+        .kebab-menu { position: fixed; z-index: 301; background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 10px; padding: 6px; min-width: 168px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 2px; }
+        .kebab-menu button { width: 100%; text-align: left; padding: 11px 12px; background: transparent; border: none; color: #ccc; font-size: 0.9rem; cursor: pointer; border-radius: 6px; }
+        .kebab-menu button:active { background: #252540; }
+        .kebab-menu button.danger { color: #f87171; }
         .momentum-display { background: #0f0f1a; border-radius: 10px; padding: 12px; text-align: center; margin-bottom: 10px; }
         .momentum-score { font-size: 1.8rem; font-weight: 700; }
         .momentum-score.positive { color: #4ade80; }

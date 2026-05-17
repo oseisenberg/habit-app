@@ -3906,6 +3906,39 @@
             detailsOpenedFromAllHabits = false;
         }
 
+        // "⋮" overflow menu in the details action bar. Anchored to the
+        // tapped button (opens upward from that point), not centered.
+        function closeDetailsMoreMenu() {
+            document.querySelectorAll('.kebab-backdrop, .kebab-menu').forEach(e => e.remove());
+        }
+        function openDetailsMoreMenu(event, id) {
+            event.stopPropagation();
+            closeDetailsMoreMenu();
+            const habit = loadHabits().find(h => h.id === id);
+            if (!habit) return;
+            const rect = event.currentTarget.getBoundingClientRect();
+            const backdrop = document.createElement('div');
+            backdrop.className = 'kebab-backdrop';
+            backdrop.onclick = closeDetailsMoreMenu;
+            const menu = document.createElement('div');
+            menu.className = 'kebab-menu';
+            menu.innerHTML = `
+                <button onclick="closeDetailsMoreMenu();freshStartHabit(${id})">Fresh Start</button>
+                <button onclick="closeDetailsMoreMenu();resetHabitStats(${id})">Reset Stats</button>
+                <button onclick="closeDetailsMoreMenu();${habit.archived ? `unarchiveHabit(${id})` : `archiveHabit(${id})`}">${habit.archived ? 'Unarchive' : 'Archive'}</button>
+                <button class="danger" onclick="closeDetailsMoreMenu();deleteHabit(${id})">Delete</button>`;
+            document.body.appendChild(backdrop);
+            document.body.appendChild(menu);
+            // Measure, then anchor to the button (open upward/left).
+            const mw = menu.offsetWidth, mh = menu.offsetHeight;
+            let left = rect.right - mw;
+            if (left < 8) left = 8;
+            let top = rect.top - mh - 6;
+            if (top < 8) top = rect.bottom + 6;
+            menu.style.left = left + 'px';
+            menu.style.top = top + 'px';
+        }
+
         function toggleEditMode() {
             const habit = loadHabits().find(h => h.id === selectedHabitId);
             if (!habit) return;
@@ -4209,10 +4242,16 @@
                             <div class="momentum-label">Momentum${recoveryText}</div>
                         </div>` : ''}
                     </div>
-                    <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" style="color:${statusColor}">${habitStatus}</span></div>
-                    <div class="detail-row"><span class="detail-label">Time</span><span class="detail-value">${timeLabel}</span></div>
-                    <div class="detail-row"><span class="detail-label">Frequency</span><span class="detail-value">${freqLabel}</span></div>
-                    ${(habit.frequency.type === FREQ.POINTS_PER_DAY || habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH) ? `<div class="detail-row"><span class="detail-label">Progress</span><span class="detail-value">${getCompletionStatus(habit).text}</span></div>` : ''}
+                    ${(() => {
+                        const isPts = habit.frequency.type === FREQ.POINTS_PER_DAY || habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH;
+                        const cells = [
+                            `<div class="detail-cell"><div class="dc-label">Status</div><div class="dc-value" style="color:${statusColor}">${habitStatus}</div></div>`,
+                            `<div class="detail-cell"><div class="dc-label">Time</div><div class="dc-value">${timeLabel}</div></div>`,
+                            `<div class="detail-cell"><div class="dc-label">Frequency</div><div class="dc-value">${freqLabel}</div></div>`,
+                        ];
+                        if (isPts) cells.push(`<div class="detail-cell"><div class="dc-label">Progress</div><div class="dc-value">${getCompletionStatus(habit).text}</div></div>`);
+                        return `<div class="detail-grid" style="grid-template-columns:repeat(${cells.length},1fr)">${cells.join('')}</div>`;
+                    })()}
                     ${!isReminder ? `<div class="stats-grid">
                         <div class="stat-box"><div class="stat-number">${total}</div><div class="stat-label">Total</div></div>
                         <div class="stat-box"><div class="stat-number">${rate}%</div><div class="stat-label">Rate</div></div>
@@ -4241,13 +4280,8 @@
                             ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id}, false)">Ignore</button>` : ''}
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
                         </div>
-                        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
-                            <button class="submit-btn secondary" style="flex:1" onclick="freshStartHabit(${habit.id})">Fresh Start</button>
-                            ${total > 0 ? `<button class="submit-btn secondary" style="flex:1" onclick="resetHabitStats(${habit.id})">Reset Stats</button>` : ''}
-                            ${habit.archived
-                                ? `<button class="submit-btn secondary" style="flex:1" onclick="unarchiveHabit(${habit.id})">Unarchive</button>`
-                                : `<button class="submit-btn secondary" style="flex:1" onclick="archiveHabit(${habit.id})">Archive</button>`}
-                            <button class="submit-btn danger" style="flex:1" onclick="deleteHabit(${habit.id})">Delete</button>
+                        <div style="display:flex;justify-content:flex-end;margin-top:6px">
+                            <button class="submit-btn secondary" style="width:48px;flex:0 0 auto" aria-label="More actions" onclick="openDetailsMoreMenu(event, ${habit.id})">⋮</button>
                         </div>
                     </div>`;
             }
