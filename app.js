@@ -3326,6 +3326,12 @@
                 const pct = Math.min(100, Math.round((status.points / status.target) * 100));
                 progress = `${pct}%`;
                 if (pct > 0) ringClass = 'partial';
+            } else if (habit.frequency.type === FREQ.TIMES_PER_DAY) {
+                // Fill the ring proportionally per completion (e.g. 1/3,
+                // 2/3); scales to whatever the daily target is.
+                const pct = Math.min(100, Math.round((status.count / status.target) * 100));
+                progress = `${pct}%`;
+                if (pct > 0) ringClass = 'partial';
             } else if (habit.frequency.type === FREQ.TIMES_PER_WEEK || habit.frequency.type === FREQ.TIMES_PER_MONTH ||
                        habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH) {
                 const today = getTodayString();
