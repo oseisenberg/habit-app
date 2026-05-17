@@ -1172,21 +1172,15 @@
             const s = getSettings();
             document.getElementById('morningStart').value = s.morningStart;
             document.getElementById('nightStart').value = s.nightStart;
-            document.getElementById('sortMethod').value = s.sortMethod || 'default';
             document.getElementById('notificationsEnabled').checked = s.notificationsEnabled;
             document.getElementById('morningReminderTime').value = s.morningReminderTime;
             document.getElementById('nightReminderTime').value = s.nightReminderTime;
             document.getElementById('momentumAlertEnabled').checked = s.momentumAlertEnabled;
             document.getElementById('momentumAlertTime').value = s.momentumAlertTime;
             document.getElementById('momentumAlertThreshold').value = s.momentumAlertThreshold;
-            document.getElementById('quietHoursEnabled').checked = s.quietHoursEnabled;
-            document.getElementById('quietHoursStart').value = s.quietHoursStart;
-            document.getElementById('quietHoursEnd').value = s.quietHoursEnd;
-            document.getElementById('weeklySummaryEnabled').checked = s.weeklySummaryEnabled;
             document.getElementById('separateBedtimeSection').checked = s.separateBedtimeSection;
             document.getElementById('notificationSettings').style.display = s.notificationsEnabled ? 'block' : 'none';
             document.getElementById('momentumAlertSettings').style.display = s.momentumAlertEnabled ? 'block' : 'none';
-            document.getElementById('quietHoursSettings').style.display = s.quietHoursEnabled ? 'block' : 'none';
             updateInstallPromptVisibility();
             showOverlay('settingsOverlay');
         }
@@ -1213,20 +1207,17 @@
                     alert('Notification permission denied. Please enable in browser settings.');
                 }
             }
+            const prev = getSettings();
             const settings = {
+                ...prev,
                 morningStart: parseInt(document.getElementById('morningStart').value) || 5,
                 nightStart: parseInt(document.getElementById('nightStart').value) || 18,
-                sortMethod: document.getElementById('sortMethod').value || 'default',
                 notificationsEnabled: document.getElementById('notificationsEnabled').checked,
                 morningReminderTime: parseInt(document.getElementById('morningReminderTime').value) || 5,
                 nightReminderTime: parseInt(document.getElementById('nightReminderTime').value) || 18,
                 momentumAlertEnabled: document.getElementById('momentumAlertEnabled').checked,
                 momentumAlertTime: parseInt(document.getElementById('momentumAlertTime').value) || 18,
                 momentumAlertThreshold: parseInt(document.getElementById('momentumAlertThreshold').value) || -20,
-                quietHoursEnabled: document.getElementById('quietHoursEnabled').checked,
-                quietHoursStart: parseInt(document.getElementById('quietHoursStart').value) || 22,
-                quietHoursEnd: parseInt(document.getElementById('quietHoursEnd').value) || 7,
-                weeklySummaryEnabled: document.getElementById('weeklySummaryEnabled').checked,
                 separateBedtimeSection: document.getElementById('separateBedtimeSection').checked
             };
             try {
@@ -4486,26 +4477,35 @@
                         <input type="text" id="allHabitsSearch" class="form-input" placeholder="Search habits..."
                             oninput="onAllHabitsSearch(this.value)" value="${escapeHtml(allHabitsSearchQuery)}" />
                     </div>
-                    <div style="display:flex;gap:6px;padding:0 14px 6px">
-                        <select class="form-input" style="flex:1;font-size:0.8rem" onchange="setAllHabitsSort(this.value)">
-                            <option value="status" ${allHabitsSort === 'status' ? 'selected' : ''}>Sort: Status</option>
-                            <option value="alpha" ${allHabitsSort === 'alpha' ? 'selected' : ''}>Sort: A–Z</option>
-                            <option value="momentum" ${allHabitsSort === 'momentum' ? 'selected' : ''}>Sort: Momentum</option>
-                            <option value="overdue" ${allHabitsSort === 'overdue' ? 'selected' : ''}>Sort: Most overdue</option>
-                        </select>
-                        <select class="form-input" style="flex:1;font-size:0.8rem" onchange="setAllHabitsFilter(this.value)">
-                            <option value="all" ${allHabitsFilter === 'all' ? 'selected' : ''}>Filter: All</option>
-                            <option value="reminders" ${allHabitsFilter === 'reminders' ? 'selected' : ''}>Filter: Reminders</option>
-                            <option value="subtasks" ${allHabitsFilter === 'subtasks' ? 'selected' : ''}>Filter: Has subtasks</option>
-                            <option value="snoozed" ${allHabitsFilter === 'snoozed' ? 'selected' : ''}>Filter: Snoozed</option>
-                            <option value="negative" ${allHabitsFilter === 'negative' ? 'selected' : ''}>Filter: Negative</option>
-                            <option value="archived" ${allHabitsFilter === 'archived' ? 'selected' : ''}>Filter: Archived</option>
-                        </select>
+                    <div style="display:flex;gap:8px;padding:0 14px 8px">
+                        <label class="ah-select-wrap">
+                            <span class="ah-select-label">Sort</span>
+                            <select class="ah-select" onchange="setAllHabitsSort(this.value)">
+                                <option value="status" ${allHabitsSort === 'status' ? 'selected' : ''}>Status</option>
+                                <option value="alpha" ${allHabitsSort === 'alpha' ? 'selected' : ''}>A–Z</option>
+                                <option value="momentum" ${allHabitsSort === 'momentum' ? 'selected' : ''}>Momentum</option>
+                                <option value="overdue" ${allHabitsSort === 'overdue' ? 'selected' : ''}>Most overdue</option>
+                            </select>
+                        </label>
+                        <label class="ah-select-wrap">
+                            <span class="ah-select-label">Filter</span>
+                            <select class="ah-select" onchange="setAllHabitsFilter(this.value)">
+                                <option value="all" ${allHabitsFilter === 'all' ? 'selected' : ''}>All</option>
+                                <option value="reminders" ${allHabitsFilter === 'reminders' ? 'selected' : ''}>Reminders</option>
+                                <option value="subtasks" ${allHabitsFilter === 'subtasks' ? 'selected' : ''}>Has subtasks</option>
+                                <option value="snoozed" ${allHabitsFilter === 'snoozed' ? 'selected' : ''}>Snoozed</option>
+                                <option value="negative" ${allHabitsFilter === 'negative' ? 'selected' : ''}>Negative</option>
+                                <option value="archived" ${allHabitsFilter === 'archived' ? 'selected' : ''}>Archived</option>
+                            </select>
+                        </label>
                     </div>
-                    <label style="display:flex;align-items:center;gap:8px;padding:6px 14px;color:#888;font-size:0.8rem;cursor:pointer">
-                        <input type="checkbox" ${allHabitsMomentumRings ? 'checked' : ''} onchange="toggleAllHabitsMomentum(this.checked)" style="accent-color:#667eea">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 14px 10px;color:#aaa;font-size:0.82rem">
                         <span>Show momentum rings</span>
-                    </label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" ${allHabitsMomentumRings ? 'checked' : ''} onchange="toggleAllHabitsMomentum(this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
                 <div class="all-habits-scroll-area">
                     <div id="allHabitsNoResults" class="empty-state" style="display:none;padding:20px 0">

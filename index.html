@@ -45,14 +45,6 @@
                 <button class="modal-close" onclick="closeSettings()">&times;</button>
             </div>
             <div class="settings-row">
-                <span class="settings-label">Sort habits by</span>
-                <select class="settings-select" id="sortMethod">
-                    <option value="default" selected>Default</option>
-                    <option value="attention">Needs attention</option>
-                    <option value="alphabetical">A-Z</option>
-                </select>
-            </div>
-            <div class="settings-row">
                 <span class="settings-label">Morning starts at</span>
                 <div class="settings-value">
                     <input type="number" class="settings-input" id="morningStart" min="0" max="23" value="5">
@@ -65,9 +57,6 @@
                     <input type="number" class="settings-input" id="nightStart" min="0" max="23" value="18">
                     <span style="color:#666">:00</span>
                 </div>
-            </div>
-            <div class="settings-row" style="color:#666; font-size:0.8rem;">
-                Completions before morning count as previous day's night.
             </div>
             <div class="settings-row">
                 <span class="settings-label">Separate bedtime section</span>
@@ -121,36 +110,6 @@
                             <input type="number" class="settings-input" id="momentumAlertThreshold" min="-100" max="0" value="-20">
                         </div>
                     </div>
-                </div>
-                <div class="settings-row">
-                    <span class="settings-label">Quiet hours</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="quietHoursEnabled" onchange="toggleQuietHoursSettings()">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-                <div id="quietHoursSettings" style="display:none;">
-                    <div class="settings-row">
-                        <span class="settings-label" style="padding-left:12px">From</span>
-                        <div class="settings-value">
-                            <input type="number" class="settings-input" id="quietHoursStart" min="0" max="23" value="22">
-                            <span style="color:#666">:00</span>
-                        </div>
-                    </div>
-                    <div class="settings-row">
-                        <span class="settings-label" style="padding-left:12px">Until</span>
-                        <div class="settings-value">
-                            <input type="number" class="settings-input" id="quietHoursEnd" min="0" max="23" value="7">
-                            <span style="color:#666">:00</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="settings-row" style="border-bottom:none;">
-                    <span class="settings-label">Weekly summary (Sun)</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="weeklySummaryEnabled">
-                        <span class="toggle-slider"></span>
-                    </label>
                 </div>
             </div>
             <div id="installPrompt" style="display:none; margin-top:12px; padding:12px; background:#1a1a2e; border-radius:8px; font-size:0.85rem;">
