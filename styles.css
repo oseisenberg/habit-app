@@ -29,21 +29,19 @@
             flex-direction: row;
             align-items: center;
             justify-content: center;
-            gap: 0;
+            gap: 6px;
             min-height: 82px;
             min-width: 0;
-            overflow: hidden;
         }
         .habit-icon-wrapper.linked-pair .habit-icon {
-            flex: 1 1 0;
-            min-width: 0;
+            flex: 0 0 auto;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         .habit-icon-wrapper.linked-pair .link-line {
-            flex: 0 0 12px;
-            min-width: 6px;
+            flex: 0 0 20px;
+            min-width: 20px;
             height: 3px;
             background: #4a4a5e;
             border-radius: 2px;
@@ -328,7 +326,7 @@
         .stat-label { font-size: 0.55rem; color: #666; margin-top: 1px; }
 
         .action-buttons { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
-        .action-buttons .submit-btn { padding: 10px; font-size: 0.85rem; }
+        .action-buttons .submit-btn { padding: 10px; font-size: 0.85rem; min-width: 88px; }
         .action-row { display: flex; gap: 6px; }
         .action-row .submit-btn { flex: 1; }
 

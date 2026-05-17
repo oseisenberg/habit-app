@@ -3740,16 +3740,8 @@
             const habit = habits.find(h => h.id === habitId);
             if (!habit || !habit.subtasks) return;
 
-            const { status, period } = applySubtaskToggle(habits, habit, subtaskId);
+            const { status } = applySubtaskToggle(habits, habit, subtaskId);
             if (status === 'noop') return;
-
-            if (status === 'confirm') {
-                saveHabits(habits);
-                closeSubtaskPopup();
-                openConfirmDescPopup(habitId, period);
-                renderHabits();
-                return;
-            }
 
             saveHabits(habits);
             if (status === 'completed') {
@@ -3766,16 +3758,8 @@
             const habit = habits.find(h => h.id === habitId);
             if (!habit || !habit.subtasks) return;
 
-            const { status, period } = applySubtaskToggle(habits, habit, subtaskId);
+            const { status } = applySubtaskToggle(habits, habit, subtaskId);
             if (status === 'noop') return;
-
-            if (status === 'confirm') {
-                saveHabits(habits);
-                closeDetails();
-                openConfirmDescPopup(habitId, period);
-                renderHabits();
-                return;
-            }
 
             saveHabits(habits);
             renderHabits();
@@ -4230,7 +4214,7 @@
                         </div>
                     </div>` : ''}
                     <div class="action-buttons">
-                        <div style="display:flex;gap:6px">
+                        <div style="display:flex;gap:6px;flex-wrap:wrap">
                             ${completeButton}
                             ${undoButton}
                             ${moveToTodayButton}
@@ -4239,7 +4223,7 @@
                             ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id}, false)">Ignore</button>` : ''}
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
                         </div>
-                        <div style="display:flex;gap:6px">
+                        <div style="display:flex;gap:6px;flex-wrap:wrap">
                             <button class="submit-btn secondary" style="flex:1" onclick="freshStartHabit(${habit.id})">Fresh Start</button>
                             ${total > 0 ? `<button class="submit-btn secondary" style="flex:1" onclick="resetHabitStats(${habit.id})">Reset Stats</button>` : ''}
                             ${habit.archived
