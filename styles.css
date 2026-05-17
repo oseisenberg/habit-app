@@ -374,7 +374,7 @@
         .subtask-indicator.complete { color: #4ade80; }
         .subtask-list { margin-top: 10px; }
         .subtasks-scroll-container { background: #0f0f1a; border-radius: 8px; padding: 8px 12px; max-height: 200px; overflow-y: auto; margin-bottom: 8px; }
-        .subtask-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #2a2a3e; min-height: 36px; }
+        .subtask-item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-bottom: 1px solid #2a2a3e; min-height: 36px; }
         .subtask-item.dragging { opacity: 0.5; background: #1a1a2e; }
         .subtask-item.drag-over { border-top: 2px solid #667eea; }
         .subtask-drag-handle { color: #555; cursor: grab; padding: 4px; font-size: 0.8rem; user-select: none; }
@@ -385,7 +385,7 @@
         .subtask-checkbox.checked::after { content: '✓'; color: white; font-size: 10px; }
         .subtask-name { flex: 1; color: #ccc; font-size: 0.8rem; }
         .subtask-name.completed { color: #555; text-decoration: line-through; }
-        .subtask-name-input { flex: 1; color: #ccc; font-size: 0.8rem; background: transparent; border: none; border-bottom: 1px solid transparent; outline: none; padding: 2px 0; }
+        .subtask-name-input { flex: 1; min-width: 0; color: #ccc; font-size: 0.8rem; font-family: inherit; line-height: 1.4; background: transparent; border: none; border-bottom: 1px solid transparent; outline: none; padding: 4px 0; resize: none; overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere; box-sizing: border-box; }
         .subtask-name-input:focus { border-bottom-color: #667eea; }
         .subtask-delete { color: #666; font-size: 0.7rem; cursor: pointer; padding: 4px 8px; min-width: 32px; min-height: 32px; display: flex; align-items: center; justify-content: center; }
         .add-subtask { display: flex; gap: 6px; margin-top: 6px; }

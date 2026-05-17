@@ -248,35 +248,37 @@
             let subtasksHtml = '';
             if (showSubtasksArea || subtasks.length > 0) {
                 const subtaskItems = isEdit ? subtasks.map((s, i) => `
-                    <div class="subtask-item" draggable="true" data-subtask-id="${s.id}" data-index="${i}"
-                        ondragstart="handleSubtaskDragStart(event, 'edit', ${habit.id})"
+                    <div class="subtask-item" data-subtask-id="${s.id}" data-index="${i}"
                         ondragover="handleSubtaskDragOver(event)"
                         ondragleave="handleSubtaskDragLeave(event)"
                         ondrop="handleSubtaskDrop(event, 'edit', ${habit.id})">
-                        <span class="subtask-drag-handle"
+                        <span class="subtask-drag-handle" draggable="true"
+                            ondragstart="handleSubtaskDragStart(event, 'edit', ${habit.id})"
                             ontouchstart="handleSubtaskTouchStart(event, 'edit', ${habit.id})"
                             ontouchmove="handleSubtaskTouchMove(event)"
                             ontouchend="handleSubtaskTouchEnd(event)"
                             ontouchcancel="handleSubtaskTouchEnd(event)">⋮⋮</span>
-                        <input type="text" class="subtask-name-input" value="${escapeHtml(s.name)}"
+                        <textarea class="subtask-name-input" rows="1"
+                            oninput="autoGrowSubtask(this)"
                             onchange="updateEditSubtask(${habit.id}, ${s.id}, this.value)"
-                            onkeypress="if(event.key==='Enter')this.blur()">
+                            onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${escapeHtml(s.name)}</textarea>
                         <span class="subtask-delete" onclick="deleteSubtask(${habit.id}, ${s.id})">✕</span>
                     </div>
                 `).join('') : subtasks.map((s, i) => `
-                    <div class="subtask-item" draggable="true" data-subtask-id="${s.id}" data-index="${i}"
-                        ondragstart="handleSubtaskDragStart(event, 'new')"
+                    <div class="subtask-item" data-subtask-id="${s.id}" data-index="${i}"
                         ondragover="handleSubtaskDragOver(event)"
                         ondragleave="handleSubtaskDragLeave(event)"
                         ondrop="handleSubtaskDrop(event, 'new')">
-                        <span class="subtask-drag-handle"
+                        <span class="subtask-drag-handle" draggable="true"
+                            ondragstart="handleSubtaskDragStart(event, 'new')"
                             ontouchstart="handleSubtaskTouchStart(event, 'new')"
                             ontouchmove="handleSubtaskTouchMove(event)"
                             ontouchend="handleSubtaskTouchEnd(event)"
                             ontouchcancel="handleSubtaskTouchEnd(event)">⋮⋮</span>
-                        <input type="text" class="subtask-name-input" value="${escapeHtml(s.name)}"
+                        <textarea class="subtask-name-input" rows="1"
+                            oninput="autoGrowSubtask(this)"
                             onchange="updateNewHabitSubtask(${s.id}, this.value)"
-                            onkeypress="if(event.key==='Enter')this.blur()">
+                            onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${escapeHtml(s.name)}</textarea>
                         <span class="subtask-delete" onclick="removeNewHabitSubtask(${s.id})">✕</span>
                     </div>
                 `).join('');
@@ -455,6 +457,7 @@
                 document.getElementById('detailsModal').innerHTML = renderHabitForm(habit);
             }
             fitOptionsToTwoLines();
+            growSubtaskInputs();
 
             // Restore focus to the same input after re-render. Skip <select>
             // elements — re-focusing them on mobile re-opens the dropdown
@@ -593,6 +596,16 @@
                 pill.style.display = 'none';
                 if (rowCount() <= 2) return;
             }
+        }
+
+        // Subtask name fields are wrapping <textarea>s so long items are
+        // fully visible/editable; grow them to fit their content.
+        function autoGrowSubtask(el) {
+            el.style.height = 'auto';
+            el.style.height = el.scrollHeight + 'px';
+        }
+        function growSubtaskInputs() {
+            document.querySelectorAll('.subtask-name-input').forEach(autoGrowSubtask);
         }
 
         function toggleFormSequentialSubtasks() {
@@ -1113,6 +1126,7 @@
             document.getElementById('createModal').innerHTML = renderHabitForm();
             showOverlay('modalOverlay');
             fitOptionsToTwoLines();
+            growSubtaskInputs();
             document.getElementById('habitInput').focus();
         }
 
@@ -1643,10 +1657,14 @@
         let draggedSubtaskHabitId = null;
 
         function handleSubtaskDragStart(event, mode, habitId = null) {
-            draggedSubtaskId = parseInt(event.target.dataset.subtaskId);
+            // dragstart fires on the ⋮⋮ handle now (so the editable field
+            // isn't trapped inside a draggable ancestor); resolve the row.
+            const row = event.target.closest('.subtask-item');
+            if (!row) return;
+            draggedSubtaskId = parseInt(row.dataset.subtaskId);
             draggedSubtaskMode = mode;
             draggedSubtaskHabitId = habitId;
-            event.target.classList.add('dragging');
+            row.classList.add('dragging');
             event.dataTransfer.effectAllowed = 'move';
             event.dataTransfer.setData('text/plain', draggedSubtaskId);
         }
@@ -3932,6 +3950,7 @@
                 formHabitId = habit.id;
                 document.getElementById('detailsModal').innerHTML = renderHabitForm(habit);
                 fitOptionsToTwoLines();
+                growSubtaskInputs();
             } else {
                 // View mode
                 const total = habit.completions.length;
