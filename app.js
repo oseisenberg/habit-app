@@ -4163,7 +4163,7 @@
                 const afterLabel = habit.frequency.everyXWeeks ? `${habit.frequency.everyXWeeks} weeks after` :
                                    habit.frequency.everyXMonths ? `${habit.frequency.everyXMonths} months after` :
                                    `${habit.frequency.everyXDays || 2} days after`;
-                const freqLabel = { daily: 'Daily', reminder: `${habit.frequency.reminderDays || 1} days after`, twiceDaily: 'Twice daily', timesPerDay: `${habit.frequency.timesPerDay || 1}x within day`, timesPerWeek: `${habit.frequency.timesPerWeek || 3}x within week`, timesPerMonth: `${habit.frequency.timesPerMonth || 4}x within month`, everyXDays: afterLabel, pointsPerDay: `${habit.frequency.pointsPerDay || 4} pts within day`, pointsPerWeek: `${habit.frequency.pointsPerWeek || 12} pts within week`, pointsPerMonth: `${habit.frequency.pointsPerMonth || 30} pts within month` }[habit.frequency.type];
+                const freqLabel = { daily: 'Daily', reminder: `${habit.frequency.reminderDays || 1} days after`, twiceDaily: 'Twice daily', timesPerDay: `${habit.frequency.timesPerDay || 1}× / day`, timesPerWeek: `${habit.frequency.timesPerWeek || 3}× / wk`, timesPerMonth: `${habit.frequency.timesPerMonth || 4}× / mo`, everyXDays: afterLabel, pointsPerDay: `${habit.frequency.pointsPerDay || 4} pts / day`, pointsPerWeek: `${habit.frequency.pointsPerWeek || 12} pts / wk`, pointsPerMonth: `${habit.frequency.pointsPerMonth || 30} pts / mo` }[habit.frequency.type];
                 const timeLabel = habit.timeOfDay ? { morning: 'Morning', night: 'Bedtime' }[habit.timeOfDay] : 'Anytime';
 
                 // Momentum score
