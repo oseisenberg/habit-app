@@ -18,11 +18,6 @@
         /* Icon Grid Layout */
         .habits-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 90px; gap: 8px 0; padding: 8px; justify-items: center; align-items: center; grid-auto-flow: dense; }
         .habit-icon-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .habit-icon-wrapper.medium { grid-column: span 2; }
-        /* Cap medium tile to the column slot it occupies so it can't bleed
-         * past the grid padding on narrow phones (was a hard 200px). */
-        .habit-icon-wrapper.medium .habit-ring { width: 100%; max-width: 184px; height: 78px; border-radius: 20px; box-sizing: border-box; }
-        .habit-icon-wrapper.medium .habit-ring::before { width: calc(100% - 12px); max-width: 172px; height: 66px; border-radius: 14px; }
 
         /* Linked pair: two habit icons in one row connected by a line.
          * The wrapper still occupies exactly 2 grid columns; the line is
@@ -34,17 +29,19 @@
             flex-direction: row;
             align-items: center;
             justify-content: center;
-            gap: 0;
+            gap: 6px;
             min-height: 82px;
             min-width: 0;
-            overflow: hidden;
         }
         .habit-icon-wrapper.linked-pair .habit-icon {
             flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .habit-icon-wrapper.linked-pair .link-line {
-            flex: 0 1 12px;
-            min-width: 6px;
+            flex: 0 0 20px;
+            min-width: 20px;
             height: 3px;
             background: #4a4a5e;
             border-radius: 2px;
@@ -71,15 +68,6 @@
             display: none;
         }
         .habit-icon.linked-muted { opacity: 0.4; }
-        .habit-icon-wrapper.large { grid-column: span 2; grid-row: span 2; }
-        .habit-icon-wrapper.large .habit-ring { width: 156px; height: 156px; }
-        .habit-icon-wrapper.large .habit-ring::before { width: 140px; height: 140px; }
-        .habit-icon-wrapper.large .habit-emoji { font-size: 3.5rem; }
-        .habit-icon-wrapper.large .neglect-dot { width: 14px; height: 14px; }
-        .habit-icon-wrapper.large .neglect-dot:nth-child(1) { top: 2px; right: 38px; }
-        .habit-icon-wrapper.large .neglect-dot:nth-child(2) { top: 16px; right: 16px; }
-        .habit-icon-wrapper.large .neglect-dot:nth-child(3) { top: 38px; right: 2px; }
-        .habit-icon-wrapper.large .extra-indicator { bottom: 24px; right: 24px; width: 8px; height: 8px; }
         .habit-icon {
             display: flex; flex-direction: column; align-items: center; gap: 2px;
             cursor: pointer; padding: 2px; border-radius: 12px; transition: background 0.15s;
@@ -338,7 +326,7 @@
         .stat-label { font-size: 0.55rem; color: #666; margin-top: 1px; }
 
         .action-buttons { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
-        .action-buttons .submit-btn { padding: 10px; font-size: 0.85rem; }
+        .action-buttons .submit-btn { padding: 10px; font-size: 0.85rem; min-width: 88px; }
         .action-row { display: flex; gap: 6px; }
         .action-row .submit-btn { flex: 1; }
 
@@ -374,7 +362,7 @@
         .subtask-indicator.complete { color: #4ade80; }
         .subtask-list { margin-top: 10px; }
         .subtasks-scroll-container { background: #0f0f1a; border-radius: 8px; padding: 8px 12px; max-height: 200px; overflow-y: auto; margin-bottom: 8px; }
-        .subtask-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #2a2a3e; min-height: 36px; }
+        .subtask-item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-bottom: 1px solid #2a2a3e; min-height: 36px; }
         .subtask-item.dragging { opacity: 0.5; background: #1a1a2e; }
         .subtask-item.drag-over { border-top: 2px solid #667eea; }
         .subtask-drag-handle { color: #555; cursor: grab; padding: 4px; font-size: 0.8rem; user-select: none; }
@@ -383,9 +371,9 @@
         .subtask-checkbox { width: 18px; height: 18px; border-radius: 4px; border: 2px solid #444; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .subtask-checkbox.checked { background: #667eea; border-color: #667eea; }
         .subtask-checkbox.checked::after { content: '✓'; color: white; font-size: 10px; }
-        .subtask-name { flex: 1; color: #ccc; font-size: 0.8rem; }
+        .subtask-name { flex: 1; min-width: 0; color: #ccc; font-size: 0.8rem; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; }
         .subtask-name.completed { color: #555; text-decoration: line-through; }
-        .subtask-name-input { flex: 1; color: #ccc; font-size: 0.8rem; background: transparent; border: none; border-bottom: 1px solid transparent; outline: none; padding: 2px 0; }
+        .subtask-name-input { flex: 1; min-width: 0; color: #ccc; font-size: 0.8rem; font-family: inherit; line-height: 1.4; background: transparent; border: none; border-bottom: 1px solid transparent; outline: none; padding: 4px 0; resize: none; overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere; box-sizing: border-box; }
         .subtask-name-input:focus { border-bottom-color: #667eea; }
         .subtask-delete { color: #666; font-size: 0.7rem; cursor: pointer; padding: 4px 8px; min-width: 32px; min-height: 32px; display: flex; align-items: center; justify-content: center; }
         .add-subtask { display: flex; gap: 6px; margin-top: 6px; }
@@ -394,7 +382,7 @@
 
         /* Inline subtasks on main screen */
         .inline-subtasks-container { margin-left: 32px; padding-left: 10px; border-left: 2px solid #2a2a3e; }
-        .inline-subtask { display: flex; align-items: center; gap: 8px; padding: 3px 0; min-height: 28px; }
+        .inline-subtask { display: flex; align-items: flex-start; gap: 8px; padding: 3px 0; min-height: 28px; }
         .inline-subtask .subtask-checkbox { width: 14px; height: 14px; border-radius: 3px; }
         .inline-subtask .subtask-name { font-size: 0.75rem; color: #777; }
         .inline-subtask .subtask-name.completed { color: #555; text-decoration: line-through; }
@@ -486,13 +474,14 @@
         .subtask-popup-close { background: none; border: none; color: #666; font-size: 1.2rem; cursor: pointer; padding: 4px; }
         .subtask-popup-list { display: flex; flex-direction: column; gap: 2px; }
         .subtask-popup-item {
-            display: flex; align-items: center; gap: 10px; padding: 8px;
+            display: flex; align-items: flex-start; gap: 10px; padding: 8px;
             background: #0f0f1a; border-radius: 8px; cursor: pointer; transition: background 0.1s;
         }
         .subtask-popup-item:active { background: #252540; }
         .subtask-popup-item-locked { cursor: default; }
         .subtask-popup-item-locked:active { background: #0f0f1a; }
         .subtask-popup-item .subtask-checkbox { width: 20px; height: 20px; }
+        .subtask-popup-item .subtask-bullet { width: 20px; text-align: center; color: #666; flex-shrink: 0; }
         .subtask-popup-item .subtask-name { font-size: 0.85rem; }
 
         /* Points selection popup */
@@ -551,8 +540,6 @@
         .snooze-date-apply { padding: 0 14px; border: 1px solid #2d5a42; border-radius: 10px; background: linear-gradient(180deg, #1a3a2e 0%, #153025 100%); color: #6fbc8f; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
         .snooze-date-apply:hover { background: linear-gradient(180deg, #2d5a42 0%, #1a3a2e 100%); border-color: #40916c; color: #fff; }
         .snooze-date-apply:active { transform: scale(0.97); }
-        .snooze-momentum-label { display: flex; align-items: center; gap: 10px; margin: 14px 0; padding: 10px 12px; background: #12121f; border-radius: 8px; font-size: 0.8rem; color: #777; cursor: pointer; }
-        .snooze-momentum-label input { width: 16px; height: 16px; accent-color: #667eea; }
         .snooze-cancel {
             width: 100%; margin-top: 6px; padding: 11px; background: transparent;
             border: 1px solid #252535; border-radius: 10px; color: #555;
