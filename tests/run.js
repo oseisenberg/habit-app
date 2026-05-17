@@ -234,5 +234,44 @@ console.log('\nG. No-momentum tag');
   eq('no-momentum still due on schedule', F.getCompletionStatus(m2).due, true);
 }
 
+// === H. Daily×N post-completion delay (isDelayHidden) ================
+console.log('\nH. Daily×N delay-after-completion');
+{
+  const now = Date.now();
+  const HOUR = 3600000;
+  // 3×/day, hide 4h after each completion.
+  const base = { id: 90, frequency: { type: 'timesPerDay', timesPerDay: 3, delayHours: 4 } };
+
+  // No completions today -> visible.
+  eq('no completions -> not hidden',
+    F.isDelayHidden(mkHabit({ ...base, completions: [] })), false);
+
+  // Completed 1h ago (within 4h window) -> hidden.
+  eq('within delay window -> hidden',
+    F.isDelayHidden(mkHabit({ ...base, completions: [{ date: today, timestamp: now - 1 * HOUR }] })), true);
+
+  // Completed 5h ago (delay elapsed) -> visible again.
+  eq('after delay elapsed -> not hidden',
+    F.isDelayHidden(mkHabit({ ...base, completions: [{ date: today, timestamp: now - 5 * HOUR }] })), false);
+
+  // Daily target met (3/3) -> never hidden (normal Done flow).
+  eq('target met -> not hidden',
+    F.isDelayHidden(mkHabit({ ...base, completions: [
+      { date: today, timestamp: now - 1 * HOUR },
+      { date: today, timestamp: now - 1 * HOUR },
+      { date: today, timestamp: now - 1 * HOUR },
+    ] })), false);
+
+  // delayHours unset -> never hidden (legacy / opt-in only).
+  eq('no delayHours -> not hidden',
+    F.isDelayHidden(mkHabit({ id: 91, frequency: { type: 'timesPerDay', timesPerDay: 3 },
+      completions: [{ date: today, timestamp: now }] })), false);
+
+  // Non-timesPerDay habit -> feature does not apply.
+  eq('daily (1x) habit -> not hidden',
+    F.isDelayHidden(mkHabit({ id: 92, frequency: { type: 'daily', delayHours: 4 },
+      completions: [{ date: today, timestamp: now }] })), false);
+}
+
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
 if (fail) { console.log('FAILED:', fails.join(', ')); process.exit(1); }

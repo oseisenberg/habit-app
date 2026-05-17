@@ -109,7 +109,8 @@
             everyXValue: null,                   // number value for "every X days/weeks/months"
             timesValue: null,                    // number value for "X times per period"
             pointsValue: null,                   // number value for "X points per period"
-            dailyTimesValue: null                // X times per day when frequency is Daily (1/null = once)
+            dailyTimesValue: null,               // X times per day when frequency is Daily (1/null = once)
+            delayHoursValue: null                // hours to hide a Daily×N habit after each completion (0/null = no delay)
         };
 
         // ========================================
@@ -148,6 +149,7 @@
             formState.timesValue = null;
             formState.pointsValue = null;
             formState.dailyTimesValue = null;
+            formState.delayHoursValue = null;
         }
 
         // Initialize form state from habit (for edit mode)
@@ -208,6 +210,7 @@
             formState.timesValue = habit.frequency.timesPerDay || habit.frequency.timesPerWeek || habit.frequency.timesPerMonth || null;
             formState.pointsValue = habit.frequency.pointsPerDay || habit.frequency.pointsPerWeek || habit.frequency.pointsPerMonth || null;
             formState.dailyTimesValue = (freqType === FREQ.TIMES_PER_DAY) ? (habit.frequency.timesPerDay || null) : null;
+            formState.delayHoursValue = habit.frequency.delayHours || null;
         }
 
         // Get current form state (for compatibility with renderHabitForm)
@@ -259,7 +262,7 @@
                 }
             } else if (state.frequency === FREQ.DAILY) {
                 const dailyVal = state.dailyTimesValue ?? habit?.frequency?.timesPerDay ?? 1;
-                freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'D' : 'd'}ailyTimes" value="${dailyVal}" min="1" max="31"><span style="color:#888">× / day</span>`;
+                freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'D' : 'd'}ailyTimes" value="${dailyVal}" min="1" max="31" oninput="rerenderForm()"><span style="color:#888">× / day</span>`;
             }
 
             // Subtasks section (show if toggle is on OR habit has existing subtasks)
@@ -438,6 +441,13 @@
                         <div id="${isEdit ? 'editFrequencyInputs' : 'frequencyInputs'}">${freqInputsHtml}</div>
                     </div>
                 </div>
+                ${(state.frequency === FREQ.DAILY && (state.dailyTimesValue ?? habit?.frequency?.timesPerDay ?? 1) > 1) ? `<div class="form-group">
+                    <label class="form-label">Hide after each completion</label>
+                    <div class="frequency-row">
+                        <input type="number" class="frequency-input" id="${isEdit ? 'editDelayHours' : 'delayHours'}" value="${state.delayHoursValue ?? habit?.frequency?.delayHours ?? 0}" min="0" max="24">
+                        <span style="color:#888">hours</span>
+                    </div>
+                </div>` : ''}
                 ${subtasksHtml}
                 <div class="action-buttons">
                     ${isEdit
@@ -481,10 +491,12 @@
             const timesInput = document.getElementById(isEdit ? 'editTimesPerPeriod' : 'timesPerPeriod');
             const pointsInput = document.getElementById(isEdit ? 'editPointsPerPeriod' : 'pointsPerPeriod');
             const dailyTimesInput = document.getElementById(isEdit ? 'editDailyTimes' : 'dailyTimes');
+            const delayHoursInput = document.getElementById(isEdit ? 'editDelayHours' : 'delayHours');
             if (everyXInput) formState.everyXValue = parseInt(everyXInput.value) || null;
             if (timesInput) formState.timesValue = parseInt(timesInput.value) || null;
             if (pointsInput) formState.pointsValue = parseInt(pointsInput.value) || null;
             if (dailyTimesInput) formState.dailyTimesValue = parseInt(dailyTimesInput.value) || null;
+            if (delayHoursInput) formState.delayHoursValue = parseInt(delayHoursInput.value) || null;
 
             // Remember focused element to restore after re-render
             const focusedId = document.activeElement?.id;
@@ -1885,7 +1897,8 @@
                     pointsPerWeek: pointsVal,
                     pointsPerMonth: pointsVal,
                     pointsTarget: pointsTargetVal,
-                    reminderDays: reminderDaysVal
+                    reminderDays: reminderDaysVal,
+                    delayHours: Math.max(0, parseInt(document.getElementById('delayHours')?.value) || 0)
                 },
                 usePoints: formState.isPointsMode,
                 isReminder: formState.isReminderMode,
@@ -3016,6 +3029,24 @@
             return habits;
         }
 
+        // A Daily×N habit (timesPerDay) can carry frequency.delayHours: after
+        // each completion it is hidden from the day's list until that many
+        // hours have elapsed, then it reappears (same day) until the daily
+        // target is met. Recomputed on every render, so no timer is needed.
+        function isDelayHidden(habit) {
+            if (habit.frequency.type !== FREQ.TIMES_PER_DAY) return false;
+            const delayHours = habit.frequency.delayHours;
+            if (!delayHours || delayHours <= 0) return false;
+            // Target met → fall through to normal Done/Optional handling.
+            if (getCompletionStatus(habit).completed) return false;
+            const today = getTodayString();
+            const todaysCompletions = habit.completions.filter(c => c.date === today);
+            if (!todaysCompletions.length) return false;
+            const lastTs = Math.max(...todaysCompletions.map(c => c.timestamp || 0));
+            if (!lastTs) return false; // legacy completion with no timestamp → show
+            return (Date.now() - lastTs) < delayHours * 3600000;
+        }
+
         // Categorize habits into sections (Now, Optional, Later, Done) - each habit in ONE section only
         function categorizeHabits(habits) {
             const timeOfDay = getTimeOfDayNow();
@@ -3038,6 +3069,10 @@
 
                 // Hide habits suppressed today by a "Conflicts with" partner
                 if (isConflictSuppressed(h)) return;
+
+                // Daily×N with a post-completion delay: hide until enough
+                // hours have passed since the last completion today.
+                if (isDelayHidden(h)) return;
 
                 // Twice daily: special handling
                 if (h.frequency.type === FREQ.TWICE_DAILY) {
@@ -4017,6 +4052,9 @@
                 habit.frequency.timesPerWeek = val;
                 habit.frequency.timesPerMonth = val;
             }
+            // Delay-after-completion (Daily×N only). The input only exists
+            // when Daily with count > 1, so it clears itself otherwise.
+            habit.frequency.delayHours = Math.max(0, parseInt(document.getElementById('editDelayHours')?.value) || 0);
             if (finalFreqType === FREQ.EVERY_X_DAYS) {
                 const input = document.getElementById('editEveryXPeriod');
                 const val = Math.max(1, parseInt(input?.value) || DEFAULTS.EVERY_X_DAYS);
