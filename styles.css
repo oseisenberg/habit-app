@@ -493,6 +493,7 @@
         .subtask-popup-item-locked { cursor: default; }
         .subtask-popup-item-locked:active { background: #0f0f1a; }
         .subtask-popup-item .subtask-checkbox { width: 20px; height: 20px; }
+        .subtask-popup-item .subtask-bullet { width: 20px; text-align: center; color: #666; flex-shrink: 0; }
         .subtask-popup-item .subtask-name { font-size: 0.85rem; }
 
         /* Points selection popup */

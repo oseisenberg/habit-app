@@ -2553,32 +2553,26 @@
             confirmDescHabitId = id;
             confirmDescPeriod = period;
 
-            const icon = habit.icon || '📌';
             const lines = (habit.description || 'No description')
                 .split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            const items = (lines.length ? lines : ['No description']).map(line =>
-                `<div class="subtask-popup-item subtask-popup-item-locked">
-                    <span style="width:20px;text-align:center;color:#666;flex-shrink:0">•</span>
-                    <span class="subtask-name">${escapeHtml(line)}</span>
-                </div>`
-            ).join('');
+            const items = (lines.length ? lines : ['No description']).map(line => ({
+                name: line,
+                completed: false,
+                locked: true,
+                onclick: ''
+            }));
 
-            const popup = document.getElementById('confirmDescPopup');
-            popup.style.width = '280px';
-            popup.style.padding = '12px';
-            popup.style.textAlign = 'left';
-            popup.innerHTML = `
-                <div class="subtask-popup-header">
-                    <span class="subtask-popup-icon">${icon}</span>
-                    <span class="subtask-popup-title">${escapeHtml(habit.name)}</span>
-                    <button class="subtask-popup-close" onclick="closeConfirmDescPopup()">&times;</button>
-                </div>
-                <div class="subtask-popup-list">${items}</div>
-                <div style="display:flex;gap:8px;margin-top:12px">
+            renderChecklistPopup('confirmDescPopup', {
+                icon: habit.icon || '📌',
+                title: habit.name,
+                onClose: 'closeConfirmDescPopup()',
+                items,
+                marker: 'bullet',
+                footer: `<div style="display:flex;gap:8px;margin-top:12px">
                     <button class="submit-btn secondary" onclick="closeConfirmDescPopup()" style="flex:1">Cancel</button>
                     <button class="submit-btn" onclick="confirmAndCompleteHabit()" style="flex:1;background:#4ade80">Complete</button>
-                </div>
-            `;
+                </div>`
+            });
             document.getElementById('confirmDescPopupOverlay').classList.add('active');
         }
 
@@ -3446,40 +3440,63 @@
             subtaskPopupHabitId = null;
         }
 
+        // Shared renderer for the subtask popup and the description-
+        // confirmation popup. Both use the exact same layout (header +
+        // list + footer); the `marker` option switches list rows between
+        // interactive checkboxes and static bullet points.
+        function renderChecklistPopup(targetId, { icon, title, onClose, items, marker, footer }) {
+            const rows = items.map(it => {
+                const onclick = it.onclick ? `onclick="${it.onclick}"` : '';
+                const itemClass = `subtask-popup-item${it.locked ? ' subtask-popup-item-locked' : ''}`;
+                const mark = marker === 'bullet'
+                    ? `<span class="subtask-bullet">•</span>`
+                    : `<div class="subtask-checkbox ${it.completed ? 'checked' : ''}"></div>`;
+                return `<div class="${itemClass}" ${onclick}>
+                    ${mark}
+                    <span class="subtask-name ${it.completed ? 'completed' : ''}">${escapeHtml(it.name)}</span>
+                </div>`;
+            }).join('');
+
+            document.getElementById(targetId).innerHTML = `
+                <div class="subtask-popup-header">
+                    <span class="subtask-popup-icon">${icon}</span>
+                    <span class="subtask-popup-title">${escapeHtml(title)}</span>
+                    <button class="subtask-popup-close" onclick="${onClose}">&times;</button>
+                </div>
+                <div class="subtask-popup-list">${rows}</div>
+                ${footer}`;
+        }
+
         function renderSubtaskPopup() {
             const habit = loadHabits().find(h => h.id === subtaskPopupHabitId);
             if (!habit) return;
 
-            const icon = habit.icon || '📌';
             const subtasks = habit.subtasks || [];
             const isSequential = !!habit.sequentialSubtasks;
 
-            const subtaskItems = subtasks.map(s => {
-                const completed = isSubtaskCompleted(habit, s.id);
+            const items = subtasks.map(s => ({
+                name: s.name,
+                completed: isSubtaskCompleted(habit, s.id),
                 // In sequential mode the user can only tick the next pending
-                // item via the Complete Next button — disable individual taps
+                // item via the Complete Next button — lock individual taps
                 // so they can't skip ahead.
-                const onclick = isSequential ? '' : `onclick="toggleSubtaskFromPopup(${habit.id}, ${s.id})"`;
-                const itemClass = `subtask-popup-item${isSequential ? ' subtask-popup-item-locked' : ''}`;
-                return `<div class="${itemClass}" ${onclick}>
-                    <div class="subtask-checkbox ${completed ? 'checked' : ''}"></div>
-                    <span class="subtask-name ${completed ? 'completed' : ''}">${escapeHtml(s.name)}</span>
-                </div>`;
-            }).join('');
+                locked: isSequential,
+                onclick: isSequential ? '' : `toggleSubtaskFromPopup(${habit.id}, ${s.id})`
+            }));
 
             const allDone = subtasks.length > 0 && subtasks.every(s => isSubtaskCompleted(habit, s.id));
-            const button = isSequential
+            const footer = isSequential
                 ? `<button class="submit-btn" style="margin-top:12px;width:100%" onclick="completeNextSubtask(${habit.id})" ${allDone ? 'disabled style="margin-top:12px;width:100%;opacity:0.5;cursor:default"' : ''}>Complete Next</button>`
                 : `<button class="submit-btn" style="margin-top:12px;width:100%" onclick="completeHabitWithAllSubtasks(${habit.id})">Complete All</button>`;
 
-            document.getElementById('subtaskPopup').innerHTML = `
-                <div class="subtask-popup-header">
-                    <span class="subtask-popup-icon">${icon}</span>
-                    <span class="subtask-popup-title">${escapeHtml(habit.name)}</span>
-                    <button class="subtask-popup-close" onclick="closeSubtaskPopup()">&times;</button>
-                </div>
-                <div class="subtask-popup-list">${subtaskItems}</div>
-                ${button}`;
+            renderChecklistPopup('subtaskPopup', {
+                icon: habit.icon || '📌',
+                title: habit.name,
+                onClose: 'closeSubtaskPopup()',
+                items,
+                marker: 'checkbox',
+                footer
+            });
         }
 
         // Sequential mode: tick the next pending subtask (top-to-bottom).
