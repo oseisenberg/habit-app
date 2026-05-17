@@ -1509,6 +1509,12 @@
 
         async function sendNotification(title, body, tag, ignoreQuietHours = false) {
             if (!ignoreQuietHours && isQuietHours()) return;
+            // In the Capacitor app the web Notification/SW APIs don't
+            // deliver — fire an immediate native local notification.
+            if (window.AppPlatform && AppPlatform.isNative()) {
+                AppPlatform.notifyNow(title, body);
+                return;
+            }
             if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
             // Try service worker first (works when app is in background)

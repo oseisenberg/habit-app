@@ -98,6 +98,23 @@
       return true;
     },
 
+    // Fire a one-off notification right now (momentum alert, on-open
+    // catch-up). Uses a rotating id so repeated alerts don't collide.
+    notifyNow(title, body) {
+      if (!isNative()) return false;
+      var LN = plugin('LocalNotifications');
+      if (!LN) return false;
+      try {
+        LN.schedule({ notifications: [{
+          id: 2000 + (Date.now() % 1000),
+          title: title || 'Habits',
+          body: body || '',
+          schedule: { at: new Date(Date.now() + 1000), allowWhileIdle: true }
+        }]});
+      } catch (e) {}
+      return true;
+    },
+
     async cancelNotifications() {
       if (!isNative()) return false;
       var LN = plugin('LocalNotifications');
