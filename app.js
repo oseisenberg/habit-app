@@ -4218,11 +4218,9 @@
 
                 document.getElementById('detailsModal').innerHTML = `
                     <div class="modal-header"><span></span><button class="modal-close" onclick="closeDetails()">&times;</button></div>
-                    <div style="margin-bottom:12px">
-                        <div style="display:flex;align-items:center;gap:12px">
-                            <div class="details-large-icon" style="margin-bottom:0;flex-shrink:0">${icon}</div>
-                            <div class="details-habit-name" style="text-align:left;flex:1;min-width:0">${escapeHtml(habit.name)}</div>
-                        </div>
+                    <div style="margin-bottom:12px;text-align:center">
+                        <div class="details-large-icon" style="margin:0 auto 8px">${icon}</div>
+                        <div class="details-habit-name" style="text-align:center">${escapeHtml(habit.name)}</div>
                         ${habit.description ? `<div style="color:#888;font-size:0.85rem;margin-top:8px">${formatDescription(habit.description)}</div>` : ''}
                         ${!isReminder && !habit.noMomentum ? `<div class="momentum-display" style="margin-top:10px;margin-bottom:0">
                             <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
