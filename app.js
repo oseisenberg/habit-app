@@ -302,16 +302,16 @@
                 subtasksHtml = `
                     <div class="form-group" id="${isEdit ? 'editSubtasksArea' : 'subtasksInputArea'}" style="${showSubtasksArea ? '' : 'display:none'}">
                         <label class="form-label">Subtasks</label>
+                        <label style="display:flex;align-items:center;gap:8px;margin:2px 0 8px;color:#aaa;font-size:0.82rem;cursor:pointer">
+                            <input type="checkbox" ${state.sequentialSubtasks ? 'checked' : ''} onchange="setFormSequentialSubtasks(this.checked)" style="accent-color:#667eea">
+                            <span>Complete in order (sequential)</span>
+                        </label>
                         ${hasSubtasks ? `<div class="subtasks-scroll-container" id="${isEdit ? 'editSubtasksList' : 'newHabitSubtasksList'}">${subtaskItems}</div>` : `<div id="${isEdit ? 'editSubtasksList' : 'newHabitSubtasksList'}"></div>`}
                         <div class="add-subtask">
                             <input type="text" id="${isEdit ? 'editSubtaskInput' : 'newHabitSubtaskInput'}" placeholder="Add subtask..."
                                 onkeypress="if(event.key==='Enter'){event.preventDefault();${isEdit ? `addSubtask(${habit.id})` : 'addNewHabitSubtask()'};}">
                             <button type="button" onclick="${isEdit ? `addSubtask(${habit.id})` : 'addNewHabitSubtask()'}">+</button>
                         </div>
-                        <label style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#aaa;font-size:0.82rem;cursor:pointer">
-                            <input type="checkbox" ${state.sequentialSubtasks ? 'checked' : ''} onchange="setFormSequentialSubtasks(this.checked)" style="accent-color:#667eea">
-                            <span>Complete in order (sequential)</span>
-                        </label>
                     </div>`;
             }
 
