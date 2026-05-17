@@ -308,6 +308,10 @@
                                 onkeypress="if(event.key==='Enter'){event.preventDefault();${isEdit ? `addSubtask(${habit.id})` : 'addNewHabitSubtask()'};}">
                             <button type="button" onclick="${isEdit ? `addSubtask(${habit.id})` : 'addNewHabitSubtask()'}">+</button>
                         </div>
+                        <label style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#aaa;font-size:0.82rem;cursor:pointer">
+                            <input type="checkbox" ${state.sequentialSubtasks ? 'checked' : ''} onchange="setFormSequentialSubtasks(this.checked)" style="accent-color:#667eea">
+                            <span>Complete in order (sequential)</span>
+                        </label>
                     </div>`;
             }
 
@@ -357,7 +361,6 @@
                                 { id: 'desc',        label: 'Description',   active: state.showDescription,     domId: isEdit ? 'editDescPill' : 'descPill',                   onclick: 'toggleFormDescription()',       usage: count(h => !!h.description) },
                                 { id: 'noMomentum',  label: 'No momentum',   active: state.noMomentum,          domId: isEdit ? 'editNoMomentumPill' : 'noMomentumPill',       onclick: 'toggleFormNoMomentum()',        usage: count(h => h.noMomentum) },
                                 { id: 'conflicts',   label: 'Conflicts',     active: state.showConflictsWith,   domId: isEdit ? 'editConflictsPill' : 'conflictsPill',         onclick: 'toggleFormConflictsWith()',     usage: count(h => !!h.conflictsWith) },
-                                { id: 'sequential',  label: 'Sequential',    active: state.sequentialSubtasks,  domId: isEdit ? 'editSequentialPill' : 'sequentialPill',       onclick: 'toggleFormSequentialSubtasks()',usage: count(h => !!h.sequentialSubtasks), extraClass: showSubtasksArea ? '' : 'disabled' },
                             ];
 
                             // Render every pill with its usage as data so the
@@ -636,11 +639,10 @@
             document.querySelectorAll('.subtask-name-input').forEach(autoGrowSubtask);
         }
 
-        function toggleFormSequentialSubtasks() {
-            // Sequential only applies when the habit uses subtasks.
-            if (!formState.showSubtasks) return;
-            formState.sequentialSubtasks = !formState.sequentialSubtasks;
-            rerenderForm();
+        // Sequential is a sub-option of Subtasks (checkbox in the
+        // subtasks area), not a standalone tag — no rerender needed.
+        function setFormSequentialSubtasks(checked) {
+            formState.sequentialSubtasks = !!checked;
         }
 
         // Glossary describing every option pill so the user can look up what
@@ -652,7 +654,6 @@
             { label: 'Description',   desc: 'Attach freeform notes that show on the details page.' },
             { label: 'No momentum',   desc: 'Never tracks momentum — always neutral, no reward or penalty. Still appears in its normal sections like any habit.' },
             { label: 'Conflicts',     desc: 'Hide this habit on any day the chosen habit is due (e.g. skip serum on shampoo days). One-way; momentum is not penalized for those days.' },
-            { label: 'Sequential',    desc: 'Subtasks must be ticked top-to-bottom via a Complete Next button. Individual rows are not tappable; no Complete All shortcut.' },
         ];
 
         function openTagGlossary() {
