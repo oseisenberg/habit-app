@@ -383,7 +383,7 @@
         .subtask-checkbox { width: 18px; height: 18px; border-radius: 4px; border: 2px solid #444; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .subtask-checkbox.checked { background: #667eea; border-color: #667eea; }
         .subtask-checkbox.checked::after { content: '✓'; color: white; font-size: 10px; }
-        .subtask-name { flex: 1; color: #ccc; font-size: 0.8rem; }
+        .subtask-name { flex: 1; min-width: 0; color: #ccc; font-size: 0.8rem; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; }
         .subtask-name.completed { color: #555; text-decoration: line-through; }
         .subtask-name-input { flex: 1; min-width: 0; color: #ccc; font-size: 0.8rem; font-family: inherit; line-height: 1.4; background: transparent; border: none; border-bottom: 1px solid transparent; outline: none; padding: 4px 0; resize: none; overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere; box-sizing: border-box; }
         .subtask-name-input:focus { border-bottom-color: #667eea; }
@@ -394,7 +394,7 @@
 
         /* Inline subtasks on main screen */
         .inline-subtasks-container { margin-left: 32px; padding-left: 10px; border-left: 2px solid #2a2a3e; }
-        .inline-subtask { display: flex; align-items: center; gap: 8px; padding: 3px 0; min-height: 28px; }
+        .inline-subtask { display: flex; align-items: flex-start; gap: 8px; padding: 3px 0; min-height: 28px; }
         .inline-subtask .subtask-checkbox { width: 14px; height: 14px; border-radius: 3px; }
         .inline-subtask .subtask-name { font-size: 0.75rem; color: #777; }
         .inline-subtask .subtask-name.completed { color: #555; text-decoration: line-through; }
@@ -486,7 +486,7 @@
         .subtask-popup-close { background: none; border: none; color: #666; font-size: 1.2rem; cursor: pointer; padding: 4px; }
         .subtask-popup-list { display: flex; flex-direction: column; gap: 2px; }
         .subtask-popup-item {
-            display: flex; align-items: center; gap: 10px; padding: 8px;
+            display: flex; align-items: flex-start; gap: 10px; padding: 8px;
             background: #0f0f1a; border-radius: 8px; cursor: pointer; transition: background 0.1s;
         }
         .subtask-popup-item:active { background: #252540; }
