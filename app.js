@@ -4149,9 +4149,10 @@
                     </div>` : ''}
                     <div class="action-buttons">
                         <div style="display:flex;gap:6px">
-                            ${completeButton || undoButton || ''}
+                            ${completeButton}
+                            ${undoButton}
                             ${moveToTodayButton}
-                            <button class="submit-btn${completeButton || undoButton || moveToTodayButton ? ' secondary' : ''}" style="flex:1" onclick="toggleEditMode()">Edit</button>
+                            <button class="submit-btn secondary" style="flex:1" onclick="toggleEditMode()">Edit</button>
                             ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id})">Snooze</button>` : ''}
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
                         </div>
