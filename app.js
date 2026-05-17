@@ -1900,6 +1900,10 @@
         }
 
         let snoozePopupHabitId = null;
+        // true = Snooze (pause momentum during the delay), false = Ignore
+        // (let momentum keep running while delayed). Set by whichever
+        // details button opened the (otherwise identical) date popup.
+        let snoozePauseMomentum = true;
 
         function getHabitCycleDays(habit) {
             const freq = habit.frequency;
@@ -1927,8 +1931,9 @@
             return `${days} days`;
         }
 
-        function openSnoozePopup(id) {
+        function openSnoozePopup(id, pauseMomentum = true) {
             snoozePopupHabitId = id;
+            snoozePauseMomentum = pauseMomentum;
             const habit = loadHabits().find(h => h.id === id);
             const cycleDays = habit ? getHabitCycleDays(habit) : 1;
             const cycleLabel = formatCycleDays(cycleDays);
@@ -1979,10 +1984,6 @@
                             <button type="button" class="snooze-date-apply" onclick="snoozeToDate()">Go</button>
                         </div>
                     </div>
-                    <label class="snooze-momentum-label">
-                        <input type="checkbox" id="snoozePauseMomentum" checked>
-                        <span>Pause momentum during snooze</span>
-                    </label>
                     <button class="snooze-option skip-cycle-btn" onclick="snoozeHabit(${cycleDays})" style="width:100%;margin-bottom:6px">
                         <span class="snooze-option-icon">⏭️</span>
                         <span>Skip cycle (${cycleLabel})</span>
@@ -2009,7 +2010,7 @@
                 const untilStr = toDateString(snoozeUntil);
                 habit.snoozedUntil = untilStr;
                 // Track snooze history for momentum pausing (only if checkbox is checked)
-                const pauseMomentum = document.getElementById('snoozePauseMomentum')?.checked;
+                const pauseMomentum = snoozePauseMomentum;
                 if (pauseMomentum) {
                     if (!habit.snoozeHistory) habit.snoozeHistory = [];
                     habit.snoozeHistory.push({ from: today, until: untilStr });
@@ -2038,7 +2039,7 @@
                 habit.snoozedUntil = dateInput.value;
                 delete habit.snoozedUntilPeriod;
                 // Track snooze history for momentum pausing (only if checkbox is checked)
-                const pauseMomentum = document.getElementById('snoozePauseMomentum')?.checked;
+                const pauseMomentum = snoozePauseMomentum;
                 if (pauseMomentum) {
                     if (!habit.snoozeHistory) habit.snoozeHistory = [];
                     habit.snoozeHistory.push({ from: today, until: dateInput.value });
@@ -2077,7 +2078,7 @@
                 habit.snoozedUntil = untilStr;
                 habit.snoozedUntilPeriod = 'morning'; // Mark that it should appear in morning
                 // Track snooze history for momentum pausing (only if checkbox is checked)
-                const pauseMomentum = document.getElementById('snoozePauseMomentum')?.checked;
+                const pauseMomentum = snoozePauseMomentum;
                 if (pauseMomentum) {
                     if (!habit.snoozeHistory) habit.snoozeHistory = [];
                     habit.snoozeHistory.push({ from: today, until: untilStr });
@@ -4157,7 +4158,8 @@
                             ${undoButton}
                             ${moveToTodayButton}
                             <button class="submit-btn secondary" style="flex:1" onclick="toggleEditMode()">Edit</button>
-                            ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id})">Snooze</button>` : ''}
+                            ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id}, true)">Snooze</button>` : ''}
+                            ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id}, false)">Ignore</button>` : ''}
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
                         </div>
                         <div style="display:flex;gap:6px">
