@@ -2651,6 +2651,7 @@
                 onClose: 'closeConfirmDescPopup()',
                 items,
                 marker: 'bullet',
+                preamble: linkedAutoInfoHtml(habit),
                 footer: `<div style="display:flex;gap:8px;margin-top:12px">
                     <button class="submit-btn secondary" onclick="closeConfirmDescPopup()" style="flex:1">Cancel</button>
                     <button class="submit-btn" onclick="confirmAndCompleteHabit()" style="flex:1;background:#4ade80">Complete</button>
@@ -3550,7 +3551,42 @@
         // confirmation popup. Both use the exact same layout (header +
         // list + footer); the `marker` option switches list rows between
         // interactive checkboxes and static bullet points.
-        function renderChecklistPopup(targetId, { icon, title, onClose, items, marker, footer }) {
+        // Build a separated info section: a small uppercase label plus
+        // bulleted lines. Used to show a confirm-description and any
+        // auto-completed partner's details inside the completion popup.
+        function popupSection(label, innerHtml) {
+            return `<div style="margin:10px 0;padding-top:10px;border-top:1px solid #2a2a3e">
+                <div style="font-size:0.7rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">${escapeHtml(label)}</div>
+                ${innerHtml}
+            </div>`;
+        }
+
+        // Info about a habit's auto-completed partner (icon + name, its
+        // subtasks if any, and its description when it carries Confirm),
+        // shown in the trigger's completion popup. '' when no partner.
+        function linkedAutoInfoHtml(habit) {
+            if (!habit.autoCompletes) return '';
+            const cid = Number(habit.autoCompletes);
+            const linked = loadHabits().find(h =>
+                (cid ? h.id === cid : h.name.toLowerCase() === String(habit.autoCompletes).toLowerCase())
+                && h.id !== habit.id && !h.archived);
+            if (!linked) return '';
+            let inner = `<div style="display:flex;align-items:center;gap:8px;color:#ccc;font-size:0.9rem">
+                <span style="font-size:1.2rem">${linked.icon || '📌'}</span>
+                <span>${escapeHtml(linked.name)}</span></div>`;
+            if (linked.subtasks && linked.subtasks.length) {
+                inner += linked.subtasks.map(s =>
+                    `<div style="display:flex;gap:6px;align-items:flex-start;padding:2px 0;color:#aaa;font-size:0.8rem">
+                        <span style="color:#666;flex-shrink:0">•</span><span>${escapeHtml(s.name)}</span></div>`
+                ).join('');
+            }
+            if (linked.confirmDescription && linked.description) {
+                inner += `<div style="margin-top:6px;color:#aaa;font-size:0.8rem;line-height:1.4">${formatDescription(linked.description)}</div>`;
+            }
+            return popupSection('Also completes', inner);
+        }
+
+        function renderChecklistPopup(targetId, { icon, title, onClose, items, marker, footer, preamble }) {
             const rows = items.map(it => {
                 const onclick = it.onclick ? `onclick="${it.onclick}"` : '';
                 const itemClass = `subtask-popup-item${it.locked ? ' subtask-popup-item-locked' : ''}`;
@@ -3565,6 +3601,7 @@
 
             document.getElementById(targetId).innerHTML = `
                 ${popupHeader({ icon, title, onClose })}
+                ${preamble || ''}
                 <div class="subtask-popup-list">${rows}</div>
                 ${footer}`;
         }
@@ -3591,13 +3628,19 @@
                 ? `<button class="submit-btn" style="margin-top:12px;width:100%" onclick="completeNextSubtask(${habit.id})" ${allDone ? 'disabled style="margin-top:12px;width:100%;opacity:0.5;cursor:default"' : ''}>Complete Next</button>`
                 : `<button class="submit-btn" style="margin-top:12px;width:100%" onclick="completeHabitWithAllSubtasks(${habit.id})">Complete All</button>`;
 
+            const descSection = (habit.confirmDescription && habit.description)
+                ? popupSection('Description', `<div style="color:#ccc;font-size:0.85rem;line-height:1.4">${formatDescription(habit.description)}</div>`)
+                : '';
+            const preamble = descSection + linkedAutoInfoHtml(habit);
+
             renderChecklistPopup('subtaskPopup', {
                 icon: habit.icon || '📌',
                 title: habit.name,
                 onClose: 'closeSubtaskPopup()',
                 items,
                 marker: 'checkbox',
-                footer
+                footer,
+                preamble
             });
         }
 
@@ -3654,9 +3697,9 @@
                 : habit.completions.some(c => c.date === today);
 
             if (allCompleted && !alreadyCompleted) {
-                if (habit.confirmDescription && habit.description) {
-                    return { status: 'confirm', period };
-                }
+                // The confirm-description (if any) is already shown inside
+                // this subtask popup, so finishing the subtasks IS the
+                // confirmation — no separate confirm popup needed.
                 recordCompletion(habits, habit, period, periodKey);
                 return { status: 'completed', period };
             }
@@ -3681,15 +3724,8 @@
                 });
             }
 
-            // Show confirm description popup if applicable
-            if (habit.confirmDescription && habit.description) {
-                saveHabits(habits);
-                closeSubtaskPopup();
-                openConfirmDescPopup(habitId, period);
-                renderHabits();
-                return;
-            }
-
+            // Confirm-description is shown inside this popup already, so
+            // "Complete All" is the confirmation — no second popup.
             hapticFeedback();
             recordCompletion(habits, habit, period, periodKey);
 
