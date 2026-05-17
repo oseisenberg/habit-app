@@ -2008,15 +2008,16 @@
                     <div class="snooze-section">
                         <div class="snooze-section-label">Pick date</div>
                         <div class="snooze-date-row">
-                            <input type="date" id="snoozeCustomDate" class="snooze-date-input" min="${tomorrowStr}" value="${currentSnooze}">
-                            <button type="button" class="snooze-date-apply" onclick="snoozeToDate()">Go</button>
+                            <input type="date" id="snoozeCustomDate" class="snooze-date-input" min="${tomorrowStr}" value="${currentSnooze}" onchange="snoozeToDate()">
                         </div>
                     </div>
-                    <button class="snooze-option skip-cycle-btn" onclick="snoozeHabit(${cycleDays})" style="width:100%;margin-bottom:6px">
-                        <span class="snooze-option-icon">⏭️</span>
-                        <span>Skip cycle (${cycleLabel})</span>
-                    </button>
-                    <button class="snooze-cancel" onclick="closeSnoozePopup()">Cancel</button>
+                    <div style="display:flex;gap:6px">
+                        <button class="snooze-option skip-cycle-btn" onclick="snoozeHabit(${cycleDays})" style="flex:1;margin:0">
+                            <span class="snooze-option-icon">⏭️</span>
+                            <span>Skip cycle (${cycleLabel})</span>
+                        </button>
+                        <button class="snooze-cancel" onclick="closeSnoozePopup()" style="flex:1;margin:0">Cancel</button>
+                    </div>
                 </div>`;
             showOverlay('snoozePopupOverlay');
         }
@@ -2535,20 +2536,6 @@
                 if (habit.subtasks) {
                     habit.subtasks.forEach(s => { s.completedPeriods = {}; });
                 }
-                saveHabits(habits);
-                renderDetails();
-                renderHabits();
-            }
-        }
-
-        function resetHabitMomentum(id) {
-            const habits = loadHabits();
-            const habit = habits.find(h => h.id === id);
-            if (habit) {
-                const today = getTodayString();
-                habit.momentumScore = 0;
-                habit.lastScoreUpdate = today;
-                habit.momentumResetDate = today;
                 saveHabits(habits);
                 renderDetails();
                 renderHabits();
@@ -4200,7 +4187,6 @@
                     ${!isReminder && !habit.noMomentum ? `<div class="momentum-display">
                         <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
                         <div class="momentum-label">Momentum${recoveryText}</div>
-                        ${rawScore !== 0 ? `<button style="margin-top:8px;padding:4px 12px;background:#2a2a3e;border:1px solid #444;border-radius:6px;color:#888;font-size:0.7rem;cursor:pointer" onclick="resetHabitMomentum(${habit.id})">Reset to 0</button>` : ''}
                     </div>` : ''}
                     <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" style="color:${statusColor}">${habitStatus}</span></div>
                     <div class="detail-row"><span class="detail-label">Time</span><span class="detail-value">${timeLabel}</span></div>
