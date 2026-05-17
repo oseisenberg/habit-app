@@ -2553,14 +2553,28 @@
             confirmDescHabitId = id;
             confirmDescPeriod = period;
 
+            const icon = habit.icon || '📌';
+            const lines = (habit.description || 'No description')
+                .split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            const items = (lines.length ? lines : ['No description']).map(line =>
+                `<div class="subtask-popup-item subtask-popup-item-locked">
+                    <span style="width:20px;text-align:center;color:#666;flex-shrink:0">•</span>
+                    <span class="subtask-name">${escapeHtml(line)}</span>
+                </div>`
+            ).join('');
+
             const popup = document.getElementById('confirmDescPopup');
+            popup.style.width = '280px';
+            popup.style.padding = '12px';
+            popup.style.textAlign = 'left';
             popup.innerHTML = `
-                <div class="points-popup-header">
-                    <span style="font-size:1.5rem">${habit.icon || '📌'}</span>
-                    <span>${escapeHtml(habit.name)}</span>
+                <div class="subtask-popup-header">
+                    <span class="subtask-popup-icon">${icon}</span>
+                    <span class="subtask-popup-title">${escapeHtml(habit.name)}</span>
+                    <button class="subtask-popup-close" onclick="closeConfirmDescPopup()">&times;</button>
                 </div>
-                <div style="padding:16px;color:#ccc;font-size:0.95rem;line-height:1.5">${formatDescription(habit.description || 'No description')}</div>
-                <div style="padding:0 16px 16px;display:flex;gap:8px">
+                <div class="subtask-popup-list">${items}</div>
+                <div style="display:flex;gap:8px;margin-top:12px">
                     <button class="submit-btn secondary" onclick="closeConfirmDescPopup()" style="flex:1">Cancel</button>
                     <button class="submit-btn" onclick="confirmAndCompleteHabit()" style="flex:1;background:#4ade80">Complete</button>
                 </div>
