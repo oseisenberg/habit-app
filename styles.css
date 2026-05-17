@@ -23,6 +23,14 @@
          * past the grid padding on narrow phones (was a hard 200px). */
         .habit-icon-wrapper.medium .habit-ring { width: 100%; max-width: 184px; height: 78px; border-radius: 20px; box-sizing: border-box; }
         .habit-icon-wrapper.medium .habit-ring::before { width: calc(100% - 12px); max-width: 172px; height: 66px; border-radius: 14px; }
+        /* Medium is a 184x78 rounded rect (20px corners), not a circle —
+         * the base dot/indicator coords are tuned for the circle arc, so
+         * re-anchor the badges to the rounded rect's top-right and
+         * bottom-right corners. */
+        .habit-icon-wrapper.medium .neglect-dot:nth-child(1) { top: -2px; right: 16px; }
+        .habit-icon-wrapper.medium .neglect-dot:nth-child(2) { top: 3px; right: 3px; }
+        .habit-icon-wrapper.medium .neglect-dot:nth-child(3) { top: 16px; right: -2px; }
+        .habit-icon-wrapper.medium .extra-indicator { bottom: 6px; right: 6px; }
 
         /* Linked pair: two habit icons in one row connected by a line.
          * The wrapper still occupies exactly 2 grid columns; the line is
