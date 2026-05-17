@@ -216,9 +216,10 @@
             const currentIcon = state.icon || (habit?.icon) || '📌';
             const habitName = escapeHtml(formState.name || '');
             const habitDesc = escapeHtml(formState.description || '');
-            // Points disabled only for twice daily (morning & bedtime makes no sense with points)
+            // Points only applies to the "Within period" schedule
+            // (points per day/week/month) — disabled for every other type.
             const isTwiceDaily = state.frequency === FREQ.TWICE_DAILY;
-            const pointsDisabled = isTwiceDaily;
+            const pointsDisabled = state.frequency !== FREQ.TIMES_PER_PERIOD;
             // Allow Extra is now compatible with all frequencies
 
             // Build frequency inputs (use lowercase IDs for create, camelCase with 'edit' prefix for edit)
@@ -357,7 +358,7 @@
                                 { id: 'confirm',     label: 'Confirm',       active: state.confirmDescription,  domId: isEdit ? 'editConfirmDescPill' : 'confirmDescPill',     onclick: 'toggleFormConfirmDescription()',usage: count(h => h.confirmDescription),  activeStyle: 'border-color:#f59e0b;background:rgba(245,158,11,0.15)' },
                                 { id: 'noMomentum',  label: 'No momentum',   active: state.noMomentum,          domId: isEdit ? 'editNoMomentumPill' : 'noMomentumPill',       onclick: 'toggleFormNoMomentum()',        usage: count(h => h.noMomentum) },
                                 { id: 'conflicts',   label: 'Conflicts',     active: state.showConflictsWith,   domId: isEdit ? 'editConflictsPill' : 'conflictsPill',         onclick: 'toggleFormConflictsWith()',     usage: count(h => !!h.conflictsWith) },
-                                { id: 'sequential',  label: 'Sequential',    active: state.sequentialSubtasks,  domId: isEdit ? 'editSequentialPill' : 'sequentialPill',       onclick: 'toggleFormSequentialSubtasks()',usage: count(h => !!h.sequentialSubtasks) },
+                                { id: 'sequential',  label: 'Sequential',    active: state.sequentialSubtasks,  domId: isEdit ? 'editSequentialPill' : 'sequentialPill',       onclick: 'toggleFormSequentialSubtasks()',usage: count(h => !!h.sequentialSubtasks), extraClass: showSubtasksArea ? '' : 'disabled' },
                             ];
 
                             // Render every pill with its usage as data so the
@@ -524,11 +525,9 @@
         }
 
         function toggleFormPointsMode() {
+            // Points only makes sense with the "Within period" schedule.
+            if (formState.frequency !== FREQ.TIMES_PER_PERIOD) return;
             formState.isPointsMode = !formState.isPointsMode;
-            // When enabling points, only auto-switch from twice daily (the only incompatible option)
-            if (formState.isPointsMode && formState.frequency === FREQ.TWICE_DAILY) {
-                formState.frequency = FREQ.TIMES_PER_PERIOD;
-            }
             rerenderForm();
         }
 
@@ -633,6 +632,8 @@
         }
 
         function toggleFormSequentialSubtasks() {
+            // Sequential only applies when the habit uses subtasks.
+            if (!formState.showSubtasks) return;
             formState.sequentialSubtasks = !formState.sequentialSubtasks;
             rerenderForm();
         }
@@ -722,8 +723,8 @@
             if (f === FREQ.TWICE_DAILY) {
                 formState.time = null;
             }
-            // Auto-disable points for daily/twiceDaily
-            if ((f === FREQ.DAILY || f === FREQ.TWICE_DAILY) && formState.isPointsMode) {
+            // Points only applies to "Within period"; clear it otherwise.
+            if (f !== FREQ.TIMES_PER_PERIOD && formState.isPointsMode) {
                 formState.isPointsMode = false;
             }
             rerenderForm();
@@ -3629,11 +3630,11 @@
             const items = subtasks.map(s => ({
                 name: s.name,
                 completed: isSubtaskCompleted(habit, s.id),
-                // In sequential mode the user can only tick the next pending
-                // item via the Complete Next button — lock individual taps
-                // so they can't skip ahead.
-                locked: isSequential,
-                onclick: isSequential ? '' : `toggleSubtaskFromPopup(${habit.id}, ${s.id})`
+                // Rows are always tappable (mark off in any order). In
+                // sequential mode the "Complete Next" button is just a
+                // convenience that ticks the next unmarked one top-down.
+                locked: false,
+                onclick: `toggleSubtaskFromPopup(${habit.id}, ${s.id})`
             }));
 
             const allDone = subtasks.length > 0 && subtasks.every(s => isSubtaskCompleted(habit, s.id));
