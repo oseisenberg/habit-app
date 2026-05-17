@@ -216,5 +216,18 @@ console.log('\nF. timesPerDay completion');
   eq('3/3 today -> complete', F.getCompletionStatus(h2).completed, true);
 }
 
+// === G. No-momentum tag ============================================
+console.log('\nG. No-momentum tag');
+{
+  const m = mkHabit({ id: 80, noMomentum: true, lastScoreUpdate: dayOff(-30),
+    completions: [{ date: dayOff(-30) }] }); // long-missed would normally be very negative
+  const sd = F.calculateMomentumScore(m);
+  ok('no-momentum -> raw 0', sd.raw === 0, sd);
+  ok('no-momentum -> display 0', sd.display === 0, sd);
+  // Still schedulable like a normal habit (everyXDays cadence intact).
+  const m2 = mkHabit({ id: 81, noMomentum: true, completions: [{ date: dayOff(-2) }] });
+  eq('no-momentum still due on schedule', F.getCompletionStatus(m2).due, true);
+}
+
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
 if (fail) { console.log('FAILED:', fails.join(', ')); process.exit(1); }

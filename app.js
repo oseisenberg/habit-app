@@ -94,6 +94,7 @@
             pointsPeriod: PERIOD.WEEK,           // 'day', 'week' or 'month' for points
             afterPeriod: PERIOD.DAY,             // 'day', 'week' or 'month' for after completion
             isNegative: false,                   // negative habit (track avoiding)
+            noMomentum: false,                   // never track momentum (always neutral)
             confirmDescription: false,           // show description popup before completing
             autoCompletes: '',                   // habit ID to auto-complete when this is done
             showAutoCompletes: false,            // show auto-completes field
@@ -129,6 +130,7 @@
             formState.pointsPeriod = PERIOD.WEEK;
             formState.afterPeriod = PERIOD.DAY;
             formState.isNegative = false;
+            formState.noMomentum = false;
             formState.confirmDescription = false;
             formState.autoCompletes = '';
             formState.showAutoCompletes = false;
@@ -184,6 +186,7 @@
             else formState.afterPeriod = PERIOD.DAY;
 
             formState.isNegative = habit.isNegative || false;
+            formState.noMomentum = habit.noMomentum || false;
             formState.confirmDescription = habit.confirmDescription || false;
             formState.autoCompletes = habit.autoCompletes || '';
             formState.showAutoCompletes = !!habit.autoCompletes;
@@ -352,10 +355,8 @@
                                 { id: 'optional',    label: 'Allow extra',   active: state.allowOptional,       domId: isEdit ? 'editOptionalPill' : 'optionalPill',           onclick: 'toggleFormAllowOptional()',     usage: count(h => h.allowOptional !== false) },
                                 { id: 'reminder',    label: 'Reminder',      active: state.isReminderMode,      domId: isEdit ? 'editReminderPill' : 'reminderPill',           onclick: 'toggleFormReminderMode()',      usage: count(h => h.isReminder || h.frequency?.type === FREQ.REMINDER) },
                                 { id: 'desc',        label: 'Description',   active: state.showDescription,     domId: isEdit ? 'editDescPill' : 'descPill',                   onclick: 'toggleFormDescription()',       usage: count(h => !!h.description) },
-                                { id: 'negative',    label: 'Negative',      active: state.isNegative,          domId: isEdit ? 'editNegativePill' : 'negativePill',           onclick: 'toggleFormNegative()',          usage: count(h => h.isNegative),          activeStyle: 'border-color:#dc2626;background:rgba(220,38,38,0.15)' },
                                 { id: 'confirm',     label: 'Confirm',       active: state.confirmDescription,  domId: isEdit ? 'editConfirmDescPill' : 'confirmDescPill',     onclick: 'toggleFormConfirmDescription()',usage: count(h => h.confirmDescription),  activeStyle: 'border-color:#f59e0b;background:rgba(245,158,11,0.15)' },
-                                { id: 'autoComplete',label: 'Auto-complete', active: state.showAutoCompletes,   domId: isEdit ? 'editAutoCompletesPill' : 'autoCompletesPill', onclick: 'toggleFormAutoCompletes()',     usage: count(h => !!h.autoCompletes) },
-                                { id: 'link',        label: 'Link',          active: state.showLinkedHabit,     domId: isEdit ? 'editLinkedHabitPill' : 'linkedHabitPill',     onclick: 'toggleFormLinkedHabit()',       usage: count(h => !!h.linkedHabit) },
+                                { id: 'noMomentum',  label: 'No momentum',   active: state.noMomentum,          domId: isEdit ? 'editNoMomentumPill' : 'noMomentumPill',       onclick: 'toggleFormNoMomentum()',        usage: count(h => h.noMomentum) },
                                 { id: 'conflicts',   label: 'Conflicts',     active: state.showConflictsWith,   domId: isEdit ? 'editConflictsPill' : 'conflictsPill',         onclick: 'toggleFormConflictsWith()',     usage: count(h => !!h.conflictsWith) },
                                 { id: 'sequential',  label: 'Sequential',    active: state.sequentialSubtasks,  domId: isEdit ? 'editSequentialPill' : 'sequentialPill',       onclick: 'toggleFormSequentialSubtasks()',usage: count(h => !!h.sequentialSubtasks) },
                             ];
@@ -556,6 +557,11 @@
             rerenderForm();
         }
 
+        function toggleFormNoMomentum() {
+            formState.noMomentum = !formState.noMomentum;
+            rerenderForm();
+        }
+
         function toggleFormAutoCompletes() {
             formState.showAutoCompletes = !formState.showAutoCompletes;
             rerenderForm();
@@ -640,10 +646,8 @@
             { label: 'Allow extra',   desc: 'After hitting the target, completions stay tickable in an Optional section so you can keep going without breaking the count.' },
             { label: 'Reminder',      desc: 'Treat as a recurring nudge rather than a streak — momentum resets to zero on completion instead of building up.' },
             { label: 'Description',   desc: 'Attach freeform notes that show on the details page.' },
-            { label: 'Negative',      desc: 'Track avoiding something. Tapping logs an incident (red ring) instead of a completion.' },
             { label: 'Confirm',       desc: 'Ask for confirmation before completing — pops up the description so you can re-read it first.' },
-            { label: 'Auto-complete', desc: 'Completing this habit also marks another linked habit complete (one-way).' },
-            { label: 'Link',          desc: 'Pair with another habit visually so they sit side-by-side in the grid. Bidirectional, but completion does not transfer.' },
+            { label: 'No momentum',   desc: 'Never tracks momentum — always neutral, no reward or penalty. Still appears in its normal sections like any habit.' },
             { label: 'Conflicts',     desc: 'Hide this habit on any day the chosen habit is due (e.g. skip serum on shampoo days). One-way; momentum is not penalized for those days.' },
             { label: 'Sequential',    desc: 'Subtasks must be ticked top-to-bottom via a Complete Next button. Individual rows are not tappable; no Complete All shortcut.' },
         ];
@@ -1859,6 +1863,7 @@
                 isReminder: formState.isReminderMode,
                 allowOptional: formState.allowOptional,
                 isNegative: formState.isNegative,
+                noMomentum: formState.noMomentum,
                 confirmDescription: formState.confirmDescription,
                 autoCompletes: document.getElementById('autoCompletes')?.value.trim() || '',
                 linkedHabit: '',
@@ -2290,6 +2295,9 @@
         // ========================================
 
         function calculateMomentumScore(habit) {
+            // "No momentum" habits are always neutral — never rewarded or
+            // penalized — but otherwise behave like any other habit.
+            if (habit.noMomentum) return { raw: 0, display: 0 };
             const today = getTodayString();
             const freq = habit.frequency;
             const freqType = freq.type;
@@ -3979,6 +3987,9 @@
             // Save negative habit flag
             habit.isNegative = formState.isNegative;
 
+            // Save no-momentum flag
+            habit.noMomentum = formState.noMomentum;
+
             // Save confirm description flag
             habit.confirmDescription = formState.confirmDescription;
 
@@ -4186,7 +4197,7 @@
                         <div class="details-habit-name">${escapeHtml(habit.name)}</div>
                         ${habit.description ? `<div style="color:#888;font-size:0.85rem;margin-top:4px">${formatDescription(habit.description)}</div>` : ''}
                     </div>
-                    ${!isReminder ? `<div class="momentum-display">
+                    ${!isReminder && !habit.noMomentum ? `<div class="momentum-display">
                         <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
                         <div class="momentum-label">Momentum${recoveryText}</div>
                         ${rawScore !== 0 ? `<button style="margin-top:8px;padding:4px 12px;background:#2a2a3e;border:1px solid #444;border-radius:6px;color:#888;font-size:0.7rem;cursor:pointer" onclick="resetHabitMomentum(${habit.id})">Reset to 0</button>` : ''}
