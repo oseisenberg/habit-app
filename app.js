@@ -3212,7 +3212,8 @@
             if (habit.frequency.type === FREQ.TWICE_DAILY) {
                 const bothDone = status.morningDone && status.nightDone;
                 const twiceDailyHasSubtasks = habit.subtasks && habit.subtasks.length > 0;
-                const twiceDailyExtraIndicator = twiceDailyHasSubtasks ? '<div class="extra-indicator"></div>' : '';
+                const twiceDailyHasConfirm = !!(habit.confirmDescription && habit.description);
+                const twiceDailyExtraIndicator = (twiceDailyHasSubtasks || twiceDailyHasConfirm) ? '<div class="extra-indicator"></div>' : '';
                 return `<div class="habit-icon${mutedClass}" data-habit-id="${habit.id}" onclick="${bothDone ? `openDetails(${habit.id})` : `completeTwiceDaily(${habit.id})`}" oncontextmenu="${rightClick}">
                     <div class="habit-ring split ${bothDone ? 'completed' : ''}">
                         <div class="half-fill left ${status.morningDone ? 'filled' : ''}"></div>
@@ -3266,7 +3267,10 @@
                 progress = '0%';
             }
 
-            const extraIndicator = (hasSubtasks || isPointsBased) ? '<div class="extra-indicator"></div>' : '';
+            // Grey dot = "tapping Complete opens a popup first": subtasks,
+            // points entry, or a confirm-description prompt.
+            const hasConfirm = !!(habit.confirmDescription && habit.description);
+            const extraIndicator = (hasSubtasks || isPointsBased || hasConfirm) ? '<div class="extra-indicator"></div>' : '';
 
             const isNegative = habit.isNegative;
             const today = getTodayString();
