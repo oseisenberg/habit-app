@@ -93,8 +93,6 @@
             timesPeriod: PERIOD.WEEK,            // 'day', 'week' or 'month' for times
             pointsPeriod: PERIOD.WEEK,           // 'day', 'week' or 'month' for points
             afterPeriod: PERIOD.DAY,             // 'day', 'week' or 'month' for after completion
-            isLarge: false,                      // show as large (2 cols × 2 rows) in grid
-            isMedium: false,                     // show as medium (2 cols × 1 row) in grid
             isNegative: false,                   // negative habit (track avoiding)
             confirmDescription: false,           // show description popup before completing
             autoCompletes: '',                   // habit ID to auto-complete when this is done
@@ -127,8 +125,6 @@
             formState.timesPeriod = PERIOD.WEEK;
             formState.pointsPeriod = PERIOD.WEEK;
             formState.afterPeriod = PERIOD.DAY;
-            formState.isLarge = false;
-            formState.isMedium = false;
             formState.isNegative = false;
             formState.confirmDescription = false;
             formState.autoCompletes = '';
@@ -149,8 +145,6 @@
             formState.showDescription = !!(habit.description);
             formState.icon = habit.icon || HABIT_EMOJIS[0];
             formState.allowOptional = habit.allowOptional !== false;
-            formState.isLarge = habit.isLarge || false;
-            formState.isMedium = habit.isMedium || false;
             formState.showSubtasks = (habit.subtasks?.length > 0); // Show if habit has existing subtasks
 
             // Determine mode based on frequency type and flags
@@ -341,8 +335,6 @@
                                 { id: 'points',      label: 'Points',        active: state.isPointsMode,        domId: isEdit ? 'editPointsPill' : 'pointsPill',               onclick: 'toggleFormPointsMode()',        usage: count(h => h.usePoints), extraClass: pointsDisabled ? 'disabled' : '' },
                                 { id: 'optional',    label: 'Allow extra',   active: state.allowOptional,       domId: isEdit ? 'editOptionalPill' : 'optionalPill',           onclick: 'toggleFormAllowOptional()',     usage: count(h => h.allowOptional !== false) },
                                 { id: 'reminder',    label: 'Reminder',      active: state.isReminderMode,      domId: isEdit ? 'editReminderPill' : 'reminderPill',           onclick: 'toggleFormReminderMode()',      usage: count(h => h.isReminder || h.frequency?.type === FREQ.REMINDER) },
-                                { id: 'medium',      label: 'Medium',        active: state.isMedium,            domId: isEdit ? 'editMediumPill' : 'mediumPill',               onclick: 'toggleFormIsMedium()',          usage: count(h => h.isMedium) },
-                                { id: 'large',       label: 'Large',         active: state.isLarge,             domId: isEdit ? 'editLargePill' : 'largePill',                 onclick: 'toggleFormIsLarge()',           usage: count(h => h.isLarge) },
                                 { id: 'desc',        label: 'Description',   active: state.showDescription,     domId: isEdit ? 'editDescPill' : 'descPill',                   onclick: 'toggleFormDescription()',       usage: count(h => !!h.description) },
                                 { id: 'negative',    label: 'Negative',      active: state.isNegative,          domId: isEdit ? 'editNegativePill' : 'negativePill',           onclick: 'toggleFormNegative()',          usage: count(h => h.isNegative),          activeStyle: 'border-color:#dc2626;background:rgba(220,38,38,0.15)' },
                                 { id: 'confirm',     label: 'Confirm',       active: state.confirmDescription,  domId: isEdit ? 'editConfirmDescPill' : 'confirmDescPill',     onclick: 'toggleFormConfirmDescription()',usage: count(h => h.confirmDescription),  activeStyle: 'border-color:#f59e0b;background:rgba(245,158,11,0.15)' },
@@ -511,18 +503,6 @@
             rerenderForm();
         }
 
-        function toggleFormIsLarge() {
-            formState.isLarge = !formState.isLarge;
-            if (formState.isLarge) formState.isMedium = false;
-            rerenderForm();
-        }
-
-        function toggleFormIsMedium() {
-            formState.isMedium = !formState.isMedium;
-            if (formState.isMedium) formState.isLarge = false;
-            rerenderForm();
-        }
-
         function toggleFormDescription() {
             formState.showDescription = !formState.showDescription;
             rerenderForm();
@@ -620,8 +600,6 @@
             { label: 'Points',        desc: 'Score each completion (1, 2, or 3 points) and aim for a daily, weekly, or monthly target instead of a fixed count.' },
             { label: 'Allow extra',   desc: 'After hitting the target, completions stay tickable in an Optional section so you can keep going without breaking the count.' },
             { label: 'Reminder',      desc: 'Treat as a recurring nudge rather than a streak — momentum resets to zero on completion instead of building up.' },
-            { label: 'Medium',        desc: 'Lay this habit out across two grid columns for emphasis.' },
-            { label: 'Large',         desc: 'Lay this habit out across two columns and two rows — the biggest tile.' },
             { label: 'Description',   desc: 'Attach freeform notes that show on the details page.' },
             { label: 'Negative',      desc: 'Track avoiding something. Tapping logs an incident (red ring) instead of a completion.' },
             { label: 'Confirm',       desc: 'Ask for confirmation before completing — pops up the description so you can re-read it first.' },
@@ -1834,8 +1812,6 @@
                 usePoints: formState.isPointsMode,
                 isReminder: formState.isReminderMode,
                 allowOptional: formState.allowOptional,
-                isLarge: formState.isLarge,
-                isMedium: formState.isMedium,
                 isNegative: formState.isNegative,
                 confirmDescription: formState.confirmDescription,
                 autoCompletes: document.getElementById('autoCompletes')?.value.trim() || '',
@@ -3041,18 +3017,12 @@
             //   only the still-pending partner shows (alone, no pair).
             // - Otherwise (both done OR both pending), drop the higher-id
             //   partner so the lower-id one renders the pair.
-            // - Skip dedup entirely when sizes mismatch (one is Large or
-            //   Medium): renderHabitIcon won't draw a paired wrapper in
-            //   that case, so both partners need to stay in their buckets
-            //   to render independently at their natural sizes.
             habits.forEach(h => {
                 if (!visibleIds.has(h.id) || !h.linkedHabit) return;
                 const lid = Number(h.linkedHabit);
                 if (!lid || lid === h.id) return;
                 const partner = habits.find(ph => ph.id === lid);
                 if (!partner) return;
-                const sizeMismatch = h.isLarge || h.isMedium || partner.isLarge || partner.isMedium;
-                if (sizeMismatch) return;
                 const hDone = isCompletedToday(h);
                 const pDone = isCompletedToday(partner);
                 if (hDone && !pDone) {
@@ -3077,7 +3047,7 @@
             // Helper: render a sub-section with header and habits grid (large tasks sorted first)
             const subSection = (habits, icon, title) => {
                 if (!habits.length) return '';
-                const sorted = [...habits].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0) || (b.isMedium ? 1 : 0) - (a.isMedium ? 1 : 0));
+                const sorted = habits;
                 return `<div class="sub-header"><span class="sub-header-icon">${icon}</span>${title}</div>
                    <div class="habits-grid">${sorted.map(h => renderHabitIcon(h)).join('')}</div>`;
             };
@@ -3145,8 +3115,8 @@
             const contentClass = collapsed ? 'section-content collapsed' : 'section-content';
             const headerClass = collapsed ? 'section-header collapsible collapsed' : 'section-header collapsible';
             const sectionClass = renderOpts.inactive ? 'habits-section inactive-section' : 'habits-section';
-            // Sort: large tasks first, reminders last
-            const sorted = [...habits].sort((a, b) => (b.isLarge ? 1 : 0) - (a.isLarge ? 1 : 0) || (b.isMedium ? 1 : 0) - (a.isMedium ? 1 : 0) || (a.isReminder ? 1 : 0) - (b.isReminder ? 1 : 0));
+            // Sort: reminders last
+            const sorted = [...habits].sort((a, b) => (a.isReminder ? 1 : 0) - (b.isReminder ? 1 : 0));
             const habitsHtml = sorted.map(h => renderHabitIcon(h, renderOpts.isLater, renderOpts.isCompleted)).join('');
             return `<div class="${sectionClass}">
                 <div class="${headerClass}" onclick="toggleSection('${sectionId}')">
@@ -3312,21 +3282,16 @@
 
             // Companion link: bidirectional, visual only — no auto-completion.
             // Render as a pair only when both partners are in the same
-            // completion state today AND neither is sized larger than the
-            // default. A Large or Medium partner inside a paired wrapper
-            // would force both icons down to the compact 78px size, and
-            // when the other partner gets hidden (e.g. completed) the
-            // survivor would visibly "grow" back to its natural size.
+            // completion state today.
             if (habit.linkedHabit) {
                 const linkedId = Number(habit.linkedHabit);
                 if (linkedId && linkedId !== habit.id) {
                     const linked = loadHabits().find(h => h.id === linkedId && !h.archived);
                     if (linked) {
-                        const sizeMismatch = habit.isLarge || habit.isMedium || linked.isLarge || linked.isMedium;
                         const habitDone = isCompletedToday(habit);
                         const linkedDone = isCompletedToday(linked);
                         const sameState = habitDone === linkedDone;
-                        if (!sizeMismatch && sameState && habit.id < linkedId) {
+                        if (sameState && habit.id < linkedId) {
                             const aInner = renderHabitIconInner(habit, isLater, isCompleted);
                             const bInner = renderHabitIconInner(linked, isLater, isCompleted);
                             return `<div class="habit-icon-wrapper linked-pair companion-pair">${aInner}<div class="link-line"></div>${bInner}</div>`;
@@ -3335,8 +3300,7 @@
                 }
             }
 
-            const sizeClass = habit.isLarge ? 'large' : (habit.isMedium ? 'medium' : '');
-            return `<div class="habit-icon-wrapper ${sizeClass}">${renderHabitIconInner(habit, isLater, isCompleted)}</div>`;
+            return `<div class="habit-icon-wrapper">${renderHabitIconInner(habit, isLater, isCompleted)}</div>`;
         }
 
         function toggleSection(sectionId) {
@@ -3913,10 +3877,6 @@
 
             // Save reminder mode flag
             habit.isReminder = formState.isReminderMode;
-
-            // Save large display preference
-            habit.isLarge = formState.isLarge;
-            habit.isMedium = formState.isMedium;
 
             // Save negative habit flag
             habit.isNegative = formState.isNegative;

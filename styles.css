@@ -18,19 +18,6 @@
         /* Icon Grid Layout */
         .habits-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 90px; gap: 8px 0; padding: 8px; justify-items: center; align-items: center; grid-auto-flow: dense; }
         .habit-icon-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .habit-icon-wrapper.medium { grid-column: span 2; }
-        /* Cap medium tile to the column slot it occupies so it can't bleed
-         * past the grid padding on narrow phones (was a hard 200px). */
-        .habit-icon-wrapper.medium .habit-ring { width: 100%; max-width: 184px; height: 78px; border-radius: 20px; box-sizing: border-box; }
-        .habit-icon-wrapper.medium .habit-ring::before { width: calc(100% - 12px); max-width: 172px; height: 66px; border-radius: 14px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
-        /* Medium is a 184x78 rounded rect (20px corners), not a circle —
-         * the base dot/indicator coords are tuned for the circle arc, so
-         * re-anchor the badges to the rounded rect's top-right and
-         * bottom-right corners. */
-        .habit-icon-wrapper.medium .neglect-dot:nth-child(1) { top: -2px; right: 16px; }
-        .habit-icon-wrapper.medium .neglect-dot:nth-child(2) { top: 3px; right: 3px; }
-        .habit-icon-wrapper.medium .neglect-dot:nth-child(3) { top: 16px; right: -2px; }
-        .habit-icon-wrapper.medium .extra-indicator { bottom: 6px; right: 6px; }
 
         /* Linked pair: two habit icons in one row connected by a line.
          * The wrapper still occupies exactly 2 grid columns; the line is
@@ -79,15 +66,6 @@
             display: none;
         }
         .habit-icon.linked-muted { opacity: 0.4; }
-        .habit-icon-wrapper.large { grid-column: span 2; grid-row: span 2; }
-        .habit-icon-wrapper.large .habit-ring { width: 156px; height: 156px; }
-        .habit-icon-wrapper.large .habit-ring::before { width: 140px; height: 140px; }
-        .habit-icon-wrapper.large .habit-emoji { font-size: 3.5rem; }
-        .habit-icon-wrapper.large .neglect-dot { width: 14px; height: 14px; }
-        .habit-icon-wrapper.large .neglect-dot:nth-child(1) { top: 2px; right: 38px; }
-        .habit-icon-wrapper.large .neglect-dot:nth-child(2) { top: 16px; right: 16px; }
-        .habit-icon-wrapper.large .neglect-dot:nth-child(3) { top: 38px; right: 2px; }
-        .habit-icon-wrapper.large .extra-indicator { bottom: 24px; right: 24px; width: 8px; height: 8px; }
         .habit-icon {
             display: flex; flex-direction: column; align-items: center; gap: 2px;
             cursor: pointer; padding: 2px; border-radius: 12px; transition: background 0.15s;
