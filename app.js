@@ -1974,7 +1974,6 @@
             snoozePauseMomentum = pauseMomentum;
             const habit = loadHabits().find(h => h.id === id);
             const cycleDays = habit ? getHabitCycleDays(habit) : 1;
-            const cycleLabel = formatCycleDays(cycleDays);
 
             // Calculate tomorrow relative to the app's effective "today" so the
             // snooze date min/value match what the rest of the app considers today.
@@ -2024,7 +2023,7 @@
                     <div style="display:flex;gap:6px">
                         <button class="snooze-option skip-cycle-btn" onclick="snoozeHabit(${cycleDays})" style="flex:1;margin:0">
                             <span class="snooze-option-icon">⏭️</span>
-                            <span>Skip cycle (${cycleLabel})</span>
+                            <span>Skip cycle</span>
                         </button>
                         <button class="snooze-cancel" onclick="closeSnoozePopup()" style="flex:1;margin:0">Cancel</button>
                     </div>
