@@ -323,12 +323,17 @@
                     <button class="modal-close" onclick="${isEdit ? 'closeDetails' : 'closeModal'}()">&times;</button>
                 </div>
                 <div class="form-group">
-                    <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
-                        <div class="emoji-select-btn" onclick="openEmojiPopup('${isEdit ? 'edit' : 'new'}'${isEdit ? `, ${habit.id}` : ''})" style="flex-shrink:0;width:64px;height:64px;border-radius:50%;justify-content:center;box-sizing:border-box;font-size:1.7rem">
+                    <div style="display:flex;gap:10px;margin-bottom:6px">
+                        <label class="form-label" style="margin:0;width:52px;flex-shrink:0">Icon</label>
+                        <label class="form-label" style="margin:0;flex:1">Name</label>
+                        <label class="form-label" style="margin:0;width:86px;flex-shrink:0;${isTwiceDaily ? 'opacity:0.4' : ''}">Time</label>
+                    </div>
+                    <div style="display:flex;gap:10px;align-items:stretch;height:48px">
+                        <div class="emoji-select-btn" onclick="openEmojiPopup('${isEdit ? 'edit' : 'new'}'${isEdit ? `, ${habit.id}` : ''})" style="flex-shrink:0;width:52px;justify-content:center;box-sizing:border-box;font-size:1.3rem">
                             <span class="emoji-select-icon" id="${isEdit ? 'editSelectedEmojiDisplay' : 'selectedEmojiDisplay'}" style="width:auto;height:auto">${currentIcon}</span>
                         </div>
-                        <input type="text" class="form-input" id="${isEdit ? 'editHabitName' : 'habitInput'}" value="${habitName}" placeholder="e.g., Brush teeth..." style="margin:0;box-sizing:border-box;width:100%;max-width:280px;text-align:center" onkeypress="if(event.key==='Enter')${isEdit ? 'saveHabitEdit' : 'addHabit'}()" />
-                        <div class="time-toggle ${isTwiceDaily ? 'disabled' : ''}" id="${isEdit ? 'editTimeToggle' : 'timeToggle'}">
+                        <input type="text" class="form-input" id="${isEdit ? 'editHabitName' : 'habitInput'}" value="${habitName}" placeholder="e.g., Brush teeth..." style="flex:1;margin:0;box-sizing:border-box" onkeypress="if(event.key==='Enter')${isEdit ? 'saveHabitEdit' : 'addHabit'}()" />
+                        <div class="time-toggle ${isTwiceDaily ? 'disabled' : ''}" id="${isEdit ? 'editTimeToggle' : 'timeToggle'}" style="height:100%">
                             <button type="button" class="time-toggle-btn ${state.time === PERIOD.MORNING ? 'active' : ''}" data-time="morning" onclick="${isTwiceDaily ? '' : `toggleFormTime('${PERIOD.MORNING}')`}">🌅</button>
                             <button type="button" class="time-toggle-btn ${state.time === PERIOD.NIGHT ? 'active' : ''}" data-time="night" onclick="${isTwiceDaily ? '' : `toggleFormTime('${PERIOD.NIGHT}')`}">🌙</button>
                         </div>
@@ -4213,11 +4218,9 @@
 
                 document.getElementById('detailsModal').innerHTML = `
                     <div class="modal-header"><span></span><button class="modal-close" onclick="closeDetails()">&times;</button></div>
-                    <div style="margin-bottom:12px">
-                        <div style="display:flex;align-items:center;gap:12px">
-                            <div class="details-large-icon" style="margin-bottom:0;flex-shrink:0">${icon}</div>
-                            <div class="details-habit-name" style="text-align:left;flex:1;min-width:0">${escapeHtml(habit.name)}</div>
-                        </div>
+                    <div style="margin-bottom:12px;text-align:center">
+                        <div class="details-large-icon" style="margin:0 auto 8px">${icon}</div>
+                        <div class="details-habit-name" style="text-align:center">${escapeHtml(habit.name)}</div>
                         ${habit.description ? `<div style="color:#888;font-size:0.85rem;margin-top:8px">${formatDescription(habit.description)}</div>` : ''}
                         ${!isReminder && !habit.noMomentum ? `<div class="momentum-display" style="margin-top:10px;margin-bottom:0">
                             <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
