@@ -401,8 +401,12 @@
                 </div>
                 ${subtasksHtml}
                 <div class="action-buttons">
-                    <button class="submit-btn" onclick="${isEdit ? 'saveHabitEdit' : 'addHabit'}()">${isEdit ? 'Save Changes' : 'Add Habit'}</button>
-                    ${isEdit ? '<button class="submit-btn secondary" onclick="toggleEditMode()">Cancel</button>' : ''}
+                    ${isEdit
+                        ? `<div class="action-row">
+                            <button class="submit-btn" onclick="saveHabitEdit()">Save Changes</button>
+                            <button class="submit-btn secondary" onclick="toggleEditMode()">Cancel</button>
+                        </div>`
+                        : `<button class="submit-btn" onclick="addHabit()">Add Habit</button>`}
                 </div>`;
         }
 
