@@ -99,6 +99,8 @@
             showAutoCompletes: false,            // show auto-completes field
             linkedHabit: '',                     // habit ID of a companion habit (visual link only, bidirectional, no auto-completion)
             showLinkedHabit: false,              // show linked-habit field
+            conflictsWith: '',                   // habit ID this conflicts with: hidden on days that habit is due
+            showConflictsWith: false,            // show conflicts-with field
             sequentialSubtasks: false,           // subtasks must be completed in order; popup shows "Complete Next" instead of "Complete All"
             showAllPills: false,                 // expand the options list to show all pills (default hides least-used)
             everyXValue: null,                   // number value for "every X days/weeks/months"
@@ -131,6 +133,8 @@
             formState.showAutoCompletes = false;
             formState.linkedHabit = '';
             formState.showLinkedHabit = false;
+            formState.conflictsWith = '';
+            formState.showConflictsWith = false;
             formState.sequentialSubtasks = false;
             formState.showAllPills = false;
             formState.everyXValue = null;
@@ -179,6 +183,8 @@
             formState.showAutoCompletes = !!habit.autoCompletes;
             formState.linkedHabit = habit.linkedHabit || '';
             formState.showLinkedHabit = !!habit.linkedHabit;
+            formState.conflictsWith = habit.conflictsWith || '';
+            formState.showConflictsWith = !!habit.conflictsWith;
             formState.sequentialSubtasks = !!habit.sequentialSubtasks;
             formState.showAllPills = false;
 
@@ -340,6 +346,7 @@
                                 { id: 'confirm',     label: 'Confirm',       active: state.confirmDescription,  domId: isEdit ? 'editConfirmDescPill' : 'confirmDescPill',     onclick: 'toggleFormConfirmDescription()',usage: count(h => h.confirmDescription),  activeStyle: 'border-color:#f59e0b;background:rgba(245,158,11,0.15)' },
                                 { id: 'autoComplete',label: 'Auto-complete', active: state.showAutoCompletes,   domId: isEdit ? 'editAutoCompletesPill' : 'autoCompletesPill', onclick: 'toggleFormAutoCompletes()',     usage: count(h => !!h.autoCompletes) },
                                 { id: 'link',        label: 'Link',          active: state.showLinkedHabit,     domId: isEdit ? 'editLinkedHabitPill' : 'linkedHabitPill',     onclick: 'toggleFormLinkedHabit()',       usage: count(h => !!h.linkedHabit) },
+                                { id: 'conflicts',   label: 'Conflicts',     active: state.showConflictsWith,   domId: isEdit ? 'editConflictsPill' : 'conflictsPill',         onclick: 'toggleFormConflictsWith()',     usage: count(h => !!h.conflictsWith) },
                                 { id: 'sequential',  label: 'Sequential',    active: state.sequentialSubtasks,  domId: isEdit ? 'editSequentialPill' : 'sequentialPill',       onclick: 'toggleFormSequentialSubtasks()',usage: count(h => !!h.sequentialSubtasks) },
                             ];
 
@@ -384,6 +391,15 @@
                         <option value="">None</option>
                         ${loadHabits().filter(h => !habit || h.id !== habit.id).map(h =>
                             `<option value="${h.id}" ${String(state.linkedHabit) === String(h.id) ? 'selected' : ''}>${h.icon || '📌'} ${escapeHtml(h.name)}</option>`
+                        ).join('')}
+                    </select>
+                </div>` : ''}
+                ${state.showConflictsWith ? `<div class="form-group">
+                    <label class="form-label">Conflicts with (hidden on days that habit is due)</label>
+                    <select class="form-input" id="${isEdit ? 'editConflictsWith' : 'conflictsWith'}" style="font-size:0.85rem">
+                        <option value="">None</option>
+                        ${loadHabits().filter(h => !habit || h.id !== habit.id).map(h =>
+                            `<option value="${h.id}" ${String(state.conflictsWith) === String(h.id) ? 'selected' : ''}>${h.icon || '📌'} ${escapeHtml(h.name)}</option>`
                         ).join('')}
                     </select>
                 </div>` : ''}
@@ -434,6 +450,8 @@
             if (autoCompletesSelect) formState.autoCompletes = autoCompletesSelect.value;
             const linkedHabitSelect = document.getElementById(isEdit ? 'editLinkedHabit' : 'linkedHabit');
             if (linkedHabitSelect) formState.linkedHabit = linkedHabitSelect.value;
+            const conflictsWithSelect = document.getElementById(isEdit ? 'editConflictsWith' : 'conflictsWith');
+            if (conflictsWithSelect) formState.conflictsWith = conflictsWithSelect.value;
             const everyXInput = document.getElementById(isEdit ? 'editEveryXPeriod' : 'everyXPeriod');
             const timesInput = document.getElementById(isEdit ? 'editTimesPerPeriod' : 'timesPerPeriod');
             const pointsInput = document.getElementById(isEdit ? 'editPointsPerPeriod' : 'pointsPerPeriod');
@@ -536,6 +554,11 @@
             rerenderForm();
         }
 
+        function toggleFormConflictsWith() {
+            formState.showConflictsWith = !formState.showConflictsWith;
+            rerenderForm();
+        }
+
         function toggleFormShowAllPills() {
             formState.showAllPills = !formState.showAllPills;
             rerenderForm();
@@ -609,6 +632,7 @@
             { label: 'Confirm',       desc: 'Ask for confirmation before completing — pops up the description so you can re-read it first.' },
             { label: 'Auto-complete', desc: 'Completing this habit also marks another linked habit complete (one-way).' },
             { label: 'Link',          desc: 'Pair with another habit visually so they sit side-by-side in the grid. Bidirectional, but completion does not transfer.' },
+            { label: 'Conflicts',     desc: 'Hide this habit on any day the chosen habit is due (e.g. skip serum on shampoo days). One-way; momentum is not penalized for those days.' },
             { label: 'Sequential',    desc: 'Subtasks must be ticked top-to-bottom via a Complete Next button. Individual rows are not tappable; no Complete All shortcut.' },
         ];
 
@@ -1820,6 +1844,7 @@
                 confirmDescription: formState.confirmDescription,
                 autoCompletes: document.getElementById('autoCompletes')?.value.trim() || '',
                 linkedHabit: '',
+                conflictsWith: document.getElementById('conflictsWith')?.value.trim() || '',
                 sequentialSubtasks: formState.sequentialSubtasks,
                 completions: [], skippedDates: [], snoozedUntil: null, subtasks: [...newHabitSubtasks], createdAt: getTodayString()
             });
@@ -2181,6 +2206,22 @@
             return true;
         }
 
+        // Resolve a habit's "conflicts with" partner (by id), if any.
+        function getConflictPartner(habit) {
+            if (!habit.conflictsWith) return null;
+            const cid = Number(habit.conflictsWith);
+            if (!cid || cid === habit.id) return null;
+            return loadHabits().find(h => h.id === cid && !h.archived) || null;
+        }
+
+        // A habit tagged "Conflicts with X" is suppressed (hidden, not
+        // momentum-penalized) on any day X is due — e.g. don't use serum
+        // on shampoo days.
+        function isConflictSuppressed(habit) {
+            const partner = getConflictPartner(habit);
+            return !!partner && isDueToday(partner);
+        }
+
         function getDaysOverdue(habit) {
             const today = getTodayString();
             if (habit.frequency.type === FREQ.EVERY_X_DAYS) {
@@ -2280,6 +2321,7 @@
             // Apply decay and calculate new score
             const completionDates = new Set(habit.completions.map(c => c.date));
             const createdAt = habit.createdAt;
+            const conflictPartner = getConflictPartner(habit);
 
             for (let i = 1; i <= daysSinceUpdate; i++) {
                 const checkDate = new Date(lastUpdate);
@@ -2291,6 +2333,10 @@
 
                 // Skip dates when habit was snoozed (momentum pauses during snooze)
                 if (wasDateSnoozed(habit, checkDateStr)) continue;
+
+                // Skip days the conflict partner was due — the habit was
+                // intentionally suppressed, so don't penalize the gap.
+                if (conflictPartner && wasHabitDueOnDate(conflictPartner, checkDateStr)) continue;
 
                 const wasDue = wasHabitDueOnDate(habit, checkDateStr);
                 let wasCompleted = completionDates.has(checkDateStr);
@@ -2777,6 +2823,7 @@
             const today = getTodayString();
             const timeOfDay = getTimeOfDayNow();
             if (habit.skippedDates?.includes(today)) return false;
+            if (isConflictSuppressed(habit)) return false;
 
             // Track if snooze just expired (snoozedUntil is today or in the past)
             let snoozeExpiredToday = false;
@@ -2931,6 +2978,9 @@
 
                 // Hide habits that were auto-completed today by another habit
                 if (h.autoCompletedToday === today) return;
+
+                // Hide habits suppressed today by a "Conflicts with" partner
+                if (isConflictSuppressed(h)) return;
 
                 // Twice daily: special handling
                 if (h.frequency.type === FREQ.TWICE_DAILY) {
@@ -3894,6 +3944,9 @@
             // Save linked-habit (bidirectional companion)
             const linkedRaw = document.getElementById('editLinkedHabit')?.value.trim() || '';
             syncLinkedHabit(habits, habit.id, linkedRaw);
+
+            // Save conflicts-with (one-directional: hide on days that habit is due)
+            habit.conflictsWith = document.getElementById('editConflictsWith')?.value.trim() || '';
 
             // Save sequential-subtasks flag
             habit.sequentialSubtasks = formState.sequentialSubtasks;
