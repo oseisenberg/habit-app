@@ -1,0 +1,14 @@
+{
+  "appId": "com.oseisenberg.habits",
+  "appName": "Habits",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "always"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon",
+      "iconColor": "#667eea"
+    }
+  }
+}
