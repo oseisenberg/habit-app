@@ -4227,7 +4227,7 @@
                                    habit.frequency.everyXMonths ? `${habit.frequency.everyXMonths} months after` :
                                    `${habit.frequency.everyXDays || 2} days after`;
                 const freqLabel = { daily: 'Daily', reminder: `${habit.frequency.reminderDays || 1} days after`, twiceDaily: 'Twice daily', timesPerDay: `${habit.frequency.timesPerDay || 1}× / day`, timesPerWeek: `${habit.frequency.timesPerWeek || 3}× / wk`, timesPerMonth: `${habit.frequency.timesPerMonth || 4}× / mo`, everyXDays: afterLabel, pointsPerDay: `${habit.frequency.pointsPerDay || 4} pts / day`, pointsPerWeek: `${habit.frequency.pointsPerWeek || 12} pts / wk`, pointsPerMonth: `${habit.frequency.pointsPerMonth || 30} pts / mo` }[habit.frequency.type];
-                const timeLabel = habit.timeOfDay ? { morning: 'Morning', night: 'Bedtime' }[habit.timeOfDay] : 'Anytime';
+                const timeIcon = habit.timeOfDay ? { morning: '🌅', night: '🌙' }[habit.timeOfDay] : '';
 
                 // Momentum score
                 const scoreData = calculateMomentumScore(habit);
@@ -4296,7 +4296,7 @@
                     <div class="modal-header"><span></span><button class="modal-close" onclick="closeDetails()">&times;</button></div>
                     <div style="margin-bottom:12px;text-align:center">
                         <div class="details-large-icon" style="margin:0 auto 8px">${icon}</div>
-                        <div class="details-habit-name" style="text-align:center">${escapeHtml(habit.name)}</div>
+                        <div class="details-habit-name" style="text-align:center">${escapeHtml(habit.name)}${timeIcon ? ` <span title="${habit.timeOfDay === 'morning' ? 'Morning' : 'Bedtime'}">${timeIcon}</span>` : ''}</div>
                         ${habit.description ? `<div style="color:#888;font-size:0.85rem;margin-top:8px">${formatDescription(habit.description)}</div>` : ''}
                         ${!isReminder && !habit.noMomentum ? `<div class="momentum-display" style="margin-top:10px;margin-bottom:0">
                             <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
@@ -4307,7 +4307,6 @@
                         const isPts = habit.frequency.type === FREQ.POINTS_PER_DAY || habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH;
                         const cells = [
                             `<div class="detail-cell"><div class="dc-label">Status</div><div class="dc-value" style="color:${statusColor}">${habitStatus}</div></div>`,
-                            `<div class="detail-cell"><div class="dc-label">Time</div><div class="dc-value">${timeLabel}</div></div>`,
                             `<div class="detail-cell"><div class="dc-label">Frequency</div><div class="dc-value">${freqLabel}</div></div>`,
                         ];
                         if (isPts) cells.push(`<div class="detail-cell"><div class="dc-label">Progress</div><div class="dc-value">${getCompletionStatus(habit).text}</div></div>`);
