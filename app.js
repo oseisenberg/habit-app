@@ -4231,7 +4231,7 @@
                         </div>
                     </div>` : ''}
                     <div class="action-buttons">
-                        <div style="display:flex;gap:6px;flex-wrap:wrap">
+                        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
                             ${completeButton}
                             ${undoButton}
                             ${moveToTodayButton}
@@ -4240,7 +4240,7 @@
                             ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id}, false)">Ignore</button>` : ''}
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
                         </div>
-                        <div style="display:flex;gap:6px;flex-wrap:wrap">
+                        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
                             <button class="submit-btn secondary" style="flex:1" onclick="freshStartHabit(${habit.id})">Fresh Start</button>
                             ${total > 0 ? `<button class="submit-btn secondary" style="flex:1" onclick="resetHabitStats(${habit.id})">Reset Stats</button>` : ''}
                             ${habit.archived
