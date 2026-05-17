@@ -4276,10 +4276,12 @@
                             ${undoButton}
                             ${moveToTodayButton}
                             <button class="submit-btn secondary" style="flex:1" onclick="toggleEditMode()">Edit</button>
-                            ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id}, true)">Snooze</button>` : ''}
-                            ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id}, false)">Ignore</button>` : ''}
+                        </div>
+                        <div style="display:flex;gap:6px;margin-top:6px">
+                            ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id}, true)">Snooze</button>
+                            <button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id}, false)">Ignore</button>` : ''}
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
-                            <button class="submit-btn secondary" aria-label="More actions" onclick="openDetailsMoreMenu(event, ${habit.id})">⋮</button>
+                            <button class="submit-btn secondary" style="flex:0 0 48px;margin-left:auto" aria-label="More actions" onclick="openDetailsMoreMenu(event, ${habit.id})">⋮</button>
                         </div>
                     </div>`;
             }
