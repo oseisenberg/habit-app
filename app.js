@@ -4545,13 +4545,13 @@
 
             let html = '';
             if (allHabitsSort === 'status' && allHabitsFilter === 'all') {
-                // Default view keeps the Now / Other / Archived sections.
+                // Default view keeps the Now / Later / Archived sections.
                 if (nowHabits.length) {
                     html += `<div class="all-habits-section-header">Now</div>`;
                     html += `<div class="habits-grid">${nowHabits.map(renderHabitItem).join('')}</div>`;
                 }
                 if (otherHabits.length) {
-                    html += `<div class="all-habits-section-header" style="margin-top:16px">Other</div>`;
+                    html += `<div class="all-habits-section-header" style="margin-top:16px">Later</div>`;
                     html += `<div class="habits-grid">${otherHabits.map(renderHabitItem).join('')}</div>`;
                 }
                 if (archivedHabits.length) {
