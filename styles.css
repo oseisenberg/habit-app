@@ -306,9 +306,12 @@
         .frequency-label { color: #ccc; font-size: 0.85rem; }
         .frequency-input { width: 54px; padding: 8px; border: 1px solid #2a2a3e; border-radius: 8px; text-align: center; font-size: 1rem; background: #1a1a2e; color: #fff; -moz-appearance: textfield; touch-action: manipulation; }
         .frequency-input::-webkit-outer-spin-button, .frequency-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        .period-toggle { display: inline-flex; border: 1px solid #2a2a3e; border-radius: 8px; overflow: hidden; margin-left: auto; }
-        .period-toggle-btn { padding: 8px 10px; font-size: 0.85rem; color: #666; cursor: pointer; border: none; background: #0a0a14; }
-        .period-toggle-btn.active { background: #667eea; color: white; }
+        .frequency-row select.period-select {
+            flex: 0 0 auto; min-width: 0; width: auto;
+            padding: 8px 28px 8px 10px; font-size: 0.85rem;
+            border: 1px solid #2a2a3e; border-radius: 8px;
+            background: #0a0a14; color: #fff; cursor: pointer;
+        }
         .frequency-row { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
         .frequency-row select { min-width: 0; flex: 1; }
         .frequency-row #frequencyInputs, .frequency-row #editFrequencyInputs { display: flex; align-items: center; gap: 8px; min-height: 40px; flex-shrink: 0; }

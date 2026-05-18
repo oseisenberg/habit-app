@@ -250,29 +250,30 @@
             if (state.frequency === FREQ.EVERY_X_DAYS) {
                 const afterVal = state.everyXValue ?? habit?.frequency?.everyXDays ?? habit?.frequency?.everyXWeeks ?? habit?.frequency?.everyXMonths ?? DEFAULTS.EVERY_X_DAYS;
                 freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'E' : 'e'}veryXPeriod" value="${afterVal}" min="1">
-                    <div class="period-toggle">
-                        <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.DAY}')">day</button>
-                        <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.WEEK}')">wk</button>
-                        <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.MONTH ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.MONTH}')">mo</button>
-                    </div>`;
+                    <select class="period-select" onchange="setFormPeriod('after', this.value)">
+                        <option value="${PERIOD.DAY}" ${state.afterPeriod === PERIOD.DAY ? 'selected' : ''}>day</option>
+                        <option value="${PERIOD.WEEK}" ${state.afterPeriod === PERIOD.WEEK ? 'selected' : ''}>wk</option>
+                        <option value="${PERIOD.MONTH}" ${state.afterPeriod === PERIOD.MONTH ? 'selected' : ''}>mo</option>
+                    </select>`;
             } else if (state.frequency === FREQ.TIMES_PER_PERIOD) {
-                if (state.isPointsMode) {
-                    const ptsVal = state.pointsValue ?? habit?.frequency?.pointsPerDay ?? habit?.frequency?.pointsPerWeek ?? habit?.frequency?.pointsPerMonth ?? DEFAULTS.POINTS_PER_PERIOD;
-                    freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'P' : 'p'}ointsPerPeriod" value="${ptsVal}" min="1"><span style="color:#888">pts /</span>
-                        <div class="period-toggle">
-                            <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.DAY}')">day</button>
-                            <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.WEEK}')">wk</button>
-                            <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.MONTH ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.MONTH}')">mo</button>
-                        </div>`;
-                } else {
-                    const timesVal = state.timesValue ?? habit?.frequency?.timesPerDay ?? habit?.frequency?.timesPerWeek ?? habit?.frequency?.timesPerMonth ?? DEFAULTS.TIMES_PER_PERIOD;
-                    freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'T' : 't'}imesPerPeriod" value="${timesVal}" min="1" max="31">
-                        <div class="period-toggle">
-                            <button type="button" class="period-toggle-btn ${state.timesPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('times', '${PERIOD.DAY}')">day</button>
-                            <button type="button" class="period-toggle-btn ${state.timesPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('times', '${PERIOD.WEEK}')">wk</button>
-                            <button type="button" class="period-toggle-btn ${state.timesPeriod === PERIOD.MONTH ? 'active' : ''}" onclick="setFormPeriod('times', '${PERIOD.MONTH}')">mo</button>
-                        </div>`;
-                }
+                const isP = state.isPointsMode;
+                const numVal = isP
+                    ? (state.pointsValue ?? habit?.frequency?.pointsPerDay ?? habit?.frequency?.pointsPerWeek ?? habit?.frequency?.pointsPerMonth ?? DEFAULTS.POINTS_PER_PERIOD)
+                    : (state.timesValue ?? habit?.frequency?.timesPerDay ?? habit?.frequency?.timesPerWeek ?? habit?.frequency?.timesPerMonth ?? DEFAULTS.TIMES_PER_PERIOD);
+                const numId = `${idPrefix}${isP ? (isEdit ? 'P' : 'p') + 'ointsPerPeriod' : (isEdit ? 'T' : 't') + 'imesPerPeriod'}`;
+                const periodState = isP ? state.pointsPeriod : state.timesPeriod;
+                const periodType = isP ? 'points' : 'times';
+                freqInputsHtml = `<input type="number" class="frequency-input" id="${numId}" value="${numVal}" min="1"${isP ? '' : ' max="31"'}>
+                        <select class="period-select" onchange="toggleFormPointsMode()">
+                            <option value="times" ${isP ? '' : 'selected'}>times</option>
+                            <option value="points" ${isP ? 'selected' : ''}>points</option>
+                        </select>
+                        <span style="color:#888">/</span>
+                        <select class="period-select" onchange="setFormPeriod('${periodType}', this.value)">
+                            <option value="${PERIOD.DAY}" ${periodState === PERIOD.DAY ? 'selected' : ''}>day</option>
+                            <option value="${PERIOD.WEEK}" ${periodState === PERIOD.WEEK ? 'selected' : ''}>wk</option>
+                            <option value="${PERIOD.MONTH}" ${periodState === PERIOD.MONTH ? 'selected' : ''}>mo</option>
+                        </select>`;
             } else if (state.frequency === FREQ.DAILY) {
                 const dailyVal = state.dailyTimesValue ?? habit?.frequency?.timesPerDay ?? 1;
                 freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'D' : 'd'}ailyTimes" value="${dailyVal}" min="1" max="31" oninput="rerenderForm()"><span style="color:#888">× / day</span>`;
@@ -455,13 +456,6 @@
                         </select>
                         <div id="${isEdit ? 'editFrequencyInputs' : 'frequencyInputs'}">${freqInputsHtml}</div>
                     </div>
-                    ${state.frequency === FREQ.TIMES_PER_PERIOD ? `<div class="frequency-row" style="justify-content:space-between;margin-top:8px">
-                        <span style="color:#aaa;font-size:0.85rem">Points</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" ${state.isPointsMode ? 'checked' : ''} onchange="toggleFormPointsMode()">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>` : ''}
                     ${(state.frequency === FREQ.DAILY && (state.dailyTimesValue ?? habit?.frequency?.timesPerDay ?? 1) > 1) ? `<div class="frequency-row" style="justify-content:space-between;margin-top:8px">
                         <span style="color:#aaa;font-size:0.85rem">Hide after each completion</span>
                         <div style="display:flex;align-items:center;gap:6px">
