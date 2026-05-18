@@ -948,7 +948,7 @@
         async function debugTestAllNotifications() {
             const permission = await requestNotificationPermission();
             if (permission !== 'granted') {
-                alert('Notification permission denied. Please enable notifications in your browser settings.');
+                alertDialog('Notification permission denied. Enable notifications in your browser settings.');
                 return;
             }
             // Ensure service worker is ready
@@ -1071,7 +1071,7 @@
                 console.error('Failed to load habits:', e);
                 habitsCache = [];
                 // Show error to user on next tick to avoid blocking
-                setTimeout(() => alert('Failed to load habits. Data may be corrupted. Your habits have been reset.'), 0);
+                setTimeout(() => alertDialog('Failed to load habits. Data may be corrupted — your habits have been reset.'), 0);
             }
             return habitsCache;
         }
@@ -1082,9 +1082,9 @@
             } catch (e) {
                 console.error('Failed to save habits:', e);
                 if (e.name === 'QuotaExceededError') {
-                    alert('Storage is full. Unable to save habits. Try clearing some browser data.');
+                    alertDialog('Storage is full. Unable to save habits — try clearing some browser data.');
                 } else {
-                    alert('Failed to save habits. Changes may not persist.');
+                    alertDialog('Failed to save habits. Changes may not persist.');
                 }
             }
         }
@@ -1219,6 +1219,51 @@
                 `<div class="overlay-fixed-header">${popupHeader({ icon, title, onClose, showClose })}</div>`
               + `<div class="overlay-scroll">${bodyHtml}</div>`
               + (footerHtml || '');
+        }
+
+        // --- Shared dialogs (replace native confirm/alert) -----------------
+        let _dialogButtons = [];
+        function openDialog({ title = '', message = '', buttons = [] }) {
+            _dialogButtons = buttons;
+            const btns = buttons.map((b, i) => {
+                const cls = b.secondary ? 'submit-btn secondary' : 'submit-btn';
+                const style = `flex:1${b.danger ? ';background:#dc2626' : ''}`;
+                return `<button class="${cls}" style="${style}" onclick="dialogButton(${i})">${escapeHtml(b.label)}</button>`;
+            }).join('');
+            renderPopup('dialogPopup', {
+                title,
+                onClose: 'closeDialog()',
+                bodyHtml: message ? `<div style="color:#ccc;font-size:0.9rem;line-height:1.45;white-space:pre-line">${escapeHtml(message)}</div>` : '',
+                footerHtml: `<div style="display:flex;gap:8px;padding:12px 16px">${btns}</div>`
+            });
+            showOverlay('dialogOverlay');
+        }
+        function dialogButton(i) {
+            const b = _dialogButtons[i];
+            closeDialog();
+            if (b && typeof b.onClick === 'function') b.onClick();
+        }
+        function closeDialog() { hideOverlay('dialogOverlay'); _dialogButtons = []; }
+
+        // Destructive/decision gate. onConfirm runs only on the confirm button.
+        function confirmDialog({ title = 'Are you sure?', message = '', confirmLabel = 'Confirm', danger = false, onConfirm }) {
+            openDialog({ title, message, buttons: [
+                { label: 'Cancel', secondary: true },
+                { label: confirmLabel, danger, onClick: onConfirm }
+            ]});
+        }
+        // Blocking notice (errors). One acknowledge button.
+        function alertDialog(message, title = 'Notice') {
+            openDialog({ title, message, buttons: [{ label: 'OK', secondary: true }] });
+        }
+        // Lightweight, auto-dismissing success/info toast (non-blocking).
+        function notify(message) {
+            const t = document.createElement('div');
+            t.className = 'notice-toast';
+            t.textContent = message;
+            document.body.appendChild(t);
+            requestAnimationFrame(() => t.classList.add('visible'));
+            setTimeout(() => { t.classList.remove('visible'); setTimeout(() => t.remove(), 250); }, 2600);
         }
 
         function openModal() {
@@ -1468,7 +1513,7 @@
                     settingsDraft.notificationsEnabled = false;
                     const cb = document.getElementById('notificationsEnabled');
                     if (cb) cb.checked = false;
-                    alert('Notification permission denied. Please enable in browser settings.');
+                    alertDialog('Notification permission denied. Enable it in your browser settings.');
                 }
             }
             const settings = { ...getSettings(), ...settingsDraft };
@@ -1476,7 +1521,7 @@
                 localStorage.setItem('habit_settings', JSON.stringify(settings));
             } catch (e) {
                 console.error('Failed to save settings:', e);
-                alert('Failed to save settings. Changes may not persist.');
+                alertDialog('Failed to save settings. Changes may not persist.');
             }
             if (settings.notificationsEnabled) {
                 scheduleNotifications();
@@ -1517,7 +1562,7 @@
                 const permission = await requestNotificationPermission();
                 if (permission !== 'granted') {
                     checkbox.checked = false;
-                    alert('Notification permission denied. Please enable in browser settings.');
+                    alertDialog('Notification permission denied. Enable it in your browser settings.');
                     return;
                 }
             } else {
@@ -1847,46 +1892,46 @@
 
             const reader = new FileReader();
             reader.onload = function(e) {
+                let data;
                 try {
-                    const data = JSON.parse(e.target.result);
-
-                    // Validate the data structure
-                    if (!data.habits || !Array.isArray(data.habits)) {
-                        alert('Invalid file format: missing habits array');
-                        return;
-                    }
-
-                    const mergeOrReplace = confirm(
-                        'Import options:\n\n' +
-                        'OK = Replace all data (current data will be lost)\n' +
-                        'Cancel = Merge with existing data (add new tasks, keep current ones)'
-                    );
-
-                    if (mergeOrReplace) {
-                        // Replace all data
-                        if (!confirm('This will replace ALL your current data. Are you sure?')) return;
+                    data = JSON.parse(e.target.result);
+                } catch (err) {
+                    alertDialog('Failed to import: ' + err.message);
+                    return;
+                }
+                if (!data.habits || !Array.isArray(data.habits)) {
+                    alertDialog('Invalid file format: missing habits array.');
+                    return;
+                }
+                const finish = () => { invalidateHabitsCache(); updateDisplay(); closeSettings(); notify('Import successful'); };
+                const doReplace = () => {
+                    try {
                         saveHabits(data.habits);
-                        if (data.settings) {
-                            localStorage.setItem('habit_settings', JSON.stringify(data.settings));
-                        }
-                    } else {
-                        // Merge: add imported habits with new IDs to avoid conflicts
+                        if (data.settings) localStorage.setItem('habit_settings', JSON.stringify(data.settings));
+                        finish();
+                    } catch (err) { alertDialog('Failed to import: ' + err.message); }
+                };
+                const doMerge = () => {
+                    try {
                         const currentHabits = loadHabits();
                         const maxId = Math.max(0, ...currentHabits.map(h => h.id));
-                        const newHabits = data.habits.map((h, i) => ({
-                            ...h,
-                            id: maxId + i + 1
-                        }));
+                        const newHabits = data.habits.map((h, i) => ({ ...h, id: maxId + i + 1 }));
                         saveHabits([...currentHabits, ...newHabits]);
-                    }
-
-                    invalidateHabitsCache();
-                    updateDisplay();
-                    closeSettings();
-                    alert('Import successful!');
-                } catch (err) {
-                    alert('Failed to import: ' + err.message);
-                }
+                        finish();
+                    } catch (err) { alertDialog('Failed to import: ' + err.message); }
+                };
+                openDialog({
+                    title: 'Import data',
+                    message: 'Merge the file with your current data, or replace everything?',
+                    buttons: [
+                        { label: 'Merge', onClick: doMerge },
+                        { label: 'Replace', danger: true, onClick: () => confirmDialog({
+                            title: 'Replace all data?',
+                            message: 'This permanently deletes all current data and cannot be undone.',
+                            confirmLabel: 'Replace', danger: true, onConfirm: doReplace
+                        }) },
+                    ]
+                });
             };
             reader.readAsText(file);
 
@@ -1895,24 +1940,26 @@
         }
 
         function resetAllMomentum() {
-            if (!confirm('Reset momentum scores for all habits? This cannot be undone.')) return;
-            const habits = loadHabits();
-            const today = getTodayString();
-            habits.forEach(h => {
-                h.momentumScore = 0;
-                h.lastScoreUpdate = today; // Set to today to prevent recalculation
-                h.momentumResetDate = today; // For reminders: use this as reference point for neglect calculation
-            });
-            saveHabits(habits);
-            updateDisplay();
-            closeSettings();
+            confirmDialog({ title: 'Reset all momentum?', message: 'Momentum scores for every habit reset to zero. This cannot be undone.', confirmLabel: 'Reset', danger: true, onConfirm: () => {
+                const habits = loadHabits();
+                const today = getTodayString();
+                habits.forEach(h => {
+                    h.momentumScore = 0;
+                    h.lastScoreUpdate = today; // Set to today to prevent recalculation
+                    h.momentumResetDate = today; // For reminders: use this as reference point for neglect calculation
+                });
+                saveHabits(habits);
+                updateDisplay();
+                closeSettings();
+            } });
         }
 
         function reloadDefaultTasks() {
-            if (!confirm('Replace all tasks with defaults? This will delete your current tasks and cannot be undone.')) return;
-            saveHabits(getDefaultHabits());
-            updateDisplay();
-            closeSettings();
+            confirmDialog({ title: 'Reload default tasks?', message: 'This deletes all your current tasks and replaces them with the defaults. This cannot be undone.', confirmLabel: 'Replace', danger: true, onConfirm: () => {
+                saveHabits(getDefaultHabits());
+                updateDisplay();
+                closeSettings();
+            } });
         }
 
         // Subtask functions for new habit creation
@@ -2148,7 +2195,7 @@
         }
 
         function deleteHabit(id) {
-            if (confirm('Delete this habit?')) {
+            confirmDialog({ title: 'Delete habit?', message: 'This permanently removes the habit and all its history.', confirmLabel: 'Delete', danger: true, onConfirm: () => {
                 const habits = loadHabits().filter(h => h.id !== id);
                 // --- DISABLED: linked-habit feature. Back-reference cleanup
                 // kept commented for future re-enable. ---
@@ -2158,7 +2205,7 @@
                 saveHabits(habits);
                 closeDetails();
                 renderHabits();
-            }
+            } });
         }
 
         function archiveHabit(id) {
@@ -2794,7 +2841,7 @@
         }
 
         function resetHabitStats(id) {
-            if (!confirm('Reset all stats for this habit? This clears all completion history, subtask progress, and momentum.')) return;
+            confirmDialog({ title: 'Reset stats?', message: 'Clears all completion history, subtask progress, and momentum for this habit. This cannot be undone.', confirmLabel: 'Reset', danger: true, onConfirm: () => {
             const habits = loadHabits();
             const habit = habits.find(h => h.id === id);
             if (habit) {
@@ -2816,6 +2863,7 @@
                 renderDetails();
                 renderHabits();
             }
+            } });
         }
 
         function undoHabitCompletion(id) {
@@ -4905,7 +4953,6 @@
                     { id: 303, name: 'Strength', completedPeriods: {} }
                 ], createdAt: today, lastScoreUpdate: today, momentumScore: 0 },
                 { id: 4, name: 'Read', icon: '📚', timeOfDay: null, frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, lastScoreUpdate: today, momentumScore: 0 },
-                { id: 5, name: 'Journal', icon: '✍️', timeOfDay: 'night', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, lastScoreUpdate: today, momentumScore: 0 },
                 { id: 6, name: 'Water plants', icon: '🌱', timeOfDay: 'morning', frequency: { type: 'everyXDays', timesPerWeek: 3, everyXDays: 3 }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, lastScoreUpdate: today, momentumScore: 0 },
                 { id: 7, name: 'Take vitamins', icon: '💊', timeOfDay: 'morning', frequency: { type: 'daily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [], createdAt: today, lastScoreUpdate: today, momentumScore: 0 },
                 { id: 8, name: 'Skincare', icon: '✨', timeOfDay: null, frequency: { type: 'twiceDaily' }, completions: [], skippedDates: [], snoozedUntil: null, subtasks: [
