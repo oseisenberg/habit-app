@@ -254,7 +254,7 @@
                         <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.DAY}')">day</button>
                         <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.WEEK}')">wk</button>
                         <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.MONTH ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.MONTH}')">mo</button>
-                    </div><span style="color:#888">after</span>`;
+                    </div>`;
             } else if (state.frequency === FREQ.TIMES_PER_PERIOD) {
                 if (state.isPointsMode) {
                     const ptsVal = state.pointsValue ?? habit?.frequency?.pointsPerDay ?? habit?.frequency?.pointsPerWeek ?? habit?.frequency?.pointsPerMonth ?? DEFAULTS.POINTS_PER_PERIOD;
@@ -410,11 +410,11 @@
                 </div>
                 ${state.showDescription ? `<div class="form-group">
                     <label class="form-label">Description</label>
-                    <textarea class="form-input" id="${isEdit ? 'editHabitDesc' : 'habitDesc'}" placeholder="Add a description..." rows="2" style="resize:none;font-size:0.85rem">${habitDesc}</textarea>
-                    <label style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#aaa;font-size:0.82rem;cursor:pointer">
-                        <input type="checkbox" ${state.confirmDescription ? 'checked' : ''} onchange="setFormConfirmDescription(this.checked)" style="accent-color:#f59e0b">
+                    <label style="display:flex;align-items:center;gap:8px;margin:2px 0 8px;color:#aaa;font-size:0.82rem;cursor:pointer">
+                        <input type="checkbox" ${state.confirmDescription ? 'checked' : ''} onchange="setFormConfirmDescription(this.checked)" style="accent-color:#667eea">
                         <span>Show description before completing</span>
                     </label>
+                    <textarea class="form-input" id="${isEdit ? 'editHabitDesc' : 'habitDesc'}" placeholder="Add a description..." rows="2" style="resize:none;font-size:0.85rem">${habitDesc}</textarea>
                 </div>` : ''}
                 ${false /* DISABLED: auto-complete feature */ && state.showAutoCompletes ? `<div class="form-group">
                     <label class="form-label">Auto-completes another habit</label>
@@ -2707,22 +2707,21 @@
             confirmDescHabitId = id;
             confirmDescPeriod = period;
 
-            const lines = (habit.description || 'No description')
-                .split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            const items = (lines.length ? lines : ['No description']).map(line => ({
-                name: line,
-                completed: false,
-                locked: true,
-                onclick: ''
-            }));
+            // Render the description exactly like the subtask popup does
+            // (same popupSection + formatDescription) so the two completion
+            // popups are visually consistent — this one just has no subtask
+            // rows and a Cancel/Complete footer.
+            const descSection = (habit.confirmDescription && habit.description)
+                ? popupSection('Description', `<div style="color:#ccc;font-size:0.85rem;line-height:1.4">${formatDescription(habit.description)}</div>`)
+                : '';
 
             renderChecklistPopup('confirmDescPopup', {
                 icon: habit.icon || '📌',
                 title: habit.name,
                 onClose: 'closeConfirmDescPopup()',
-                items,
+                items: [],
                 marker: 'bullet',
-                preamble: linkedAutoInfoHtml(habit),
+                preamble: descSection + linkedAutoInfoHtml(habit),
                 footer: `<div style="display:flex;gap:8px;margin-top:12px">
                     <button class="submit-btn secondary" onclick="closeConfirmDescPopup()" style="flex:1">Cancel</button>
                     <button class="submit-btn" onclick="confirmAndCompleteHabit()" style="flex:1;background:#4ade80">Complete</button>
@@ -3680,7 +3679,9 @@
         // bulleted lines. Used to show a confirm-description and any
         // auto-completed partner's details inside the completion popup.
         function popupSection(label, innerHtml) {
-            return `<div style="margin:10px 0;padding-top:10px;border-top:1px solid #2a2a3e">
+            // No top border here — the popup header already draws a divider
+            // directly above this section; a second line looked doubled.
+            return `<div style="margin:10px 0">
                 <div style="font-size:0.7rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">${escapeHtml(label)}</div>
                 ${innerHtml}
             </div>`;
@@ -4333,7 +4334,7 @@
                     <div class="modal-header" style="gap:10px">
                         <div style="display:flex;align-items:center;gap:10px;min-width:0">
                             <span style="font-size:1.6rem;flex-shrink:0;line-height:1">${icon}</span>
-                            <span class="details-habit-name" style="text-align:left;font-size:1.05rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(habit.name)}${timeIcon ? ` <span title="${habit.timeOfDay === 'morning' ? 'Morning' : 'Bedtime'}">${timeIcon}</span>` : ''}</span>
+                            <span class="details-habit-name" style="text-align:left;font-size:1.05rem;min-width:0;overflow-wrap:anywhere;line-height:1.25">${escapeHtml(habit.name)}${timeIcon ? ` <span title="${habit.timeOfDay === 'morning' ? 'Morning' : 'Bedtime'}">${timeIcon}</span>` : ''}</span>
                         </div>
                         <button class="modal-close" onclick="closeDetails()" style="flex-shrink:0">&times;</button>
                     </div>`;
@@ -4410,7 +4411,14 @@
         let allHabitsSortReversed = false;
         function setAllHabitsSort(v) { allHabitsSort = v; renderAllHabitsGrid(); }
         function setAllHabitsFilter(v) { allHabitsFilter = v; renderAllHabitsGrid(); }
-        function toggleAllHabitsSortDir() { allHabitsSortReversed = !allHabitsSortReversed; renderAllHabitsGrid(); }
+        function toggleAllHabitsSortDir() {
+            allHabitsSortReversed = !allHabitsSortReversed;
+            // The button lives in the fixed header (rendered once), so update
+            // its arrow directly — renderAllHabitsGrid only redraws the list.
+            const btn = document.getElementById('ahOrderBtn');
+            if (btn) btn.textContent = allHabitsSortReversed ? '↓' : '↑';
+            renderAllHabitsGrid();
+        }
 
         function allHabitsFilterPredicate(h) {
             switch (allHabitsFilter) {
@@ -4619,7 +4627,7 @@
                         </label>
                         <label class="ah-select-wrap" style="flex:0 0 auto">
                             <span class="ah-select-label">Order</span>
-                            <button class="ah-select ah-order" style="cursor:pointer;min-width:46px" onclick="toggleAllHabitsSortDir()" aria-label="Reverse sort order" title="Reverse sort order">${allHabitsSortReversed ? '↓' : '↑'}</button>
+                            <button id="ahOrderBtn" class="ah-select ah-order" style="cursor:pointer;min-width:46px" onclick="toggleAllHabitsSortDir()" aria-label="Reverse sort order" title="Reverse sort order">${allHabitsSortReversed ? '↓' : '↑'}</button>
                         </label>
                     </div>
                     <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 14px 10px;color:#aaa;font-size:0.82rem">
@@ -4835,7 +4843,7 @@
                 // .details-scroll-area / .all-habits-scroll-area / nested
                 // .subtasks-scroll-container.
                 const scrollable = e.target.closest(
-                    '.details-scroll-area, .all-habits-scroll-area, .subtasks-scroll-container') || modal;
+                    '.details-scroll-area, .all-habits-scroll-area, .subtasks-scroll-container, .subtask-popup-list, .emoji-picker') || modal;
                 if (scrollable.scrollTop <= 0) {
                     swipeStartY = e.touches[0].clientY;
                     swipeElement = modal;
@@ -4867,10 +4875,11 @@
             const swipeDelta = swipeEndY - swipeStartY;
             const elementToReset = swipeElement; // Save reference before clearing
 
-            // Small popups (points/snooze/confirm/emoji/subtask) are easy to
-            // dismiss by accident — keep the older 80px threshold for them so
-            // the Confirm-description popup doesn't slip away mid-tap.
-            const dismissThreshold = swipeElement.classList.contains('modal') ? 40 : 80;
+            // Small popups (points/snooze/confirm/emoji/subtask) keep the
+            // 80px threshold. Full modals (details/edit/create/settings) use
+            // a larger 95px pull so the details/edit pages aren't dismissed
+            // too easily by a light downward drag.
+            const dismissThreshold = swipeElement.classList.contains('modal') ? 95 : 80;
             if (swipeActive && swipeDelta > dismissThreshold) {
                 // Animate the slide-out via inline transform AND close the
                 // overlay immediately so it stops catching taps that should
