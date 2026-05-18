@@ -239,7 +239,7 @@
             const currentIcon = state.icon || (habit?.icon) || '📌';
             const habitName = escapeHtml(formState.name || '');
             const habitDesc = escapeHtml(formState.description || '');
-            // Points only applies to the "Within period" schedule
+            // Points only applies to the "Goal" schedule
             // (points per day/week/month) — disabled for every other type.
             const isTwiceDaily = state.frequency === FREQ.TWICE_DAILY;
             // Allow Extra is now compatible with all frequencies
@@ -452,7 +452,7 @@
                             <option value="${FREQ.DAILY}" ${state.frequency === FREQ.DAILY ? 'selected' : ''}>Daily</option>
                             <option value="${FREQ.TWICE_DAILY}" ${state.frequency === FREQ.TWICE_DAILY ? 'selected' : ''}>Morning & Bedtime</option>
                             <option value="${FREQ.EVERY_X_DAYS}" ${state.frequency === FREQ.EVERY_X_DAYS ? 'selected' : ''}>Completion</option>
-                            <option value="${FREQ.TIMES_PER_PERIOD}" ${state.frequency === FREQ.TIMES_PER_PERIOD ? 'selected' : ''}>Within period</option>
+                            <option value="${FREQ.TIMES_PER_PERIOD}" ${state.frequency === FREQ.TIMES_PER_PERIOD ? 'selected' : ''}>Goal</option>
                         </select>
                         <div id="${isEdit ? 'editFrequencyInputs' : 'frequencyInputs'}">${freqInputsHtml}</div>
                     </div>
@@ -569,7 +569,7 @@
         }
 
         function toggleFormPointsMode() {
-            // Points only makes sense with the "Within period" schedule.
+            // Points only makes sense with the "Goal" schedule.
             if (formState.frequency !== FREQ.TIMES_PER_PERIOD) return;
             formState.isPointsMode = !formState.isPointsMode;
             rerenderForm();
@@ -787,7 +787,7 @@
             if (f === FREQ.TWICE_DAILY) {
                 formState.time = null;
             }
-            // Points only applies to "Within period"; clear it otherwise.
+            // Points only applies to the "Goal" schedule; clear it otherwise.
             if (f !== FREQ.TIMES_PER_PERIOD && formState.isPointsMode) {
                 formState.isPointsMode = false;
             }
