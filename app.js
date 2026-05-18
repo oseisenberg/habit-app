@@ -1458,15 +1458,8 @@
             // #2: one Export (scope chosen by a "tasks only" toggle) paired
             // with Import on a single row, instead of two Export buttons.
             const dataSection = `
-                <div class="settings-row">
-                    <span class="settings-label">Export tasks only</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="exportTasksOnly">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-                <div style="display:flex;gap:8px;margin-top:8px">
-                    <button class="submit-btn secondary" style="flex:1;font-size:0.85rem" onclick="exportData(!!document.getElementById('exportTasksOnly')?.checked)">Export</button>
+                <div style="display:flex;gap:8px">
+                    <button class="submit-btn secondary" style="flex:1;font-size:0.85rem" onclick="chooseExport()">Export</button>
                     <button class="submit-btn secondary" style="flex:1;font-size:0.85rem" onclick="triggerImport()">Import</button>
                 </div>
                 <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(event)">
@@ -1843,6 +1836,19 @@
                     // Service worker registration failed
                 }
             }
+        }
+
+        // Scope is chosen on the action (like Import's Merge/Replace),
+        // not a separate setting-looking toggle.
+        function chooseExport() {
+            openDialog({
+                title: 'Export',
+                message: 'What should the backup file include?',
+                buttons: [
+                    { label: 'All data', onClick: () => exportData(false) },
+                    { label: 'Tasks only', onClick: () => exportData(true) },
+                ]
+            });
         }
 
         function exportData(noHistory = false) {
