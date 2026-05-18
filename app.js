@@ -1237,6 +1237,13 @@
                 footerHtml: `<div style="display:flex;gap:8px;padding:12px 16px">${btns}</div>`
             });
             showOverlay('dialogOverlay');
+            // Focus the first (safe / non-destructive) action so keyboard
+            // users can act and Esc/tap-outside still cancels. Native
+            // confirm()/alert() had this for free.
+            setTimeout(() => {
+                const b = document.querySelector('#dialogPopup button:not(.modal-close)');
+                if (b && b.focus) b.focus();
+            }, 0);
         }
         function dialogButton(i) {
             const b = _dialogButtons[i];
@@ -4987,6 +4994,7 @@
         document.addEventListener('keydown', e => {
             if (e.key !== 'Escape') return;
             const closers = [
+                ['dialogOverlay', closeDialog],
                 ['tagGlossaryOverlay', closeTagGlossary],
                 ['confirmDescPopupOverlay', closeConfirmDescPopup],
                 ['snoozePopupOverlay', closeSnoozePopup],
