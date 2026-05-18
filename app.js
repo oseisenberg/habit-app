@@ -391,7 +391,7 @@
                                 { id: 'desc',        label: 'Description',   active: state.showDescription,     domId: isEdit ? 'editDescPill' : 'descPill',                   onclick: 'toggleFormDescription()',       usage: count(h => !!h.description) },
                                 { id: 'noMomentum',  label: 'Untracked',   active: state.noMomentum,          domId: isEdit ? 'editNoMomentumPill' : 'noMomentumPill',       onclick: 'toggleFormNoMomentum()',        usage: count(h => h.noMomentum) },
                                 { id: 'conflicts',   label: 'Conflicts',     active: state.showConflictsWith,   domId: isEdit ? 'editConflictsPill' : 'conflictsPill',         onclick: 'toggleFormConflictsWith()',     usage: count(h => !!h.conflictsWith) },
-                            ];
+                            ].filter(p => !(getSettings().disabledTags || []).includes(p.id));
 
                             // Render every pill with its usage as data so the
                             // post-render fitter (fitOptionsToTwoLines) can
@@ -695,6 +695,18 @@
 
         // Glossary describing every option pill so the user can look up what
         // each tag actually does without having to experiment.
+        // Canonical tag/option list (id matches the form pills). Settings →
+        // Tags lets the user move each between Active/Inactive; only Active
+        // tags appear as option pills in the habit form.
+        const TAG_LIST = [
+            { id: 'subtasks',   label: 'Subtasks' },
+            { id: 'points',     label: 'Points' },
+            { id: 'reminder',   label: 'Reminder' },
+            { id: 'desc',       label: 'Description' },
+            { id: 'noMomentum', label: 'Untracked' },
+            { id: 'conflicts',  label: 'Conflicts' },
+        ];
+
         const TAG_GLOSSARY = [
             { label: 'Subtasks',      desc: 'Break the habit into a checklist; the habit auto-completes when every subtask is done.' },
             { label: 'Points',        desc: 'Score each completion (1, 2, or 3 points) and aim for a daily, weekly, or monthly target instead of a fixed count.' },
@@ -853,7 +865,8 @@
                 quietHoursStart: 22,
                 quietHoursEnd: 7,
                 weeklySummaryEnabled: false,
-                separateBedtimeSection: true
+                separateBedtimeSection: true,
+                disabledTags: []
             };
             try {
                 const s = localStorage.getItem('habit_settings');
@@ -1281,6 +1294,17 @@
             populateSettingsFields();
         }
 
+        // Move a tag between Active/Inactive in the draft (committed on Save,
+        // like every other setting). Form pills read the saved value.
+        function toggleTagEnabled(id) {
+            if (!settingsDraft) settingsDraft = getSettings();
+            const cur = Array.isArray(settingsDraft.disabledTags) ? settingsDraft.disabledTags.slice() : [];
+            const i = cur.indexOf(id);
+            if (i >= 0) cur.splice(i, 1); else cur.push(id);
+            settingsDraft.disabledTags = cur;
+            renderSettings();
+        }
+
         function renderSettings() {
             const generalRows = `
                 <div class="settings-row">
@@ -1388,10 +1412,25 @@
             } else if (settingsView === 'data') {
                 headerHtml = subHeader('Data & Backup');
                 bodyHtml = dataSection;
+            } else if (settingsView === 'tags') {
+                const disabled = (settingsDraft && settingsDraft.disabledTags) || [];
+                const chip = t => `<label class="option-pill ${disabled.includes(t.id) ? '' : 'active'}" onclick="toggleTagEnabled('${t.id}')">
+                        <span class="option-pill-check">✓</span><span>${t.label}</span>
+                    </label>`;
+                const activeChips = TAG_LIST.filter(t => !disabled.includes(t.id)).map(chip).join('');
+                const inactiveChips = TAG_LIST.filter(t => disabled.includes(t.id)).map(chip).join('');
+                const sectionLabel = txt => `<div style="font-size:0.7rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin:4px 0 8px">${txt}</div>`;
+                headerHtml = subHeader('Tags');
+                bodyHtml = sectionLabel('Active')
+                    + `<div class="task-options">${activeChips || '<span style="color:#666;font-size:0.85rem">None</span>'}</div>`
+                    + `<div style="margin-top:16px">${sectionLabel('Inactive')}</div>`
+                    + `<div class="task-options">${inactiveChips || '<span style="color:#666;font-size:0.85rem">None</span>'}</div>`
+                    + `<button class="submit-btn" style="margin-top:18px" onclick="saveSettings()">Save Settings</button>`;
             } else {
                 headerHtml = popupHeader({ title: 'Settings', onClose: 'closeSettings()' });
                 bodyHtml = generalRows
                     + navRow('Notifications', 'notifications')
+                    + navRow('Tags', 'tags')
                     + navRow('Data & Backup', 'data')
                     + saveButton;
             }
