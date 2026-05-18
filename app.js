@@ -221,6 +221,16 @@
             return formState;
         }
 
+        // Wrap details-modal content so the header pins to the top while
+        // everything else (body + action bar) scrolls beneath it (mirrors
+        // the All Habits fixed-header pattern, scoped via the .details-*
+        // classes to #detailsOverlay so other modals are unaffected).
+        // Used by the edit form and the details view.
+        function detailsShell(headerHtml, bodyHtml, footerHtml = '') {
+            return `<div class="details-fixed-header">${headerHtml}</div>`
+                 + `<div class="details-scroll-area">${bodyHtml}${footerHtml}</div>`;
+        }
+
         // Render the habit form (shared between Create and Edit modes)
         function renderHabitForm(habit = null) {
             const isEdit = formMode === 'edit';
@@ -329,11 +339,12 @@
 
             const reminderDays = habit?.frequency?.reminderDays || DEFAULTS.REMINDER_DAYS;
 
-            return `
+            const _hdr = `
                 <div class="modal-header">
                     <h2 class="modal-title">${isEdit ? 'Edit Habit' : 'New Habit'}</h2>
                     <button class="modal-close" onclick="${isEdit ? 'closeDetails' : 'closeModal'}()">&times;</button>
-                </div>
+                </div>`;
+            const _body = `
                 <div class="form-group">
                     <div style="display:flex;gap:10px;margin-bottom:6px">
                         <label class="form-label" style="margin:0;width:52px;flex-shrink:0">Icon</label>
@@ -451,7 +462,8 @@
                         </div>
                     </div>` : ''}
                 </div>
-                ${subtasksHtml}
+                ${subtasksHtml}`;
+            const _footer = `
                 <div class="action-buttons">
                     ${isEdit
                         ? `<div class="action-row">
@@ -460,6 +472,9 @@
                         </div>`
                         : `<button class="submit-btn" onclick="addHabit()">Add Habit</button>`}
                 </div>`;
+            // Edit form lives in the details modal → pin header/footer.
+            // Create form keeps its single-scroll layout unchanged.
+            return isEdit ? detailsShell(_hdr, _body, _footer) : (_hdr + _body + _footer);
         }
 
         // ========================================
@@ -1150,8 +1165,13 @@
 
         function handleOverlayClick(e, id, closeFn) { if (e.target === document.getElementById(id)) closeFn(); }
 
-        function showOverlay(id) { document.getElementById(id).classList.add('active'); }
-        function hideOverlay(id) { document.getElementById(id).classList.remove('active'); }
+        function syncBodyScrollLock() {
+            const anyOpen = document.querySelector(
+                '.modal-overlay.active, .subtask-popup-overlay.active, .points-popup-overlay.active, .emoji-popup-overlay.active');
+            document.body.classList.toggle('modal-open', !!anyOpen);
+        }
+        function showOverlay(id) { document.getElementById(id).classList.add('active'); syncBodyScrollLock(); }
+        function hideOverlay(id) { document.getElementById(id).classList.remove('active'); syncBodyScrollLock(); }
         function isOverlayActive(id) { return !!document.getElementById(id)?.classList.contains('active'); }
 
         // Shared popup header. `variant` 'subtask' (left-aligned, optional
@@ -1276,6 +1296,7 @@
 
         function updateInstallPromptVisibility() {
             const prompt = document.getElementById('installPrompt');
+            if (!prompt) return; // install prompt UI removed
             const notifEnabled = document.getElementById('notificationsEnabled').checked;
             // Show install prompt if notifications enabled but not installed as PWA
             if (notifEnabled && !isStandalone()) {
@@ -2028,7 +2049,10 @@
 
             document.getElementById('snoozePopup').innerHTML = `
                 <div class="snooze-popup-content">
-                    <div class="snooze-popup-title">Snooze</div>
+                    <div class="snooze-popup-title">${pauseMomentum ? 'Snooze' : 'Ignore'}</div>
+                    <div style="color:#888;font-size:0.8rem;line-height:1.4;margin:-4px 0 12px;text-align:center">${pauseMomentum
+                        ? 'Hides this habit and pauses momentum — no penalty for the skipped days.'
+                        : 'Hides this habit but momentum keeps running — missed days still count against you.'}</div>
                     <div class="snooze-section">
                         <div class="snooze-section-label">Today</div>
                         <div class="snooze-options" style="grid-template-columns: repeat(2, 1fr);">
@@ -4305,17 +4329,23 @@
                     undoButton = `<button class="submit-btn secondary" style="flex:1" onclick="undoHabitCompletion(${habit.id})">Undo</button>`;
                 }
 
-                document.getElementById('detailsModal').innerHTML = `
-                    <div class="modal-header"><span></span><button class="modal-close" onclick="closeDetails()">&times;</button></div>
-                    <div style="margin-bottom:12px;text-align:center">
-                        <div class="details-large-icon" style="margin:0 auto 8px">${icon}</div>
-                        <div class="details-habit-name" style="text-align:center">${escapeHtml(habit.name)}${timeIcon ? ` <span title="${habit.timeOfDay === 'morning' ? 'Morning' : 'Bedtime'}">${timeIcon}</span>` : ''}</div>
-                        ${habit.description ? `<div style="color:#888;font-size:0.85rem;margin-top:8px">${formatDescription(habit.description)}</div>` : ''}
-                        ${!isReminder && !habit.noMomentum ? `<div class="momentum-display" style="margin-top:10px;margin-bottom:0">
-                            <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
-                            <div class="momentum-label">Momentum${recoveryText}</div>
-                        </div>` : ''}
-                    </div>
+                const _dHdr = `
+                    <div class="modal-header" style="gap:10px">
+                        <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                            <span style="font-size:1.6rem;flex-shrink:0;line-height:1">${icon}</span>
+                            <span class="details-habit-name" style="text-align:left;font-size:1.05rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(habit.name)}${timeIcon ? ` <span title="${habit.timeOfDay === 'morning' ? 'Morning' : 'Bedtime'}">${timeIcon}</span>` : ''}</span>
+                        </div>
+                        <button class="modal-close" onclick="closeDetails()" style="flex-shrink:0">&times;</button>
+                    </div>`;
+                const _dBody = `
+                    ${habit.description ? `<div style="margin-bottom:14px">
+                        <div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Description</div>
+                        <div style="color:#aaa;font-size:0.85rem;line-height:1.4;border:1px solid #2a2a3e;border-radius:8px;padding:10px 12px;background:rgba(255,255,255,0.02)">${formatDescription(habit.description)}</div>
+                    </div>` : ''}
+                    ${!isReminder && !habit.noMomentum ? `<div class="momentum-display" style="margin-top:0;margin-bottom:12px">
+                        <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
+                        <div class="momentum-label">Momentum${recoveryText}</div>
+                    </div>` : ''}
                     ${(() => {
                         const isPts = habit.frequency.type === FREQ.POINTS_PER_DAY || habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH;
                         const cells = [
@@ -4333,7 +4363,7 @@
                     ${habit.subtasks && habit.subtasks.length > 0 ? `
                     <div class="subtask-list" style="margin:10px 0">
                         <div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Subtasks</div>
-                        <div class="subtasks-scroll-container">
+                        <div class="subtasks-scroll-container compact3">
                             ${habit.subtasks.map(s => {
                                 const completed = isSubtaskCompleted(habit, s.id);
                                 return `<div class="subtask-item" style="cursor:default">
@@ -4342,20 +4372,22 @@
                                 </div>`;
                             }).join('')}
                         </div>
-                    </div>` : ''}
+                    </div>` : ''}`;
+                const _dFooter = `
                     <div class="action-buttons">
                         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
                             ${completeButton}
                             ${undoButton}
                             <button class="submit-btn secondary" style="flex:1" onclick="toggleEditMode()">Edit</button>
                         </div>
-                        <div style="display:flex;gap:6px;margin-top:6px">
+                        <div style="display:flex;gap:6px">
                             ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id}, true)">Snooze</button>
                             <button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id}, false)">Ignore</button>` : ''}
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
                             <button class="submit-btn secondary" style="flex:0 0 48px;margin-left:auto" aria-label="More actions" onclick="openDetailsMoreMenu(event, ${habit.id})">⋮</button>
                         </div>
                     </div>`;
+                document.getElementById('detailsModal').innerHTML = detailsShell(_dHdr, _dBody, _dFooter);
             }
         }
 
@@ -4375,8 +4407,10 @@
 
         let allHabitsSort = 'status';   // status | alpha | momentum | overdue
         let allHabitsFilter = 'all';    // all | reminders | subtasks | snoozed | archived
+        let allHabitsSortReversed = false;
         function setAllHabitsSort(v) { allHabitsSort = v; renderAllHabitsGrid(); }
         function setAllHabitsFilter(v) { allHabitsFilter = v; renderAllHabitsGrid(); }
+        function toggleAllHabitsSortDir() { allHabitsSortReversed = !allHabitsSortReversed; renderAllHabitsGrid(); }
 
         function allHabitsFilterPredicate(h) {
             switch (allHabitsFilter) {
@@ -4469,6 +4503,7 @@
                 filtered = [...habits];
             }
             filtered = filtered.filter(allHabitsFilterPredicate).sort(allHabitsSortCompare);
+            if (allHabitsSortReversed) filtered.reverse();
 
             if (!filtered.length) {
                 grid.innerHTML = '';
@@ -4515,13 +4550,13 @@
 
             let html = '';
             if (allHabitsSort === 'status' && allHabitsFilter === 'all') {
-                // Default view keeps the Now / Other / Archived sections.
+                // Default view keeps the Now / Later / Archived sections.
                 if (nowHabits.length) {
                     html += `<div class="all-habits-section-header">Now</div>`;
                     html += `<div class="habits-grid">${nowHabits.map(renderHabitItem).join('')}</div>`;
                 }
                 if (otherHabits.length) {
-                    html += `<div class="all-habits-section-header" style="margin-top:16px">Other</div>`;
+                    html += `<div class="all-habits-section-header" style="margin-top:16px">Later</div>`;
                     html += `<div class="habits-grid">${otherHabits.map(renderHabitItem).join('')}</div>`;
                 }
                 if (archivedHabits.length) {
@@ -4581,6 +4616,10 @@
                                 <option value="snoozed" ${allHabitsFilter === 'snoozed' ? 'selected' : ''}>Snoozed</option>
                                 <option value="archived" ${allHabitsFilter === 'archived' ? 'selected' : ''}>Archived</option>
                             </select>
+                        </label>
+                        <label class="ah-select-wrap" style="flex:0 0 auto">
+                            <span class="ah-select-label">Order</span>
+                            <button class="ah-select ah-order" style="cursor:pointer;min-width:46px" onclick="toggleAllHabitsSortDir()" aria-label="Reverse sort order" title="Reverse sort order">${allHabitsSortReversed ? '↓' : '↑'}</button>
                         </label>
                     </div>
                     <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 14px 10px;color:#aaa;font-size:0.82rem">
@@ -4787,8 +4826,16 @@
             if (e.target.closest('[data-no-swipe-dismiss]')) return;
             const modal = e.target.closest('.modal, .subtask-popup, .points-popup, .emoji-popup');
             if (modal) {
-                // Only enable swipe if at top of scrollable content
-                const scrollable = modal.querySelector('.all-habits-scroll-area') || modal;
+                // Only arm swipe-to-dismiss when the actual scroll container
+                // under the finger is at the very top — otherwise a normal
+                // downward scroll would be hijacked into a dismiss (and its
+                // preventDefault would cancel the scroll). The modal itself
+                // is overflow:hidden in the reworked details view, so its
+                // scrollTop is always 0; the real scroller is the inner
+                // .details-scroll-area / .all-habits-scroll-area / nested
+                // .subtasks-scroll-container.
+                const scrollable = e.target.closest(
+                    '.details-scroll-area, .all-habits-scroll-area, .subtasks-scroll-container') || modal;
                 if (scrollable.scrollTop <= 0) {
                     swipeStartY = e.touches[0].clientY;
                     swipeElement = modal;
