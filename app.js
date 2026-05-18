@@ -2707,22 +2707,21 @@
             confirmDescHabitId = id;
             confirmDescPeriod = period;
 
-            const lines = (habit.description || 'No description')
-                .split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            const items = (lines.length ? lines : ['No description']).map(line => ({
-                name: line,
-                completed: false,
-                locked: true,
-                onclick: ''
-            }));
+            // Render the description exactly like the subtask popup does
+            // (same popupSection + formatDescription) so the two completion
+            // popups are visually consistent — this one just has no subtask
+            // rows and a Cancel/Complete footer.
+            const descSection = (habit.confirmDescription && habit.description)
+                ? popupSection('Description', `<div style="color:#ccc;font-size:0.85rem;line-height:1.4">${formatDescription(habit.description)}</div>`)
+                : '';
 
             renderChecklistPopup('confirmDescPopup', {
                 icon: habit.icon || '📌',
                 title: habit.name,
                 onClose: 'closeConfirmDescPopup()',
-                items,
+                items: [],
                 marker: 'bullet',
-                preamble: linkedAutoInfoHtml(habit),
+                preamble: descSection + linkedAutoInfoHtml(habit),
                 footer: `<div style="display:flex;gap:8px;margin-top:12px">
                     <button class="submit-btn secondary" onclick="closeConfirmDescPopup()" style="flex:1">Cancel</button>
                     <button class="submit-btn" onclick="confirmAndCompleteHabit()" style="flex:1;background:#4ade80">Complete</button>
