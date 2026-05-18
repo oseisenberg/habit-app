@@ -4331,7 +4331,7 @@
                 const _dBody = `
                     ${habit.description ? `<div style="margin-bottom:14px">
                         <div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Description</div>
-                        <div style="color:#aaa;font-size:0.85rem;line-height:1.4">${formatDescription(habit.description)}</div>
+                        <div style="color:#aaa;font-size:0.85rem;line-height:1.4;border:1px solid #2a2a3e;border-radius:8px;padding:10px 12px;background:rgba(255,255,255,0.02)">${formatDescription(habit.description)}</div>
                     </div>` : ''}
                     ${!isReminder && !habit.noMomentum ? `<div class="momentum-display" style="margin-top:0;margin-bottom:12px">
                         <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
