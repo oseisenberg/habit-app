@@ -2869,9 +2869,7 @@
             // (same popupSection + formatDescription) so the two completion
             // popups are visually consistent — this one just has no subtask
             // rows and a Cancel/Complete footer.
-            const descSection = (habit.confirmDescription && habit.description)
-                ? popupSection('Description', `<div style="color:#ccc;font-size:0.85rem;line-height:1.4">${formatDescription(habit.description)}</div>`)
-                : '';
+            const descSection = popupDescriptionSection(habit);
 
             renderChecklistPopup('confirmDescPopup', {
                 icon: habit.icon || '📌',
@@ -3845,6 +3843,14 @@
             </div>`;
         }
 
+        // The habit's Description for completion popups — boxed with the
+        // exact same look as the habit-details page (subtle grey fill +
+        // darker grey border). '' when there's nothing to confirm.
+        function popupDescriptionSection(habit) {
+            if (!(habit.confirmDescription && habit.description)) return '';
+            return popupSection('Description', `<div style="color:#aaa;font-size:0.85rem;line-height:1.4;border:1px solid #2a2a3e;border-radius:8px;padding:10px 12px;background:rgba(255,255,255,0.02)">${formatDescription(habit.description)}</div>`);
+        }
+
         // --- DISABLED: auto-complete feature. Stubbed to return ''; original
         // body (info about a habit's auto-completed partner shown in the
         // trigger's completion popup) kept below for future re-enable. ---
@@ -3915,9 +3921,7 @@
                 ? `<button class="submit-btn" style="margin-top:12px;width:100%" onclick="completeNextSubtask(${habit.id})" ${allDone ? 'disabled style="margin-top:12px;width:100%;opacity:0.5;cursor:default"' : ''}>Complete Next</button>`
                 : `<button class="submit-btn" style="margin-top:12px;width:100%" onclick="completeHabitWithAllSubtasks(${habit.id})">Complete All</button>`;
 
-            const descSection = (habit.confirmDescription && habit.description)
-                ? popupSection('Description', `<div style="color:#ccc;font-size:0.85rem;line-height:1.4">${formatDescription(habit.description)}</div>`)
-                : '';
+            const descSection = popupDescriptionSection(habit);
             const preamble = descSection + linkedAutoInfoHtml(habit);
 
             renderChecklistPopup('subtaskPopup', {
@@ -4068,9 +4072,7 @@
             // Points habits complete straight through this popup (they skip
             // the confirm-description gate), so surface the description here
             // — same Description section the subtask/confirm popups use.
-            const descSection = (habit.confirmDescription && habit.description)
-                ? popupSection('Description', `<div style="color:#ccc;font-size:0.85rem;line-height:1.4">${formatDescription(habit.description)}</div>`)
-                : '';
+            const descSection = popupDescriptionSection(habit);
 
             renderPopup('pointsPopup', {
                 icon, title: habit.name, onClose: 'closePointsPopup()',
