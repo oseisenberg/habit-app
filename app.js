@@ -2043,7 +2043,10 @@
 
             document.getElementById('snoozePopup').innerHTML = `
                 <div class="snooze-popup-content">
-                    <div class="snooze-popup-title">Snooze</div>
+                    <div class="snooze-popup-title">${pauseMomentum ? 'Snooze' : 'Ignore'}</div>
+                    <div style="color:#888;font-size:0.8rem;line-height:1.4;margin:-4px 0 12px;text-align:center">${pauseMomentum
+                        ? 'Hides this habit and pauses momentum — no penalty for the skipped days.'
+                        : 'Hides this habit but momentum keeps running — missed days still count against you.'}</div>
                     <div class="snooze-section">
                         <div class="snooze-section-label">Today</div>
                         <div class="snooze-options" style="grid-template-columns: repeat(2, 1fr);">
