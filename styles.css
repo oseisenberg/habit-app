@@ -197,11 +197,14 @@
         }
         .fab:active { transform: scale(0.95); }
 
+        /* Lock the page behind any open overlay so touch scrolling can't
+           bleed through to the main habit list. */
+        body.modal-open { overflow: hidden; }
         .modal-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0, 0, 0, 0.7); display: flex; align-items: flex-end;
             justify-content: center; z-index: 200; opacity: 0; visibility: hidden;
-            pointer-events: none;
+            pointer-events: none; overscroll-behavior: contain;
             transition: opacity 0.2s, visibility 0.2s;
         }
         .modal-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
@@ -232,7 +235,7 @@
         .all-habits-fixed-header .modal-header { margin-bottom: 12px; }
         .all-habits-scroll-area {
             flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 12px 16px 20px 16px;
-            -webkit-overflow-scrolling: touch;
+            -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
         }
         /* Details modal: pinned header + footer, scrollable middle.
            Scoped to #detailsOverlay so create/settings modals keep their
@@ -248,7 +251,7 @@
         #detailsOverlay .modal .details-scroll-area {
             flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
             padding: 14px 18px calc(16px + env(safe-area-inset-bottom, 0px));
-            -webkit-overflow-scrolling: touch;
+            -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
         }
         /* Details view: cap the subtask list at ~3 rows (still scrollable). */
         .subtasks-scroll-container.compact3 { max-height: 156px; }
@@ -402,7 +405,7 @@
         .subtask-indicator.partial { color: #f59e0b; }
         .subtask-indicator.complete { color: #4ade80; }
         .subtask-list { margin-top: 10px; }
-        .subtasks-scroll-container { background: #0f0f1a; border-radius: 8px; padding: 8px 12px; max-height: 200px; overflow-y: auto; margin-bottom: 8px; }
+        .subtasks-scroll-container { background: #0f0f1a; border-radius: 8px; padding: 8px 12px; max-height: 200px; overflow-y: auto; margin-bottom: 8px; overscroll-behavior: contain; }
         .subtask-item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-bottom: 1px solid #2a2a3e; min-height: 36px; }
         .subtask-item.dragging { opacity: 0.5; background: #1a1a2e; }
         .subtask-item.drag-over { border-top: 2px solid #667eea; }

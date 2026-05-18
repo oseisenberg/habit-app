@@ -1165,8 +1165,13 @@
 
         function handleOverlayClick(e, id, closeFn) { if (e.target === document.getElementById(id)) closeFn(); }
 
-        function showOverlay(id) { document.getElementById(id).classList.add('active'); }
-        function hideOverlay(id) { document.getElementById(id).classList.remove('active'); }
+        function syncBodyScrollLock() {
+            const anyOpen = document.querySelector(
+                '.modal-overlay.active, .subtask-popup-overlay.active, .points-popup-overlay.active, .emoji-popup-overlay.active');
+            document.body.classList.toggle('modal-open', !!anyOpen);
+        }
+        function showOverlay(id) { document.getElementById(id).classList.add('active'); syncBodyScrollLock(); }
+        function hideOverlay(id) { document.getElementById(id).classList.remove('active'); syncBodyScrollLock(); }
         function isOverlayActive(id) { return !!document.getElementById(id)?.classList.contains('active'); }
 
         // Shared popup header. `variant` 'subtask' (left-aligned, optional
@@ -4821,8 +4826,16 @@
             if (e.target.closest('[data-no-swipe-dismiss]')) return;
             const modal = e.target.closest('.modal, .subtask-popup, .points-popup, .emoji-popup');
             if (modal) {
-                // Only enable swipe if at top of scrollable content
-                const scrollable = modal.querySelector('.all-habits-scroll-area') || modal;
+                // Only arm swipe-to-dismiss when the actual scroll container
+                // under the finger is at the very top — otherwise a normal
+                // downward scroll would be hijacked into a dismiss (and its
+                // preventDefault would cancel the scroll). The modal itself
+                // is overflow:hidden in the reworked details view, so its
+                // scrollTop is always 0; the real scroller is the inner
+                // .details-scroll-area / .all-habits-scroll-area / nested
+                // .subtasks-scroll-container.
+                const scrollable = e.target.closest(
+                    '.details-scroll-area, .all-habits-scroll-area, .subtasks-scroll-container') || modal;
                 if (scrollable.scrollTop <= 0) {
                     swipeStartY = e.touches[0].clientY;
                     swipeElement = modal;
