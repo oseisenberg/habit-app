@@ -76,7 +76,12 @@ vm.createContext(sandbox);
 // default-habits.js defines getDefaultHabits(); load it first so app.js
 // has it even though we pre-seed storage (defensive).
 const defaults = fs.readFileSync(path.join(__dirname, '..', 'default-habits.js'), 'utf8');
-const appSrc = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+// app.js was split into ordered global scripts; concatenate in the same
+// order the browser loads them (constants/state → logic → render →
+// bootstrap) so the vm sandbox sees an identical single program.
+const appSrc = ['app-core.js', 'app-logic.js', 'app-render.js', 'app-bootstrap.js']
+    .map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8'))
+    .join('\n');
 vm.runInContext(defaults + '\n' + appSrc, sandbox, { filename: 'app.bundle.js' });
 
 // --- test helpers ----------------------------------------------------
