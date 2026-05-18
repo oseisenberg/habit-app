@@ -4371,7 +4371,7 @@
                             ${undoButton}
                             <button class="submit-btn secondary" style="flex:1" onclick="toggleEditMode()">Edit</button>
                         </div>
-                        <div style="display:flex;gap:6px;margin-top:6px">
+                        <div style="display:flex;gap:6px">
                             ${canSnooze ? `<button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id}, true)">Snooze</button>
                             <button class="submit-btn secondary" style="flex:1" onclick="openSnoozePopup(${habit.id}, false)">Ignore</button>` : ''}
                             ${isSnoozed ? `<button class="submit-btn secondary" style="flex:1" onclick="unsnoozeHabit(${habit.id})">Unsnooze</button>` : ''}
