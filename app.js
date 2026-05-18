@@ -1266,8 +1266,8 @@
             set('momentumAlertEnabled', s.momentumAlertEnabled);
             set('momentumAlertTime', s.momentumAlertTime);
             set('momentumAlertThreshold', s.momentumAlertThreshold);
-            const ns = document.getElementById('notificationSettings');
-            if (ns) ns.style.display = s.notificationsEnabled ? 'block' : 'none';
+            // Notification fields are always shown in the sub-view, even
+            // when the master toggle is off.
             const ms = document.getElementById('momentumAlertSettings');
             if (ms) ms.style.display = s.momentumAlertEnabled ? 'block' : 'none';
             updateInstallPromptVisibility();
@@ -1312,7 +1312,7 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
-                <div id="notificationSettings" style="display:none;">
+                <div id="notificationSettings">
                     <div class="settings-row">
                         <span class="settings-label">Morning reminder</span>
                         <div class="settings-value">
@@ -1414,8 +1414,6 @@
                     settingsDraft.notificationsEnabled = false;
                     const cb = document.getElementById('notificationsEnabled');
                     if (cb) cb.checked = false;
-                    const ns = document.getElementById('notificationSettings');
-                    if (ns) ns.style.display = 'none';
                     alert('Notification permission denied. Please enable in browser settings.');
                 }
             }
@@ -1459,20 +1457,16 @@
 
         async function toggleNotifications() {
             const checkbox = document.getElementById('notificationsEnabled');
-            const settingsDiv = document.getElementById('notificationSettings');
-
-            if (checkbox.checked) {
-                // Request permission
+            // The notification fields stay visible (dedicated sub-view now);
+            // the toggle only gates permission/scheduling, not visibility.
+            if (checkbox && checkbox.checked) {
                 const permission = await requestNotificationPermission();
                 if (permission !== 'granted') {
                     checkbox.checked = false;
-                    settingsDiv.style.display = 'none';
                     alert('Notification permission denied. Please enable in browser settings.');
                     return;
                 }
-                settingsDiv.style.display = 'block';
             } else {
-                settingsDiv.style.display = 'none';
                 clearNotificationTimers();
             }
             updateInstallPromptVisibility();
