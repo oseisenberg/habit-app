@@ -4485,13 +4485,18 @@
                     habitStatus = 'Snoozed until tonight';
                     statusColor = '#f59e0b';
                 } else if (habit.snoozedUntil && habit.snoozedUntil > today) {
-                    const snoozeDate = new Date(habit.snoozedUntil + 'T00:00:00');
-                    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-                    const tomorrowStr = tomorrow.toISOString().split('T')[0];
-                    if (habit.snoozedUntil === tomorrowStr) {
+                    // Show time-until (rounded days/weeks/months), not the date.
+                    const d = Math.max(1, daysBetween(today, habit.snoozedUntil));
+                    if (d === 1) {
                         habitStatus = 'Snoozed until tomorrow';
+                    } else if (d < 7) {
+                        habitStatus = `Snoozed for ${d} days`;
+                    } else if (d < 30) {
+                        const w = Math.round(d / 7);
+                        habitStatus = `Snoozed for ${w} week${w !== 1 ? 's' : ''}`;
                     } else {
-                        habitStatus = `Snoozed until ${snoozeDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`;
+                        const m = Math.round(d / 30);
+                        habitStatus = `Snoozed for ${m} month${m !== 1 ? 's' : ''}`;
                     }
                     statusColor = '#f59e0b';
                 } else if (isCompletedToday(habit)) {
