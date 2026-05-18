@@ -221,6 +221,17 @@
             return formState;
         }
 
+        // Wrap details-modal content so the header pins to the top and the
+        // action bar pins to the bottom while only the middle scrolls
+        // (mirrors the All Habits fixed-header pattern, scoped via the
+        // .details-* classes to #detailsOverlay so other modals are
+        // unaffected). Used by the edit form and the details view.
+        function detailsShell(headerHtml, bodyHtml, footerHtml = '') {
+            return `<div class="details-fixed-header">${headerHtml}</div>`
+                 + `<div class="details-scroll-area">${bodyHtml}</div>`
+                 + (footerHtml ? `<div class="details-fixed-footer">${footerHtml}</div>` : '');
+        }
+
         // Render the habit form (shared between Create and Edit modes)
         function renderHabitForm(habit = null) {
             const isEdit = formMode === 'edit';
@@ -329,11 +340,12 @@
 
             const reminderDays = habit?.frequency?.reminderDays || DEFAULTS.REMINDER_DAYS;
 
-            return `
+            const _hdr = `
                 <div class="modal-header">
                     <h2 class="modal-title">${isEdit ? 'Edit Habit' : 'New Habit'}</h2>
                     <button class="modal-close" onclick="${isEdit ? 'closeDetails' : 'closeModal'}()">&times;</button>
-                </div>
+                </div>`;
+            const _body = `
                 <div class="form-group">
                     <div style="display:flex;gap:10px;margin-bottom:6px">
                         <label class="form-label" style="margin:0;width:52px;flex-shrink:0">Icon</label>
@@ -451,7 +463,8 @@
                         </div>
                     </div>` : ''}
                 </div>
-                ${subtasksHtml}
+                ${subtasksHtml}`;
+            const _footer = `
                 <div class="action-buttons">
                     ${isEdit
                         ? `<div class="action-row">
@@ -460,6 +473,9 @@
                         </div>`
                         : `<button class="submit-btn" onclick="addHabit()">Add Habit</button>`}
                 </div>`;
+            // Edit form lives in the details modal → pin header/footer.
+            // Create form keeps its single-scroll layout unchanged.
+            return isEdit ? detailsShell(_hdr, _body, _footer) : (_hdr + _body + _footer);
         }
 
         // ========================================
@@ -4305,17 +4321,20 @@
                     undoButton = `<button class="submit-btn secondary" style="flex:1" onclick="undoHabitCompletion(${habit.id})">Undo</button>`;
                 }
 
-                document.getElementById('detailsModal').innerHTML = `
-                    <div class="modal-header"><span></span><button class="modal-close" onclick="closeDetails()">&times;</button></div>
-                    <div style="margin-bottom:12px;text-align:center">
-                        <div class="details-large-icon" style="margin:0 auto 8px">${icon}</div>
-                        <div class="details-habit-name" style="text-align:center">${escapeHtml(habit.name)}${timeIcon ? ` <span title="${habit.timeOfDay === 'morning' ? 'Morning' : 'Bedtime'}">${timeIcon}</span>` : ''}</div>
-                        ${habit.description ? `<div style="color:#888;font-size:0.85rem;margin-top:8px">${formatDescription(habit.description)}</div>` : ''}
-                        ${!isReminder && !habit.noMomentum ? `<div class="momentum-display" style="margin-top:10px;margin-bottom:0">
-                            <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
-                            <div class="momentum-label">Momentum${recoveryText}</div>
-                        </div>` : ''}
-                    </div>
+                const _dHdr = `
+                    <div class="modal-header" style="gap:10px">
+                        <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                            <span style="font-size:1.6rem;flex-shrink:0;line-height:1">${icon}</span>
+                            <span class="details-habit-name" style="text-align:left;font-size:1.05rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(habit.name)}${timeIcon ? ` <span title="${habit.timeOfDay === 'morning' ? 'Morning' : 'Bedtime'}">${timeIcon}</span>` : ''}</span>
+                        </div>
+                        <button class="modal-close" onclick="closeDetails()" style="flex-shrink:0">&times;</button>
+                    </div>`;
+                const _dBody = `
+                    ${habit.description ? `<div style="color:#888;font-size:0.85rem;margin-bottom:12px;text-align:center">${formatDescription(habit.description)}</div>` : ''}
+                    ${!isReminder && !habit.noMomentum ? `<div class="momentum-display" style="margin-top:0;margin-bottom:12px">
+                        <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
+                        <div class="momentum-label">Momentum${recoveryText}</div>
+                    </div>` : ''}
                     ${(() => {
                         const isPts = habit.frequency.type === FREQ.POINTS_PER_DAY || habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH;
                         const cells = [
@@ -4333,7 +4352,7 @@
                     ${habit.subtasks && habit.subtasks.length > 0 ? `
                     <div class="subtask-list" style="margin:10px 0">
                         <div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Subtasks</div>
-                        <div class="subtasks-scroll-container">
+                        <div class="subtasks-scroll-container compact3">
                             ${habit.subtasks.map(s => {
                                 const completed = isSubtaskCompleted(habit, s.id);
                                 return `<div class="subtask-item" style="cursor:default">
@@ -4342,7 +4361,8 @@
                                 </div>`;
                             }).join('')}
                         </div>
-                    </div>` : ''}
+                    </div>` : ''}`;
+                const _dFooter = `
                     <div class="action-buttons">
                         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
                             ${completeButton}
@@ -4356,6 +4376,7 @@
                             <button class="submit-btn secondary" style="flex:0 0 48px;margin-left:auto" aria-label="More actions" onclick="openDetailsMoreMenu(event, ${habit.id})">⋮</button>
                         </div>
                     </div>`;
+                document.getElementById('detailsModal').innerHTML = detailsShell(_dHdr, _dBody, _dFooter);
             }
         }
 
