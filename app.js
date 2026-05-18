@@ -5193,6 +5193,23 @@
         })();
         */
 
+        // One-time: auto-complete & linked-habit ship inactive. Existing
+        // installs may have a saved disabledTags from before these existed
+        // (or an explicit []), so ensure both ids are in it once. Tracked by
+        // a flag so the user can later enable them in Settings → Tags
+        // without this re-disabling them.
+        (function migrateOptInTags() {
+            const KEY = 'migration_optin_tags_v1';
+            if (localStorage.getItem(KEY)) return;
+            try {
+                const s = getSettings();
+                const dt = Array.isArray(s.disabledTags) ? s.disabledTags.slice() : [];
+                ['autoComplete', 'linkedHabit'].forEach(id => { if (!dt.includes(id)) dt.push(id); });
+                localStorage.setItem('habit_settings', JSON.stringify({ ...s, disabledTags: dt }));
+            } catch (e) { /* non-fatal */ }
+            localStorage.setItem(KEY, '1');
+        })();
+
         // Update scores on page load to persist momentum for missed days
         updateAllHabitScores();
         updateDisplay();
