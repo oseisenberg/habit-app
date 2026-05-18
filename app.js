@@ -4292,7 +4292,18 @@
                 const total = habit.completions.length;
                 const uniqueDays = new Set(habit.completions.map(c => c.date)).size;
                 const daysSinceCreated = Math.max(1, daysBetween(habit.createdAt, today) + 1);
-                const rate = Math.round((uniqueDays / daysSinceCreated) * 100);
+                // Schedule-aware adherence: completed vs. expected occurrences
+                // for the habit's OWN cadence (not the calendar), capped at
+                // 100%. Calendar-based rate made every non-daily habit look
+                // like a failure even at perfect adherence.
+                const _cycleDays = Math.max(1, getHabitCycleDays(habit));
+                const _ft = habit.frequency.type;
+                const _perTap = _ft === FREQ.TIMES_PER_WEEK || _ft === FREQ.TIMES_PER_MONTH
+                    || _ft === FREQ.TIMES_PER_DAY || _ft === FREQ.POINTS_PER_DAY
+                    || _ft === FREQ.POINTS_PER_WEEK || _ft === FREQ.POINTS_PER_MONTH;
+                const _doneCount = _perTap ? total : uniqueDays;
+                const _expected = Math.max(1, Math.round(daysSinceCreated / _cycleDays));
+                const rate = Math.min(100, Math.round((_doneCount / _expected) * 100));
 
                 let avgInterval = '-';
                 if (habit.completions.length > 1) {
