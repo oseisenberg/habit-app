@@ -1350,38 +1350,50 @@
                         </div>
                     </div>
                 </div>`;
-            const dataButtons = `
-                <button class="submit-btn" onclick="saveSettings()">Save Settings</button>
-                <div style="display:flex;gap:8px;margin-top:8px">
-                    <button class="submit-btn secondary" onclick="exportData()" style="flex:1;font-size:0.85rem">Export All Data</button>
-                    <button class="submit-btn secondary" onclick="exportData(true)" style="flex:1;font-size:0.85rem">Export Tasks Only</button>
+            const saveButton = `<button class="submit-btn" onclick="saveSettings()">Save Settings</button>`;
+            const navRow = (label, view) => `<div class="settings-row settings-nav" onclick="settingsNavigate('${view}')" style="cursor:pointer;margin-top:8px;padding-top:10px">
+                    <span class="settings-label">${label}</span>
+                    <span style="color:#666;font-size:1.2rem;line-height:1">›</span>
+                </div>`;
+            const subHeader = (title) => `<div class="modal-header">
+                    <button class="modal-close" onclick="settingsNavigate('main')" aria-label="Back" style="font-size:1.5rem;line-height:1">‹</button>
+                    <span class="modal-title">${title}</span>
+                    <button class="modal-close" onclick="closeSettings()">&times;</button>
+                </div>`;
+            // #2: one Export (scope chosen by a "tasks only" toggle) paired
+            // with Import on a single row, instead of two Export buttons.
+            const dataSection = `
+                <div class="settings-row">
+                    <span class="settings-label">Export tasks only</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="exportTasksOnly">
+                        <span class="toggle-slider"></span>
+                    </label>
                 </div>
                 <div style="display:flex;gap:8px;margin-top:8px">
-                    <button class="submit-btn secondary" onclick="triggerImport()" style="flex:1;font-size:0.85rem">Import Data</button>
-                    <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(event)">
+                    <button class="submit-btn secondary" style="flex:1;font-size:0.85rem" onclick="exportData(!!document.getElementById('exportTasksOnly')?.checked)">Export</button>
+                    <button class="submit-btn secondary" style="flex:1;font-size:0.85rem" onclick="triggerImport()">Import</button>
                 </div>
-                <div style="display:flex;gap:8px;margin-top:8px">
-                    <button class="submit-btn secondary" onclick="resetAllMomentum()" style="flex:1;font-size:0.85rem;background:#dc2626">Reset All Momentum</button>
-                    <button class="submit-btn secondary" onclick="reloadDefaultTasks()" style="flex:1;font-size:0.85rem;background:#dc2626">Reload Default Tasks</button>
+                <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(event)">
+                <div style="display:flex;gap:8px;margin-top:16px">
+                    <button class="submit-btn secondary" style="flex:1;font-size:0.85rem;background:#dc2626" onclick="resetAllMomentum()">Reset All Momentum</button>
+                    <button class="submit-btn secondary" style="flex:1;font-size:0.85rem;background:#dc2626" onclick="reloadDefaultTasks()">Reload Default Tasks</button>
                 </div>`;
 
             let headerHtml, bodyHtml;
             if (settingsView === 'notifications') {
-                headerHtml = `<div class="modal-header">
-                    <button class="modal-close" onclick="settingsNavigate('main')" aria-label="Back" style="font-size:1.5rem;line-height:1">‹</button>
-                    <span class="modal-title">Notifications</span>
-                    <button class="modal-close" onclick="closeSettings()">&times;</button>
-                </div>`;
+                headerHtml = subHeader('Notifications');
                 bodyHtml = notificationsBlock
                     + `<button class="submit-btn" style="margin-top:14px" onclick="saveSettings()">Save Settings</button>`;
+            } else if (settingsView === 'data') {
+                headerHtml = subHeader('Data & Backup');
+                bodyHtml = dataSection;
             } else {
                 headerHtml = popupHeader({ title: 'Settings', onClose: 'closeSettings()' });
                 bodyHtml = generalRows
-                    + `<div class="settings-row settings-nav" onclick="settingsNavigate('notifications')" style="cursor:pointer;margin-top:8px;padding-top:10px">
-                        <span class="settings-label">Notifications</span>
-                        <span style="color:#666;font-size:1.2rem;line-height:1">›</span>
-                    </div>`
-                    + dataButtons;
+                    + navRow('Notifications', 'notifications')
+                    + navRow('Data & Backup', 'data')
+                    + saveButton;
             }
             document.getElementById('settingsModal').innerHTML = renderSheet({ headerHtml, bodyHtml });
         }
