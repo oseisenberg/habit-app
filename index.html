@@ -39,129 +39,42 @@
 
     <!-- Settings Modal -->
     <div class="modal-overlay" id="settingsOverlay" onclick="handleOverlayClick(event, 'settingsOverlay', closeSettings)">
-        <div class="modal">
-            <div class="modal-header">
-                <h2 class="modal-title">Settings</h2>
-                <button class="modal-close" onclick="closeSettings()">&times;</button>
-            </div>
-            <div class="settings-row">
-                <span class="settings-label">Morning starts at</span>
-                <div class="settings-value">
-                    <input type="number" class="settings-input" id="morningStart" min="0" max="23" value="5">
-                    <span style="color:#666">:00</span>
-                </div>
-            </div>
-            <div class="settings-row">
-                <span class="settings-label">Bedtime starts at</span>
-                <div class="settings-value">
-                    <input type="number" class="settings-input" id="nightStart" min="0" max="23" value="18">
-                    <span style="color:#666">:00</span>
-                </div>
-            </div>
-            <div class="settings-row">
-                <span class="settings-label">Separate bedtime section</span>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="separateBedtimeSection">
-                    <span class="toggle-slider"></span>
-                </label>
-            </div>
-
-            <!-- Notifications Section -->
-            <div class="settings-row" style="margin-top:8px; padding-top:10px;">
-                <span class="settings-label">Notifications</span>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="notificationsEnabled" onchange="toggleNotifications()">
-                    <span class="toggle-slider"></span>
-                </label>
-            </div>
-            <div id="notificationSettings" style="display:none;">
-                <div class="settings-row">
-                    <span class="settings-label">Morning reminder</span>
-                    <div class="settings-value">
-                        <input type="number" class="settings-input" id="morningReminderTime" min="0" max="23" value="5">
-                        <span style="color:#666">:00</span>
-                    </div>
-                </div>
-                <div class="settings-row">
-                    <span class="settings-label">Night reminder</span>
-                    <div class="settings-value">
-                        <input type="number" class="settings-input" id="nightReminderTime" min="0" max="23" value="18">
-                        <span style="color:#666">:00</span>
-                    </div>
-                </div>
-                <div class="settings-row">
-                    <span class="settings-label">Momentum alerts</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="momentumAlertEnabled" onchange="toggleMomentumSettings()">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-                <div id="momentumAlertSettings" style="display:none;">
-                    <div class="settings-row">
-                        <span class="settings-label" style="padding-left:12px">Alert time</span>
-                        <div class="settings-value">
-                            <input type="number" class="settings-input" id="momentumAlertTime" min="0" max="23" value="18">
-                            <span style="color:#666">:00</span>
-                        </div>
-                    </div>
-                    <div class="settings-row">
-                        <span class="settings-label" style="padding-left:12px">Threshold</span>
-                        <div class="settings-value">
-                            <input type="number" class="settings-input" id="momentumAlertThreshold" min="-100" max="0" value="-20">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <button class="submit-btn" onclick="saveSettings()">Save Settings</button>
-            <div style="display:flex;gap:8px;margin-top:8px">
-                <button class="submit-btn secondary" onclick="exportData()" style="flex:1;font-size:0.85rem">Export All Data</button>
-                <button class="submit-btn secondary" onclick="exportData(true)" style="flex:1;font-size:0.85rem">Export Tasks Only</button>
-            </div>
-            <div style="display:flex;gap:8px;margin-top:8px">
-                <button class="submit-btn secondary" onclick="triggerImport()" style="flex:1;font-size:0.85rem">Import Data</button>
-                <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(event)">
-            </div>
-            <div style="display:flex;gap:8px;margin-top:8px">
-                <button class="submit-btn secondary" onclick="resetAllMomentum()" style="flex:1;font-size:0.85rem;background:#dc2626">Reset All Momentum</button>
-                <button class="submit-btn secondary" onclick="reloadDefaultTasks()" style="flex:1;font-size:0.85rem;background:#dc2626">Reload Default Tasks</button>
-            </div>
-        </div>
+        <div class="modal" id="settingsModal"></div>
     </div>
 
     <!-- Subtask Popup -->
-    <div class="subtask-popup-overlay" id="subtaskPopupOverlay" onclick="handleOverlayClick(event, 'subtaskPopupOverlay', closeSubtaskPopup)">
-        <div class="subtask-popup" id="subtaskPopup"></div>
+    <div class="popup-overlay" id="subtaskPopupOverlay" onclick="handleOverlayClick(event, 'subtaskPopupOverlay', closeSubtaskPopup)">
+        <div class="popup" id="subtaskPopup"></div>
     </div>
 
     <!-- Points Popup -->
-    <div class="points-popup-overlay" id="pointsPopupOverlay" onclick="handleOverlayClick(event, 'pointsPopupOverlay', closePointsPopup)">
-        <div class="points-popup" id="pointsPopup"></div>
+    <div class="popup-overlay" id="pointsPopupOverlay" onclick="handleOverlayClick(event, 'pointsPopupOverlay', closePointsPopup)">
+        <div class="popup" id="pointsPopup"></div>
     </div>
 
     <!-- Emoji Picker Popup -->
-    <div class="emoji-popup-overlay" id="emojiPopupOverlay" onclick="handleOverlayClick(event, 'emojiPopupOverlay', closeEmojiPopup)">
-        <div class="emoji-popup" id="emojiPopup"></div>
+    <div class="popup-overlay" id="emojiPopupOverlay" onclick="handleOverlayClick(event, 'emojiPopupOverlay', closeEmojiPopup)">
+        <div class="popup popup--wide" id="emojiPopup"></div>
     </div>
 
     <!-- Snooze Popup -->
-    <div class="points-popup-overlay" id="snoozePopupOverlay" onclick="handleOverlayClick(event, 'snoozePopupOverlay', closeSnoozePopup)">
-        <div class="points-popup" id="snoozePopup"></div>
+    <div class="popup-overlay" id="snoozePopupOverlay" onclick="handleOverlayClick(event, 'snoozePopupOverlay', closeSnoozePopup)">
+        <div class="popup" id="snoozePopup"></div>
     </div>
 
     <!-- Description Confirmation Popup -->
-    <div class="subtask-popup-overlay" id="confirmDescPopupOverlay" onclick="handleOverlayClick(event, 'confirmDescPopupOverlay', closeConfirmDescPopup)">
-        <div class="subtask-popup" id="confirmDescPopup"></div>
+    <div class="popup-overlay" id="confirmDescPopupOverlay" onclick="handleOverlayClick(event, 'confirmDescPopupOverlay', closeConfirmDescPopup)">
+        <div class="popup" id="confirmDescPopup"></div>
     </div>
 
     <!-- Tag Glossary Popup -->
-    <div class="points-popup-overlay" id="tagGlossaryOverlay" onclick="handleOverlayClick(event, 'tagGlossaryOverlay', closeTagGlossary)">
-        <div class="points-popup" id="tagGlossaryPopup" data-no-swipe-dismiss></div>
+    <div class="popup-overlay" id="tagGlossaryOverlay" onclick="handleOverlayClick(event, 'tagGlossaryOverlay', closeTagGlossary)">
+        <div class="popup" id="tagGlossaryPopup" data-no-swipe-dismiss></div>
     </div>
 
     <!-- All Habits View -->
     <div class="modal-overlay" id="allHabitsOverlay" onclick="handleOverlayClick(event, 'allHabitsOverlay', closeAllHabits)">
-        <div class="modal" id="allHabitsModal"></div>
+        <div class="modal modal--full" id="allHabitsModal"></div>
     </div>
 
     <!-- Debug -->

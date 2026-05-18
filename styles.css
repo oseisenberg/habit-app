@@ -209,50 +209,57 @@
         }
         .modal-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
 
+        /* ===== Shared overlay base =====
+           Two families share one structure, differing only by params:
+           - .modal : bottom sheet (slides up), always pinned header.
+           - .popup : centered dialog (scales in).
+           Both are a flex column with a pinned .overlay-fixed-header and a
+           single scrolling .overlay-scroll body. Size / full-screen / footer
+           / header content vary via modifiers + factory params. */
+        .modal, .popup {
+            background: #1a1a2e; max-height: 85vh;
+            display: flex; flex-direction: column; padding: 0; overflow: hidden;
+            transition: transform 0.2s ease-out;
+        }
         .modal {
-            background: #1a1a2e; border-radius: 16px 16px 0 0; padding: 18px;
-            width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto;
-            transform: translateY(100%); transition: transform 0.25s ease-out;
+            border-radius: 16px 16px 0 0; width: 100%; max-width: 500px;
+            transform: translateY(100%);
+        }
+        .popup {
+            border-radius: 12px; width: 320px; max-width: 90%;
+            transform: scale(0.95);
         }
         .modal-overlay.active .modal { transform: translateY(0); }
+        .popup-overlay.active .popup { transform: scale(1); }
+        .modal.modal--full {
+            height: 100%; max-height: 100%; border-radius: 0;
+        }
 
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-        .modal-title { font-size: 1.1rem; font-weight: 600; color: #fff; }
-        .modal-close { background: none; border: none; font-size: 1.4rem; color: #666; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
+        .overlay-fixed-header {
+            flex-shrink: 0; padding: 14px 18px 10px;
+            background: #1a1a2e; border-bottom: 1px solid #2a2a3e;
+        }
+        /* Only the full-screen modal sits under the notch, so only it needs
+           the top safe-area inset. Bottom sheets/popups are lower down —
+           adding the inset there just created a big empty gap. */
+        .modal--full .overlay-fixed-header {
+            padding-top: calc(14px + env(safe-area-inset-top, 0px));
+        }
+        .overlay-fixed-header .modal-header { margin-bottom: 0; }
+        .overlay-scroll {
+            flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+            padding: 14px 18px 14px;
+            -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+        }
+
+        .modal-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .modal-header .modal-icon { font-size: 1.3rem; flex-shrink: 0; line-height: 1; }
+        .modal-title { font-size: 1.05rem; font-weight: 600; color: #fff; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+        .modal-close { background: none; border: none; font-size: 1.4rem; color: #666; cursor: pointer; padding: 4px 8px; min-width: 40px; min-height: 40px; flex-shrink: 0; }
 
         .all-habits-search-wrapper { margin-bottom: 0; }
         .all-habits-search-wrapper .form-input { padding: 10px 14px; font-size: 0.95rem; }
 
-        /* Full-screen All Habits modal */
-        #allHabitsOverlay .modal {
-            width: 100%; height: 100%; max-height: 100%; border-radius: 0;
-            display: flex; flex-direction: column; padding: 0; overflow: hidden;
-        }
-        .all-habits-fixed-header {
-            flex-shrink: 0; padding: calc(16px + env(safe-area-inset-top, 0px)) 16px 12px 16px;
-            background: #1a1a2e; border-bottom: 1px solid #2a2a3e;
-        }
-        .all-habits-fixed-header .modal-header { margin-bottom: 12px; }
-        .all-habits-scroll-area {
-            flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 12px 16px 20px 16px;
-            -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
-        }
-        /* Details modal: pinned header + footer, scrollable middle.
-           Scoped to #detailsOverlay so create/settings modals keep their
-           single-scroll layout. */
-        #detailsOverlay .modal {
-            display: flex; flex-direction: column; padding: 0; overflow: hidden;
-        }
-        #detailsOverlay .modal .details-fixed-header {
-            flex-shrink: 0; padding: 16px 18px 10px;
-            background: #1a1a2e; border-bottom: 1px solid #2a2a3e;
-        }
-        #detailsOverlay .modal .details-fixed-header .modal-header { margin-bottom: 0; }
-        #detailsOverlay .modal .details-scroll-area {
-            flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
-            padding: 14px 18px calc(16px + env(safe-area-inset-bottom, 0px));
-            -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
-        }
         /* Details view: cap the subtask list at ~3 rows (still scrollable). */
         .subtasks-scroll-container.compact3 { max-height: 156px; }
 
@@ -457,7 +464,8 @@
         @supports (padding-bottom: env(safe-area-inset-bottom)) {
             body { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
             .fab { bottom: calc(20px + env(safe-area-inset-bottom)); }
-            .modal { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+            /* The safe-area bottom inset is handled inside .overlay-scroll;
+               adding it to .modal again just created dead footer space. */
         }
 
         .debug-toggle { position: fixed; top: calc(8px + env(safe-area-inset-top, 0px)); left: 8px; background: rgba(255,255,255,0.1); color: #666; border: none; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; z-index: 500; opacity: 0.4; }
@@ -495,29 +503,20 @@
         }
         .details-habit-name { font-size: 1.1rem; font-weight: 600; color: #fff; text-align: center; }
 
-        /* Lightweight subtask popup */
-        .subtask-popup-overlay {
+        /* ===== Shared centered-popup overlay =====
+           One overlay class for every centered dialog (subtask, confirm,
+           points, snooze, emoji, glossary). The .popup container itself is
+           defined in the shared overlay base above. */
+        .popup-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0, 0, 0, 0.5); display: flex; align-items: center;
             justify-content: center; z-index: 250; opacity: 0; visibility: hidden;
-            pointer-events: none;
+            pointer-events: none; overscroll-behavior: contain;
             transition: opacity 0.15s, visibility 0.15s;
         }
-        .subtask-popup-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
-        .subtask-popup {
-            background: #1a1a2e; border-radius: 12px; padding: 12px; width: 280px;
-            max-width: 90%; max-height: 85vh; display: flex; flex-direction: column;
-            transform: scale(0.95); transition: transform 0.15s;
-        }
-        .subtask-popup-overlay.active .subtask-popup { transform: scale(1); }
-        .subtask-popup-header {
-            display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
-            padding-bottom: 8px; border-bottom: 1px solid #2a2a3e;
-        }
-        .subtask-popup-icon { font-size: 1.2rem; }
-        .subtask-popup-title { font-size: 0.9rem; font-weight: 600; color: #fff; flex: 1; }
-        .subtask-popup-close { background: none; border: none; color: #666; font-size: 1.2rem; cursor: pointer; padding: 4px; }
-        .subtask-popup-list { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+        .popup-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
+        .popup.popup--wide { width: 360px; max-width: 95%; }
+        .subtask-popup-list { display: flex; flex-direction: column; gap: 2px; }
         .subtask-popup-item {
             display: flex; align-items: flex-start; gap: 10px; padding: 8px;
             background: #0f0f1a; border-radius: 8px; cursor: pointer; transition: background 0.1s;
@@ -529,28 +528,8 @@
         .subtask-popup-item .subtask-bullet { width: 20px; text-align: center; color: #666; flex-shrink: 0; }
         .subtask-popup-item .subtask-name { font-size: 0.85rem; }
 
-        /* Points selection popup */
-        .points-popup-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.5); display: flex; align-items: center;
-            justify-content: center; z-index: 250; opacity: 0; visibility: hidden;
-            pointer-events: none;
-            transition: opacity 0.15s, visibility 0.15s;
-        }
-        .points-popup-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
-        .points-popup {
-            background: #1a1a2e; border-radius: 12px; padding: 16px; width: 260px;
-            max-width: 90%; transform: scale(0.95); transition: transform 0.15s;
-            text-align: center;
-        }
-        .points-popup-overlay.active .points-popup { transform: scale(1); }
-        .points-popup-header {
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            margin-bottom: 6px;
-        }
-        .points-popup-icon { font-size: 1.4rem; }
-        .points-popup-title { font-size: 0.95rem; font-weight: 600; color: #fff; }
-        .points-popup-target { font-size: 0.75rem; color: #888; margin-bottom: 14px; }
+        /* Points popup content (uses the shared .popup + .modal-header) */
+        .points-popup-target { font-size: 0.8rem; color: #888; margin-bottom: 14px; text-align: center; }
         .points-popup-buttons { display: flex; gap: 10px; justify-content: center; }
         .points-btn {
             width: 60px; height: 60px; border-radius: 12px; border: 2px solid #2a2a3e;
@@ -561,8 +540,6 @@
 
         /* Snooze popup styles */
         #snoozePopup { width: 300px; }
-        .snooze-popup-content { padding: 4px 0; }
-        .snooze-popup-title { font-size: 1.05rem; font-weight: 600; color: #e0e0e0; margin-bottom: 18px; text-align: center; letter-spacing: 0.3px; }
         .snooze-section { margin-bottom: 14px; }
         .snooze-section-label { font-size: 0.65rem; color: #555; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; padding-left: 4px; font-weight: 500; }
         .snooze-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -595,35 +572,19 @@
         /* Undo toast */
         .undo-toast {
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: #1a1a2e; border: 1px solid #3a3a4e; border-radius: 12px;
-            padding: 12px 16px; display: flex; align-items: center; gap: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4); z-index: 10000;
+            display: flex; align-items: center; z-index: 10000;
             opacity: 0; transition: opacity 0.2s, transform 0.2s;
             pointer-events: none;
         }
         .undo-toast.visible { opacity: 1; pointer-events: auto; }
         .undo-toast-btn {
-            background: #667eea; border: none; border-radius: 6px;
-            color: #fff; padding: 6px 12px; font-size: 0.85rem; cursor: pointer;
-            font-weight: 500;
+            background: #667eea; border: none; border-radius: 10px;
+            color: #fff; padding: 10px 20px; font-size: 0.9rem; cursor: pointer;
+            font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
         }
         .undo-toast-btn:active { transform: scale(0.95); }
 
-        /* Emoji picker popup */
-        .emoji-popup-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.5); display: flex; align-items: center;
-            justify-content: center; z-index: 260; opacity: 0; visibility: hidden;
-            pointer-events: none;
-            transition: opacity 0.15s, visibility 0.15s;
-        }
-        .emoji-popup-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
-        .emoji-popup {
-            background: #1a1a2e; border-radius: 12px; padding: 16px; width: 340px;
-            max-width: 95%; max-height: 80vh; overflow-y: auto;
-            transform: scale(0.95); transition: transform 0.15s;
-        }
-        .emoji-popup-overlay.active .emoji-popup { transform: scale(1); }
+        /* Emoji picker uses the shared .popup.popup--wide + .overlay-scroll */
         .emoji-category { margin-bottom: 12px; }
         .emoji-category-header { font-size: 0.7rem; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
         .emoji-category-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }

@@ -226,9 +226,16 @@
         // the All Habits fixed-header pattern, scoped via the .details-*
         // classes to #detailsOverlay so other modals are unaffected).
         // Used by the edit form and the details view.
+        // Shared bottom-sheet shell: pinned header + a single scrolling body
+        // (the footer scrolls within the body for sheets). All sheets —
+        // Create, Details, Edit, Settings, All Habits — use this structure.
+        function renderSheet({ headerHtml, bodyHtml, footerHtml = '' }) {
+            return `<div class="overlay-fixed-header">${headerHtml}</div>`
+                 + `<div class="overlay-scroll">${bodyHtml}${footerHtml}</div>`;
+        }
+        // Back-compat alias used by the habit form / details view.
         function detailsShell(headerHtml, bodyHtml, footerHtml = '') {
-            return `<div class="details-fixed-header">${headerHtml}</div>`
-                 + `<div class="details-scroll-area">${bodyHtml}${footerHtml}</div>`;
+            return renderSheet({ headerHtml, bodyHtml, footerHtml });
         }
 
         // Render the habit form (shared between Create and Edit modes)
@@ -384,7 +391,7 @@
                                 { id: 'desc',        label: 'Description',   active: state.showDescription,     domId: isEdit ? 'editDescPill' : 'descPill',                   onclick: 'toggleFormDescription()',       usage: count(h => !!h.description) },
                                 { id: 'noMomentum',  label: 'Untracked',   active: state.noMomentum,          domId: isEdit ? 'editNoMomentumPill' : 'noMomentumPill',       onclick: 'toggleFormNoMomentum()',        usage: count(h => h.noMomentum) },
                                 { id: 'conflicts',   label: 'Conflicts',     active: state.showConflictsWith,   domId: isEdit ? 'editConflictsPill' : 'conflictsPill',         onclick: 'toggleFormConflictsWith()',     usage: count(h => !!h.conflictsWith) },
-                            ];
+                            ].filter(p => !(getSettings().disabledTags || []).includes(p.id));
 
                             // Render every pill with its usage as data so the
                             // post-render fitter (fitOptionsToTwoLines) can
@@ -474,7 +481,7 @@
                 </div>`;
             // Edit form lives in the details modal → pin header/footer.
             // Create form keeps its single-scroll layout unchanged.
-            return isEdit ? detailsShell(_hdr, _body, _footer) : (_hdr + _body + _footer);
+            return renderSheet({ headerHtml: _hdr, bodyHtml: _body, footerHtml: _footer });
         }
 
         // ========================================
@@ -688,6 +695,18 @@
 
         // Glossary describing every option pill so the user can look up what
         // each tag actually does without having to experiment.
+        // Canonical tag/option list (id matches the form pills). Settings →
+        // Tags lets the user move each between Active/Inactive; only Active
+        // tags appear as option pills in the habit form.
+        const TAG_LIST = [
+            { id: 'subtasks',   label: 'Subtasks' },
+            { id: 'points',     label: 'Points' },
+            { id: 'reminder',   label: 'Reminder' },
+            { id: 'desc',       label: 'Description' },
+            { id: 'noMomentum', label: 'Untracked' },
+            { id: 'conflicts',  label: 'Conflicts' },
+        ];
+
         const TAG_GLOSSARY = [
             { label: 'Subtasks',      desc: 'Break the habit into a checklist; the habit auto-completes when every subtask is done.' },
             { label: 'Points',        desc: 'Score each completion (1, 2, or 3 points) and aim for a daily, weekly, or monthly target instead of a fixed count.' },
@@ -704,10 +723,11 @@
                     <div style="color:#aaa;font-size:0.8rem;line-height:1.4">${t.desc}</div>
                 </div>`
             ).join('');
-            document.getElementById('tagGlossaryPopup').innerHTML = `
-                ${popupHeader({ title: 'Options reference', onClose: 'closeTagGlossary()' })}
-                <div style="max-height:60vh;overflow-y:auto;padding:0 4px">${rows}</div>
-                <button class="submit-btn" style="margin-top:12px;width:100%" onclick="closeTagGlossary()">Close</button>`;
+            renderPopup('tagGlossaryPopup', {
+                title: 'Options reference', onClose: 'closeTagGlossary()',
+                bodyHtml: rows,
+                footerHtml: `<div style="padding:10px 14px"><button class="submit-btn" style="width:100%" onclick="closeTagGlossary()">Close</button></div>`
+            });
             showOverlay('tagGlossaryOverlay');
         }
 
@@ -816,7 +836,10 @@
                     </div>
                 </div>`;
             }
-            document.getElementById('emojiPopup').innerHTML = html;
+            renderPopup('emojiPopup', {
+                title: 'Choose icon', onClose: 'closeEmojiPopup()',
+                bodyHtml: html
+            });
         }
 
         function selectEmojiFromPopup(emoji) {
@@ -842,7 +865,9 @@
                 quietHoursStart: 22,
                 quietHoursEnd: 7,
                 weeklySummaryEnabled: false,
-                separateBedtimeSection: true
+                separateBedtimeSection: true,
+                showDebug: false,
+                disabledTags: []
             };
             try {
                 const s = localStorage.getItem('habit_settings');
@@ -995,6 +1020,8 @@
             } else {
                 document.getElementById('timeNote').textContent = '';
             }
+            const dbgBtn = document.getElementById('debugToggle');
+            if (dbgBtn) dbgBtn.style.display = s.showDebug ? '' : 'none';
             renderHabits();
             // Re-render open panels to update subtask states for new day
             if (selectedHabitId) renderDetails();
@@ -1166,29 +1193,32 @@
         function handleOverlayClick(e, id, closeFn) { if (e.target === document.getElementById(id)) closeFn(); }
 
         function syncBodyScrollLock() {
-            const anyOpen = document.querySelector(
-                '.modal-overlay.active, .subtask-popup-overlay.active, .points-popup-overlay.active, .emoji-popup-overlay.active');
+            const anyOpen = document.querySelector('.modal-overlay.active, .popup-overlay.active');
             document.body.classList.toggle('modal-open', !!anyOpen);
         }
         function showOverlay(id) { document.getElementById(id).classList.add('active'); syncBodyScrollLock(); }
         function hideOverlay(id) { document.getElementById(id).classList.remove('active'); syncBodyScrollLock(); }
         function isOverlayActive(id) { return !!document.getElementById(id)?.classList.contains('active'); }
 
-        // Shared popup header. `variant` 'subtask' (left-aligned, optional
-        // close X) is the canonical look; 'points' keeps the centered,
-        // close-less points-popup header so that popup stays pixel-identical.
-        function popupHeader({ icon, title, onClose, variant = 'subtask' }) {
-            if (variant === 'points') {
-                return `<div class="points-popup-header">
-                    ${icon ? `<span class="points-popup-icon">${icon}</span>` : ''}
-                    <span class="points-popup-title">${escapeHtml(title)}</span>
+        // One header for every overlay (sheets + popups): optional icon,
+        // title, and a close (×) shown by default. Pass showClose:false to
+        // omit it (e.g. action-only popups).
+        function popupHeader({ icon, title, onClose, showClose = true }) {
+            return `<div class="modal-header">
+                    ${icon ? `<span class="modal-icon">${icon}</span>` : ''}
+                    <span class="modal-title">${escapeHtml(title || '')}</span>
+                    ${showClose && onClose ? `<button class="modal-close" onclick="${onClose}">&times;</button>` : ''}
                 </div>`;
-            }
-            return `<div class="subtask-popup-header">
-                    ${icon ? `<span class="subtask-popup-icon">${icon}</span>` : ''}
-                    <span class="subtask-popup-title">${escapeHtml(title)}</span>
-                    ${onClose ? `<button class="subtask-popup-close" onclick="${onClose}">&times;</button>` : ''}
-                </div>`;
+        }
+
+        // Shared centered-popup renderer: pinned header, scrolling body,
+        // optional pinned footer. Differences (title/icon, close button,
+        // body content, footer buttons) are all params.
+        function renderPopup(targetId, { icon, title, onClose, showClose = true, bodyHtml = '', footerHtml = '' }) {
+            document.getElementById(targetId).innerHTML =
+                `<div class="overlay-fixed-header">${popupHeader({ icon, title, onClose, showClose })}</div>`
+              + `<div class="overlay-scroll">${bodyHtml}</div>`
+              + (footerHtml || '');
         }
 
         function openModal() {
@@ -1217,23 +1247,207 @@
             newHabitSubtasks = [];
         }
 
-        function openSettings() {
-            const s = getSettings();
-            document.getElementById('morningStart').value = s.morningStart;
-            document.getElementById('nightStart').value = s.nightStart;
-            document.getElementById('notificationsEnabled').checked = s.notificationsEnabled;
-            document.getElementById('morningReminderTime').value = s.morningReminderTime;
-            document.getElementById('nightReminderTime').value = s.nightReminderTime;
-            document.getElementById('momentumAlertEnabled').checked = s.momentumAlertEnabled;
-            document.getElementById('momentumAlertTime').value = s.momentumAlertTime;
-            document.getElementById('momentumAlertThreshold').value = s.momentumAlertThreshold;
-            document.getElementById('separateBedtimeSection').checked = s.separateBedtimeSection;
-            document.getElementById('notificationSettings').style.display = s.notificationsEnabled ? 'block' : 'none';
-            document.getElementById('momentumAlertSettings').style.display = s.momentumAlertEnabled ? 'block' : 'none';
+        // Settings renders through the shared sheet base like every other
+        // bottom-sheet modal (Create/Details/Edit/All Habits).
+        // Settings supports in-sheet sub-views (main ⇄ Notifications). An
+        // in-memory draft holds field values so navigating between views
+        // doesn't lose edits; only Save commits, × still cancels.
+        let settingsView = 'main';
+        let settingsDraft = null;
+
+        function captureSettingsDraft() {
+            if (!settingsDraft) settingsDraft = getSettings();
+            const num = (id, def) => { const e = document.getElementById(id); return e ? (parseInt(e.value) || def) : settingsDraft[id]; };
+            const chk = (id) => { const e = document.getElementById(id); return e ? e.checked : settingsDraft[id]; };
+            settingsDraft.morningStart = num('morningStart', 5);
+            settingsDraft.nightStart = num('nightStart', 18);
+            settingsDraft.showDebug = chk('showDebugIcon');
+            settingsDraft.notificationsEnabled = chk('notificationsEnabled');
+            settingsDraft.morningReminderTime = num('morningReminderTime', 5);
+            settingsDraft.nightReminderTime = num('nightReminderTime', 18);
+            settingsDraft.momentumAlertEnabled = chk('momentumAlertEnabled');
+            settingsDraft.momentumAlertTime = num('momentumAlertTime', 18);
+            settingsDraft.momentumAlertThreshold = num('momentumAlertThreshold', -20);
+        }
+
+        function populateSettingsFields() {
+            const s = settingsDraft || getSettings();
+            const set = (id, v) => { const e = document.getElementById(id); if (e) { if (e.type === 'checkbox') e.checked = !!v; else e.value = v; } };
+            set('morningStart', s.morningStart);
+            set('nightStart', s.nightStart);
+            set('showDebugIcon', s.showDebug);
+            set('notificationsEnabled', s.notificationsEnabled);
+            set('morningReminderTime', s.morningReminderTime);
+            set('nightReminderTime', s.nightReminderTime);
+            set('momentumAlertEnabled', s.momentumAlertEnabled);
+            set('momentumAlertTime', s.momentumAlertTime);
+            set('momentumAlertThreshold', s.momentumAlertThreshold);
+            // Notification fields are always shown in the sub-view, even
+            // when the master toggle is off.
+            const ms = document.getElementById('momentumAlertSettings');
+            if (ms) ms.style.display = s.momentumAlertEnabled ? 'block' : 'none';
             updateInstallPromptVisibility();
+        }
+
+        // Navigate between the settings views without losing edits.
+        function settingsNavigate(view) {
+            captureSettingsDraft();
+            settingsView = view;
+            renderSettings();
+            populateSettingsFields();
+        }
+
+        // Move a tag between Active/Inactive in the draft (committed on Save,
+        // like every other setting). Form pills read the saved value.
+        function toggleTagEnabled(id) {
+            if (!settingsDraft) settingsDraft = getSettings();
+            const cur = Array.isArray(settingsDraft.disabledTags) ? settingsDraft.disabledTags.slice() : [];
+            const i = cur.indexOf(id);
+            if (i >= 0) cur.splice(i, 1); else cur.push(id);
+            settingsDraft.disabledTags = cur;
+            renderSettings();
+        }
+
+        function renderSettings() {
+            const generalRows = `
+                <div class="settings-row">
+                    <span class="settings-label">Morning starts at</span>
+                    <div class="settings-value">
+                        <input type="number" class="settings-input" id="morningStart" min="0" max="23" value="5">
+                        <span style="color:#666">:00</span>
+                    </div>
+                </div>
+                <div class="settings-row">
+                    <span class="settings-label">Bedtime starts at</span>
+                    <div class="settings-value">
+                        <input type="number" class="settings-input" id="nightStart" min="0" max="23" value="18">
+                        <span style="color:#666">:00</span>
+                    </div>
+                </div>
+                <div class="settings-row">
+                    <span class="settings-label">Show debug icon</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="showDebugIcon">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>`;
+            const notificationsBlock = `
+                <div class="settings-row">
+                    <span class="settings-label">Notifications</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="notificationsEnabled" onchange="toggleNotifications()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div id="notificationSettings">
+                    <div class="settings-row">
+                        <span class="settings-label">Morning reminder</span>
+                        <div class="settings-value">
+                            <input type="number" class="settings-input" id="morningReminderTime" min="0" max="23" value="5">
+                            <span style="color:#666">:00</span>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Night reminder</span>
+                        <div class="settings-value">
+                            <input type="number" class="settings-input" id="nightReminderTime" min="0" max="23" value="18">
+                            <span style="color:#666">:00</span>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Momentum alerts</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="momentumAlertEnabled" onchange="toggleMomentumSettings()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div id="momentumAlertSettings" style="display:none;">
+                        <div class="settings-row">
+                            <span class="settings-label" style="padding-left:12px">Alert time</span>
+                            <div class="settings-value">
+                                <input type="number" class="settings-input" id="momentumAlertTime" min="0" max="23" value="18">
+                                <span style="color:#666">:00</span>
+                            </div>
+                        </div>
+                        <div class="settings-row">
+                            <span class="settings-label" style="padding-left:12px">Threshold</span>
+                            <div class="settings-value">
+                                <input type="number" class="settings-input" id="momentumAlertThreshold" min="-100" max="0" value="-20">
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            const saveButton = `<button class="submit-btn" onclick="saveSettings()">Save Settings</button>`;
+            const navRow = (label, view) => `<div class="settings-row settings-nav" onclick="settingsNavigate('${view}')" style="cursor:pointer;margin-top:8px;padding-top:10px">
+                    <span class="settings-label">${label}</span>
+                    <span style="color:#666;font-size:1.2rem;line-height:1">›</span>
+                </div>`;
+            const subHeader = (title) => `<div class="modal-header">
+                    <button class="modal-close" onclick="settingsNavigate('main')" aria-label="Back" style="font-size:1.5rem;line-height:1">‹</button>
+                    <span class="modal-title">${title}</span>
+                    <button class="modal-close" onclick="closeSettings()">&times;</button>
+                </div>`;
+            // #2: one Export (scope chosen by a "tasks only" toggle) paired
+            // with Import on a single row, instead of two Export buttons.
+            const dataSection = `
+                <div class="settings-row">
+                    <span class="settings-label">Export tasks only</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="exportTasksOnly">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                    <button class="submit-btn secondary" style="flex:1;font-size:0.85rem" onclick="exportData(!!document.getElementById('exportTasksOnly')?.checked)">Export</button>
+                    <button class="submit-btn secondary" style="flex:1;font-size:0.85rem" onclick="triggerImport()">Import</button>
+                </div>
+                <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(event)">
+                <div style="display:flex;gap:8px;margin-top:16px">
+                    <button class="submit-btn secondary" style="flex:1;font-size:0.85rem;background:#dc2626" onclick="resetAllMomentum()">Reset All Momentum</button>
+                    <button class="submit-btn secondary" style="flex:1;font-size:0.85rem;background:#dc2626" onclick="reloadDefaultTasks()">Reload Default Tasks</button>
+                </div>`;
+
+            let headerHtml, bodyHtml;
+            if (settingsView === 'notifications') {
+                headerHtml = subHeader('Notifications');
+                bodyHtml = notificationsBlock
+                    + `<button class="submit-btn" style="margin-top:14px" onclick="saveSettings()">Save Settings</button>`;
+            } else if (settingsView === 'data') {
+                headerHtml = subHeader('Data & Backup');
+                bodyHtml = dataSection;
+            } else if (settingsView === 'tags') {
+                const disabled = (settingsDraft && settingsDraft.disabledTags) || [];
+                const chip = t => `<label class="option-pill ${disabled.includes(t.id) ? '' : 'active'}" onclick="toggleTagEnabled('${t.id}')">
+                        <span class="option-pill-check">✓</span><span>${t.label}</span>
+                    </label>`;
+                const activeChips = TAG_LIST.filter(t => !disabled.includes(t.id)).map(chip).join('');
+                const inactiveChips = TAG_LIST.filter(t => disabled.includes(t.id)).map(chip).join('');
+                const sectionLabel = txt => `<div style="font-size:0.7rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin:4px 0 8px">${txt}</div>`;
+                headerHtml = subHeader('Tags');
+                bodyHtml = sectionLabel('Active')
+                    + `<div class="task-options">${activeChips || '<span style="color:#666;font-size:0.85rem">None</span>'}</div>`
+                    + `<div style="margin-top:16px">${sectionLabel('Inactive')}</div>`
+                    + `<div class="task-options">${inactiveChips || '<span style="color:#666;font-size:0.85rem">None</span>'}</div>`
+                    + `<button class="submit-btn" style="margin-top:18px" onclick="saveSettings()">Save Settings</button>`;
+            } else {
+                headerHtml = popupHeader({ title: 'Settings', onClose: 'closeSettings()' });
+                bodyHtml = generalRows
+                    + navRow('Notifications', 'notifications')
+                    + navRow('Tags', 'tags')
+                    + navRow('Data & Backup', 'data')
+                    + saveButton;
+            }
+            document.getElementById('settingsModal').innerHTML = renderSheet({ headerHtml, bodyHtml });
+        }
+
+        function openSettings() {
+            settingsView = 'main';
+            settingsDraft = getSettings();
+            renderSettings();
+            populateSettingsFields();
             showOverlay('settingsOverlay');
         }
-        function closeSettings() { hideOverlay('settingsOverlay'); }
+        function closeSettings() { hideOverlay('settingsOverlay'); settingsDraft = null; }
         function toggleMomentumSettings() {
             const enabled = document.getElementById('momentumAlertEnabled').checked;
             document.getElementById('momentumAlertSettings').style.display = enabled ? 'block' : 'none';
@@ -1243,32 +1457,21 @@
             document.getElementById('quietHoursSettings').style.display = enabled ? 'block' : 'none';
         }
         async function saveSettings() {
-            const wantNotifications = document.getElementById('notificationsEnabled').checked;
-            // If notifications are turned on but the browser hasn't granted
-            // permission yet (e.g. first run with the default), request it now.
-            // Without this, scheduleNotifications() runs but every send is
-            // silently dropped until the user flips the toggle off and on.
-            if (wantNotifications && 'Notification' in window && Notification.permission !== 'granted') {
+            // Pull whatever view is currently rendered into the draft so we
+            // persist edits from either the main or Notifications sub-view.
+            captureSettingsDraft();
+            if (settingsDraft.notificationsEnabled && 'Notification' in window && Notification.permission !== 'granted') {
+                // Turned on but not yet granted (e.g. first run): request now,
+                // else scheduleNotifications() runs but sends are dropped.
                 const permission = await requestNotificationPermission();
                 if (permission !== 'granted') {
-                    document.getElementById('notificationsEnabled').checked = false;
-                    document.getElementById('notificationSettings').style.display = 'none';
+                    settingsDraft.notificationsEnabled = false;
+                    const cb = document.getElementById('notificationsEnabled');
+                    if (cb) cb.checked = false;
                     alert('Notification permission denied. Please enable in browser settings.');
                 }
             }
-            const prev = getSettings();
-            const settings = {
-                ...prev,
-                morningStart: parseInt(document.getElementById('morningStart').value) || 5,
-                nightStart: parseInt(document.getElementById('nightStart').value) || 18,
-                notificationsEnabled: document.getElementById('notificationsEnabled').checked,
-                morningReminderTime: parseInt(document.getElementById('morningReminderTime').value) || 5,
-                nightReminderTime: parseInt(document.getElementById('nightReminderTime').value) || 18,
-                momentumAlertEnabled: document.getElementById('momentumAlertEnabled').checked,
-                momentumAlertTime: parseInt(document.getElementById('momentumAlertTime').value) || 18,
-                momentumAlertThreshold: parseInt(document.getElementById('momentumAlertThreshold').value) || -20,
-                separateBedtimeSection: document.getElementById('separateBedtimeSection').checked
-            };
+            const settings = { ...getSettings(), ...settingsDraft };
             try {
                 localStorage.setItem('habit_settings', JSON.stringify(settings));
             } catch (e) {
@@ -1308,20 +1511,16 @@
 
         async function toggleNotifications() {
             const checkbox = document.getElementById('notificationsEnabled');
-            const settingsDiv = document.getElementById('notificationSettings');
-
-            if (checkbox.checked) {
-                // Request permission
+            // The notification fields stay visible (dedicated sub-view now);
+            // the toggle only gates permission/scheduling, not visibility.
+            if (checkbox && checkbox.checked) {
                 const permission = await requestNotificationPermission();
                 if (permission !== 'granted') {
                     checkbox.checked = false;
-                    settingsDiv.style.display = 'none';
                     alert('Notification permission denied. Please enable in browser settings.');
                     return;
                 }
-                settingsDiv.style.display = 'block';
             } else {
-                settingsDiv.style.display = 'none';
                 clearNotificationTimers();
             }
             updateInstallPromptVisibility();
@@ -2047,10 +2246,11 @@
             const currentSnooze = (habit && habit.snoozedUntil && habit.snoozedUntil !== PERIOD.NIGHT && habit.snoozedUntil > today)
                 ? habit.snoozedUntil : '';
 
-            document.getElementById('snoozePopup').innerHTML = `
-                <div class="snooze-popup-content">
-                    <div class="snooze-popup-title">${pauseMomentum ? 'Snooze' : 'Ignore'}</div>
-                    <div style="color:#888;font-size:0.8rem;line-height:1.4;margin:-4px 0 12px;text-align:center">${pauseMomentum
+            renderPopup('snoozePopup', {
+                title: pauseMomentum ? 'Snooze' : 'Ignore',
+                onClose: 'closeSnoozePopup()',
+                bodyHtml: `
+                    <div style="color:#888;font-size:0.8rem;line-height:1.4;margin:0 0 12px;text-align:center">${pauseMomentum
                         ? 'Hides this habit and pauses momentum — no penalty for the skipped days.'
                         : 'Hides this habit but momentum keeps running — missed days still count against you.'}</div>
                     <div class="snooze-section">
@@ -2082,15 +2282,15 @@
                         <div class="snooze-date-row">
                             <input type="date" id="snoozeCustomDate" class="snooze-date-input" min="${tomorrowStr}" value="${currentSnooze}" onchange="snoozeToDate()">
                         </div>
-                    </div>
-                    <div style="display:flex;gap:6px">
-                        <button class="snooze-option skip-cycle-btn" onclick="snoozeHabit(${cycleDays})" style="flex:1;margin:0">
-                            <span class="snooze-option-icon">⏭️</span>
-                            <span>Skip cycle</span>
-                        </button>
-                        <button class="snooze-cancel" onclick="closeSnoozePopup()" style="flex:1;margin:0">Cancel</button>
-                    </div>
-                </div>`;
+                    </div>`,
+                footerHtml: `<div style="display:flex;gap:6px;padding:10px 14px">
+                    <button class="snooze-option skip-cycle-btn" onclick="snoozeHabit(${cycleDays})" style="flex:1;margin:0">
+                        <span class="snooze-option-icon">⏭️</span>
+                        <span>Skip cycle</span>
+                    </button>
+                    <button class="snooze-cancel" onclick="closeSnoozePopup()" style="flex:1;margin:0">Cancel</button>
+                </div>`
+            });
             showOverlay('snoozePopupOverlay');
         }
 
@@ -2711,9 +2911,7 @@
             // (same popupSection + formatDescription) so the two completion
             // popups are visually consistent — this one just has no subtask
             // rows and a Cancel/Complete footer.
-            const descSection = (habit.confirmDescription && habit.description)
-                ? popupSection('Description', `<div style="color:#ccc;font-size:0.85rem;line-height:1.4">${formatDescription(habit.description)}</div>`)
-                : '';
+            const descSection = popupDescriptionSection(habit);
 
             renderChecklistPopup('confirmDescPopup', {
                 icon: habit.icon || '📌',
@@ -3687,6 +3885,14 @@
             </div>`;
         }
 
+        // The habit's Description for completion popups — boxed with the
+        // exact same look as the habit-details page (subtle grey fill +
+        // darker grey border). '' when there's nothing to confirm.
+        function popupDescriptionSection(habit) {
+            if (!(habit.confirmDescription && habit.description)) return '';
+            return popupSection('Description', `<div style="color:#aaa;font-size:0.85rem;line-height:1.4;border:1px solid #2a2a3e;border-radius:8px;padding:10px 12px;background:rgba(255,255,255,0.02)">${formatDescription(habit.description)}</div>`);
+        }
+
         // --- DISABLED: auto-complete feature. Stubbed to return ''; original
         // body (info about a habit's auto-completed partner shown in the
         // trigger's completion popup) kept below for future re-enable. ---
@@ -3728,11 +3934,11 @@
                 </div>`;
             }).join('');
 
-            document.getElementById(targetId).innerHTML = `
-                ${popupHeader({ icon, title, onClose })}
-                ${preamble || ''}
-                <div class="subtask-popup-list">${rows}</div>
-                ${footer}`;
+            renderPopup(targetId, {
+                icon, title, onClose,
+                bodyHtml: `${preamble || ''}<div class="subtask-popup-list">${rows}</div>`,
+                footerHtml: footer || ''
+            });
         }
 
         function renderSubtaskPopup() {
@@ -3757,9 +3963,7 @@
                 ? `<button class="submit-btn" style="margin-top:12px;width:100%" onclick="completeNextSubtask(${habit.id})" ${allDone ? 'disabled style="margin-top:12px;width:100%;opacity:0.5;cursor:default"' : ''}>Complete Next</button>`
                 : `<button class="submit-btn" style="margin-top:12px;width:100%" onclick="completeHabitWithAllSubtasks(${habit.id})">Complete All</button>`;
 
-            const descSection = (habit.confirmDescription && habit.description)
-                ? popupSection('Description', `<div style="color:#ccc;font-size:0.85rem;line-height:1.4">${formatDescription(habit.description)}</div>`)
-                : '';
+            const descSection = popupDescriptionSection(habit);
             const preamble = descSection + linkedAutoInfoHtml(habit);
 
             renderChecklistPopup('subtaskPopup', {
@@ -3907,14 +4111,20 @@
             const target = isDaily ? (freq.pointsPerDay || 4) : isWeekly ? (freq.pointsPerWeek || 12) : (freq.pointsPerMonth || 30);
             const period = isDaily ? PERIOD.DAY : isWeekly ? PERIOD.WEEK : PERIOD.MONTH;
 
-            document.getElementById('pointsPopup').innerHTML = `
-                ${popupHeader({ icon, title: habit.name, variant: 'points' })}
-                <div class="points-popup-target">Target: ${target} pts / ${period}</div>
+            // Points habits complete straight through this popup (they skip
+            // the confirm-description gate), so surface the description here
+            // — same Description section the subtask/confirm popups use.
+            const descSection = popupDescriptionSection(habit);
+
+            renderPopup('pointsPopup', {
+                icon, title: habit.name, onClose: 'closePointsPopup()',
+                bodyHtml: `${descSection}<div class="points-popup-target">Target: ${target} pts / ${period}</div>
                 <div class="points-popup-buttons">
                     <button class="points-btn" onclick="completeWithPoints(${habit.id}, 1)">1</button>
                     <button class="points-btn" onclick="completeWithPoints(${habit.id}, 2)">2</button>
                     <button class="points-btn" onclick="completeWithPoints(${habit.id}, 3)">3</button>
-                </div>`;
+                </div>`
+            });
         }
 
         function completeWithPoints(habitId, points) {
@@ -4186,7 +4396,18 @@
                 const total = habit.completions.length;
                 const uniqueDays = new Set(habit.completions.map(c => c.date)).size;
                 const daysSinceCreated = Math.max(1, daysBetween(habit.createdAt, today) + 1);
-                const rate = Math.round((uniqueDays / daysSinceCreated) * 100);
+                // Schedule-aware adherence: completed vs. expected occurrences
+                // for the habit's OWN cadence (not the calendar), capped at
+                // 100%. Calendar-based rate made every non-daily habit look
+                // like a failure even at perfect adherence.
+                const _cycleDays = Math.max(1, getHabitCycleDays(habit));
+                const _ft = habit.frequency.type;
+                const _perTap = _ft === FREQ.TIMES_PER_WEEK || _ft === FREQ.TIMES_PER_MONTH
+                    || _ft === FREQ.TIMES_PER_DAY || _ft === FREQ.POINTS_PER_DAY
+                    || _ft === FREQ.POINTS_PER_WEEK || _ft === FREQ.POINTS_PER_MONTH;
+                const _doneCount = _perTap ? total : uniqueDays;
+                const _expected = Math.max(1, Math.round(daysSinceCreated / _cycleDays));
+                const rate = Math.min(100, Math.round((_doneCount / _expected) * 100));
 
                 let avgInterval = '-';
                 if (habit.completions.length > 1) {
@@ -4596,7 +4817,7 @@
             }
 
             modal.innerHTML = `
-                <div class="all-habits-fixed-header">
+                <div class="overlay-fixed-header">
                     <div class="modal-header">
                         <h2 class="modal-title">All Habits</h2>
                         <button class="modal-close" onclick="closeAllHabits()">&times;</button>
@@ -4612,7 +4833,6 @@
                                 <option value="status" ${allHabitsSort === 'status' ? 'selected' : ''}>Status</option>
                                 <option value="alpha" ${allHabitsSort === 'alpha' ? 'selected' : ''}>A–Z</option>
                                 <option value="momentum" ${allHabitsSort === 'momentum' ? 'selected' : ''}>Momentum</option>
-                                <option value="overdue" ${allHabitsSort === 'overdue' ? 'selected' : ''}>Most overdue</option>
                             </select>
                         </label>
                         <label class="ah-select-wrap">
@@ -4638,7 +4858,7 @@
                         </label>
                     </div>
                 </div>
-                <div class="all-habits-scroll-area">
+                <div class="overlay-scroll">
                     <div id="allHabitsNoResults" class="empty-state" style="display:none;padding:20px 0">
                         <div style="color:#888">No matching habits</div>
                     </div>
@@ -4831,19 +5051,17 @@
             // swipe-to-dismiss — otherwise scrolling the inner content gets
             // interpreted as a dismiss gesture and closes the popup. Tap-
             // outside still closes them via handleOverlayClick.
-            if (e.target.closest('[data-no-swipe-dismiss]')) return;
-            const modal = e.target.closest('.modal, .subtask-popup, .points-popup, .emoji-popup');
+            // Opt out: explicit [data-no-swipe-dismiss], and the nested
+            // subtasks list — scrolling it (even a fast flick) must never
+            // dismiss the sheet/popup, regardless of its scroll position.
+            if (e.target.closest('[data-no-swipe-dismiss], .subtasks-scroll-container')) return;
+            const modal = e.target.closest('.modal, .popup');
             if (modal) {
-                // Only arm swipe-to-dismiss when the actual scroll container
-                // under the finger is at the very top — otherwise a normal
-                // downward scroll would be hijacked into a dismiss (and its
-                // preventDefault would cancel the scroll). The modal itself
-                // is overflow:hidden in the reworked details view, so its
-                // scrollTop is always 0; the real scroller is the inner
-                // .details-scroll-area / .all-habits-scroll-area / nested
-                // .subtasks-scroll-container.
-                const scrollable = e.target.closest(
-                    '.details-scroll-area, .all-habits-scroll-area, .subtasks-scroll-container, .subtask-popup-list, .emoji-picker') || modal;
+                // Only arm swipe-to-dismiss when the overlay's own scroll
+                // body is at the very top — otherwise a normal downward
+                // scroll would be hijacked into a dismiss (and its
+                // preventDefault would cancel the scroll).
+                const scrollable = e.target.closest('.overlay-scroll') || modal;
                 if (scrollable.scrollTop <= 0) {
                     swipeStartY = e.touches[0].clientY;
                     swipeElement = modal;
@@ -4860,11 +5078,15 @@
             // Only activate swipe if moving down
             if (delta > 10) {
                 swipeActive = true;
-                // Apply transform with resistance (moves slower than finger)
-                const resistance = 0.5;
-                const translateY = Math.min(delta * resistance, 200);
-                swipeElement.style.transform = `translateY(${translateY}px)`;
-                swipeElement.style.transition = 'none';
+                // Only the bottom-sheet (.modal) follows the finger. Centered
+                // popups don't translate — they just dismiss on release if
+                // the pull is far enough.
+                if (swipeElement.classList.contains('modal')) {
+                    const resistance = 0.5; // moves slower than finger
+                    const translateY = Math.min(delta * resistance, 200);
+                    swipeElement.style.transform = `translateY(${translateY}px)`;
+                    swipeElement.style.transition = 'none';
+                }
                 e.preventDefault();
             }
         }, { passive: false });
@@ -4879,15 +5101,17 @@
             // 80px threshold. Full modals (details/edit/create/settings) use
             // a larger 95px pull so the details/edit pages aren't dismissed
             // too easily by a light downward drag.
-            const dismissThreshold = swipeElement.classList.contains('modal') ? 95 : 80;
+            const isSheet = swipeElement.classList.contains('modal');
+            const dismissThreshold = isSheet ? 95 : 80;
             if (swipeActive && swipeDelta > dismissThreshold) {
-                // Animate the slide-out via inline transform AND close the
-                // overlay immediately so it stops catching taps that should
-                // reach the buttons underneath. Both happen in parallel: the
-                // overlay fades via its CSS opacity transition while the
-                // modal continues its inline translate animation.
-                swipeElement.style.transition = 'transform 0.2s ease-out';
-                swipeElement.style.transform = 'translateY(100%)';
+                // Sheets slide out via inline transform; popups just close
+                // (the overlay fade handles their disappearance — they never
+                // moved). Close the overlay immediately so it stops catching
+                // taps meant for the buttons underneath.
+                if (isSheet) {
+                    swipeElement.style.transition = 'transform 0.2s ease-out';
+                    swipeElement.style.transform = 'translateY(100%)';
+                }
                 if (isOverlayActive('modalOverlay')) closeModal();
                 else if (isOverlayActive('detailsOverlay')) closeDetails();
                 else if (isOverlayActive('settingsOverlay')) closeSettings();
