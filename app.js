@@ -4947,17 +4947,17 @@
             // swipe-to-dismiss — otherwise scrolling the inner content gets
             // interpreted as a dismiss gesture and closes the popup. Tap-
             // outside still closes them via handleOverlayClick.
-            if (e.target.closest('[data-no-swipe-dismiss]')) return;
+            // Opt out: explicit [data-no-swipe-dismiss], and the nested
+            // subtasks list — scrolling it (even a fast flick) must never
+            // dismiss the sheet/popup, regardless of its scroll position.
+            if (e.target.closest('[data-no-swipe-dismiss], .subtasks-scroll-container')) return;
             const modal = e.target.closest('.modal, .popup');
             if (modal) {
-                // Only arm swipe-to-dismiss when the actual scroll container
-                // under the finger is at the very top — otherwise a normal
-                // downward scroll would be hijacked into a dismiss (and its
-                // preventDefault would cancel the scroll). Every overlay now
-                // uses a single .overlay-scroll body, with .subtasks-scroll
-                // -container as the one nested exception (details subtasks).
-                const scrollable = e.target.closest(
-                    '.overlay-scroll, .subtasks-scroll-container') || modal;
+                // Only arm swipe-to-dismiss when the overlay's own scroll
+                // body is at the very top — otherwise a normal downward
+                // scroll would be hijacked into a dismiss (and its
+                // preventDefault would cancel the scroll).
+                const scrollable = e.target.closest('.overlay-scroll') || modal;
                 if (scrollable.scrollTop <= 0) {
                     swipeStartY = e.touches[0].clientY;
                     swipeElement = modal;
