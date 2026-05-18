@@ -227,19 +227,9 @@
         }
 
         // Render the habit form (shared between Create and Edit modes)
-        function renderHabitForm(habit = null) {
-            const isEdit = formMode === 'edit';
-            const state = getFormState(habit);
-            const currentIcon = state.icon || (habit?.icon) || '📌';
-            const habitName = escapeHtml(formState.name || '');
-            const habitDesc = escapeHtml(formState.description || '');
-            // Points only applies to the "Goal" schedule
-            // (points per day/week/month) — disabled for every other type.
-            const isTwiceDaily = state.frequency === FREQ.TWICE_DAILY;
-            // Allow Extra is now compatible with all frequencies
-
-            // Build frequency inputs (use lowercase IDs for create, camelCase with 'edit' prefix for edit)
-            const idPrefix = isEdit ? 'edit' : '';
+        // Frequency-input controls for the habit form (every-X / goal /
+        // daily). Pure: derives only from form state + the habit.
+        function buildFreqInputsHtml(state, habit, isEdit, idPrefix) {
             let freqInputsHtml = '';
             if (state.frequency === FREQ.EVERY_X_DAYS) {
                 const afterVal = state.everyXValue ?? habit?.frequency?.everyXDays ?? habit?.frequency?.everyXWeeks ?? habit?.frequency?.everyXMonths ?? DEFAULTS.EVERY_X_DAYS;
@@ -272,8 +262,12 @@
                 const dailyVal = state.dailyTimesValue ?? habit?.frequency?.timesPerDay ?? 1;
                 freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'D' : 'd'}ailyTimes" value="${dailyVal}" min="1" max="31" oninput="rerenderForm()"><span style="color:#888">× / day</span>`;
             }
+            return freqInputsHtml;
+        }
 
-            // Subtasks section (show if toggle is on OR habit has existing subtasks)
+        // Subtask editor block for the habit form (drag-reorder list +
+        // add-row). Pure: derives only from the habit, mode, form state.
+        function buildFormSubtasksHtml(habit, isEdit, state) {
             const subtasks = isEdit ? (habit?.subtasks || []) : newHabitSubtasks;
             const showSubtasksArea = state.showSubtasks || subtasks.length > 0;
             let subtasksHtml = '';
@@ -331,6 +325,25 @@
                         </div>
                     </div>`;
             }
+            return subtasksHtml;
+        }
+
+        function renderHabitForm(habit = null) {
+            const isEdit = formMode === 'edit';
+            const state = getFormState(habit);
+            const currentIcon = state.icon || (habit?.icon) || '📌';
+            const habitName = escapeHtml(formState.name || '');
+            const habitDesc = escapeHtml(formState.description || '');
+            // Points only applies to the "Goal" schedule
+            // (points per day/week/month) — disabled for every other type.
+            const isTwiceDaily = state.frequency === FREQ.TWICE_DAILY;
+            // Allow Extra is now compatible with all frequencies
+
+            // Build frequency inputs (use lowercase IDs for create, camelCase with 'edit' prefix for edit)
+            const idPrefix = isEdit ? 'edit' : '';
+            const freqInputsHtml = buildFreqInputsHtml(state, habit, isEdit, idPrefix);
+
+            const subtasksHtml = buildFormSubtasksHtml(habit, isEdit, state);
 
             const reminderDays = habit?.frequency?.reminderDays || DEFAULTS.REMINDER_DAYS;
 
