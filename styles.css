@@ -337,6 +337,13 @@
         .submit-btn:active { opacity: 0.9; }
         .submit-btn.danger { background: #dc2626; }
         .submit-btn.secondary { background: #2a2a3e; }
+        /* Quiet, low-emphasis destructive actions (already confirm-gated). */
+        .danger-zone-btn {
+            flex: 1; padding: 8px; font-size: 0.8rem; cursor: pointer;
+            background: transparent; color: #f87171;
+            border: 1px solid rgba(220,38,38,0.5); border-radius: 8px;
+        }
+        .danger-zone-btn:active { background: rgba(220,38,38,0.12); }
 
         .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #2a2a3e; }
         .detail-label { color: #888; font-size: 0.75rem; }
