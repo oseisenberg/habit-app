@@ -1,5 +1,5 @@
 // Service Worker for Habit Tracker PWA
-const CACHE_NAME = 'habit-tracker-v12';
+const CACHE_NAME = 'habit-tracker-v13';
 const urlsToCache = [
   './',
   './index.html',
@@ -31,11 +31,32 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch strategy:
+// - Navigations / HTML (index.html): network-first, fall back to cache.
+//   This keeps the HTML in sync with the network-served app.js so a
+//   stale cached page can never reference removed/renamed elements
+//   (which previously broke things like opening Settings).
+// - Everything else: cache-first, fall back to network.
 self.addEventListener('fetch', event => {
+  const req = event.request;
+  const isHTML = req.mode === 'navigate' ||
+    (req.headers.get('accept') || '').includes('text/html');
+
+  if (isHTML) {
+    event.respondWith(
+      fetch(req)
+        .then(res => {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put('./index.html', copy)).catch(() => {});
+          return res;
+        })
+        .catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
+    );
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request)
-      .then(response => response || fetch(event.request))
+    caches.match(req).then(response => response || fetch(req))
   );
 });
 
