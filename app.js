@@ -1231,7 +1231,97 @@
             newHabitSubtasks = [];
         }
 
+        // Settings renders through the shared sheet base like every other
+        // bottom-sheet modal (Create/Details/Edit/All Habits).
+        function renderSettings() {
+            const body = `
+                <div class="settings-row">
+                    <span class="settings-label">Morning starts at</span>
+                    <div class="settings-value">
+                        <input type="number" class="settings-input" id="morningStart" min="0" max="23" value="5">
+                        <span style="color:#666">:00</span>
+                    </div>
+                </div>
+                <div class="settings-row">
+                    <span class="settings-label">Bedtime starts at</span>
+                    <div class="settings-value">
+                        <input type="number" class="settings-input" id="nightStart" min="0" max="23" value="18">
+                        <span style="color:#666">:00</span>
+                    </div>
+                </div>
+                <div class="settings-row">
+                    <span class="settings-label">Separate bedtime section</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="separateBedtimeSection">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="settings-row" style="margin-top:8px; padding-top:10px;">
+                    <span class="settings-label">Notifications</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="notificationsEnabled" onchange="toggleNotifications()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div id="notificationSettings" style="display:none;">
+                    <div class="settings-row">
+                        <span class="settings-label">Morning reminder</span>
+                        <div class="settings-value">
+                            <input type="number" class="settings-input" id="morningReminderTime" min="0" max="23" value="5">
+                            <span style="color:#666">:00</span>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Night reminder</span>
+                        <div class="settings-value">
+                            <input type="number" class="settings-input" id="nightReminderTime" min="0" max="23" value="18">
+                            <span style="color:#666">:00</span>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Momentum alerts</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="momentumAlertEnabled" onchange="toggleMomentumSettings()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div id="momentumAlertSettings" style="display:none;">
+                        <div class="settings-row">
+                            <span class="settings-label" style="padding-left:12px">Alert time</span>
+                            <div class="settings-value">
+                                <input type="number" class="settings-input" id="momentumAlertTime" min="0" max="23" value="18">
+                                <span style="color:#666">:00</span>
+                            </div>
+                        </div>
+                        <div class="settings-row">
+                            <span class="settings-label" style="padding-left:12px">Threshold</span>
+                            <div class="settings-value">
+                                <input type="number" class="settings-input" id="momentumAlertThreshold" min="-100" max="0" value="-20">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="submit-btn" onclick="saveSettings()">Save Settings</button>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                    <button class="submit-btn secondary" onclick="exportData()" style="flex:1;font-size:0.85rem">Export All Data</button>
+                    <button class="submit-btn secondary" onclick="exportData(true)" style="flex:1;font-size:0.85rem">Export Tasks Only</button>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                    <button class="submit-btn secondary" onclick="triggerImport()" style="flex:1;font-size:0.85rem">Import Data</button>
+                    <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(event)">
+                </div>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                    <button class="submit-btn secondary" onclick="resetAllMomentum()" style="flex:1;font-size:0.85rem;background:#dc2626">Reset All Momentum</button>
+                    <button class="submit-btn secondary" onclick="reloadDefaultTasks()" style="flex:1;font-size:0.85rem;background:#dc2626">Reload Default Tasks</button>
+                </div>`;
+            document.getElementById('settingsModal').innerHTML = renderSheet({
+                headerHtml: popupHeader({ title: 'Settings', onClose: 'closeSettings()' }),
+                bodyHtml: body
+            });
+        }
+
         function openSettings() {
+            renderSettings();
             const s = getSettings();
             document.getElementById('morningStart').value = s.morningStart;
             document.getElementById('nightStart').value = s.nightStart;
@@ -4628,7 +4718,6 @@
                                 <option value="status" ${allHabitsSort === 'status' ? 'selected' : ''}>Status</option>
                                 <option value="alpha" ${allHabitsSort === 'alpha' ? 'selected' : ''}>A–Z</option>
                                 <option value="momentum" ${allHabitsSort === 'momentum' ? 'selected' : ''}>Momentum</option>
-                                <option value="overdue" ${allHabitsSort === 'overdue' ? 'selected' : ''}>Most overdue</option>
                             </select>
                         </label>
                         <label class="ah-select-wrap">
