@@ -242,7 +242,6 @@
             // Points only applies to the "Within period" schedule
             // (points per day/week/month) — disabled for every other type.
             const isTwiceDaily = state.frequency === FREQ.TWICE_DAILY;
-            const pointsDisabled = state.frequency !== FREQ.TIMES_PER_PERIOD;
             // Allow Extra is now compatible with all frequencies
 
             // Build frequency inputs (use lowercase IDs for create, camelCase with 'edit' prefix for edit)
@@ -380,7 +379,6 @@
                             const count = fn => allHabits.filter(fn).length;
                             const pills = [
                                 { id: 'subtasks',    label: 'Subtasks',      active: state.showSubtasks,        domId: isEdit ? 'editSubtasksPill' : 'subtasksPill',           onclick: 'toggleFormSubtasks()',          usage: count(h => h.subtasks?.length > 0) },
-                                { id: 'points',      label: 'Points',        active: state.isPointsMode,        domId: isEdit ? 'editPointsPill' : 'pointsPill',               onclick: 'toggleFormPointsMode()',        usage: count(h => h.usePoints), extraClass: pointsDisabled ? 'disabled' : '' },
                                 { id: 'reminder',    label: 'Reminder',      active: state.isReminderMode,      domId: isEdit ? 'editReminderPill' : 'reminderPill',           onclick: 'toggleFormReminderMode()',      usage: count(h => h.isReminder || h.frequency?.type === FREQ.REMINDER) },
                                 { id: 'desc',        label: 'Description',   active: state.showDescription,     domId: isEdit ? 'editDescPill' : 'descPill',                   onclick: 'toggleFormDescription()',       usage: count(h => !!h.description) },
                                 { id: 'noMomentum',  label: 'Untracked',   active: state.noMomentum,          domId: isEdit ? 'editNoMomentumPill' : 'noMomentumPill',       onclick: 'toggleFormNoMomentum()',        usage: count(h => h.noMomentum) },
@@ -457,6 +455,13 @@
                         </select>
                         <div id="${isEdit ? 'editFrequencyInputs' : 'frequencyInputs'}">${freqInputsHtml}</div>
                     </div>
+                    ${state.frequency === FREQ.TIMES_PER_PERIOD ? `<div class="frequency-row" style="justify-content:space-between;margin-top:8px">
+                        <span style="color:#aaa;font-size:0.85rem">Points</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" ${state.isPointsMode ? 'checked' : ''} onchange="toggleFormPointsMode()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>` : ''}
                     ${(state.frequency === FREQ.DAILY && (state.dailyTimesValue ?? habit?.frequency?.timesPerDay ?? 1) > 1) ? `<div class="frequency-row" style="justify-content:space-between;margin-top:8px">
                         <span style="color:#aaa;font-size:0.85rem">Hide after each completion</span>
                         <div style="display:flex;align-items:center;gap:6px">
@@ -692,7 +697,6 @@
         // tags appear as option pills in the habit form.
         const TAG_LIST = [
             { id: 'subtasks',   label: 'Subtasks' },
-            { id: 'points',     label: 'Points' },
             { id: 'reminder',   label: 'Reminder' },
             { id: 'desc',       label: 'Description' },
             { id: 'noMomentum', label: 'Untracked' },
@@ -703,7 +707,6 @@
 
         const TAG_GLOSSARY = [
             { label: 'Subtasks',      desc: 'Break the habit into a checklist; the habit auto-completes when every subtask is done.' },
-            { label: 'Points',        desc: 'Score each completion (1, 2, or 3 points) and aim for a daily, weekly, or monthly target instead of a fixed count.' },
             { label: 'Reminder',      desc: 'Treat as a recurring nudge rather than a streak — momentum resets to zero on completion instead of building up.' },
             { label: 'Description',   desc: 'Attach freeform notes that show on the details page.' },
             { label: 'Untracked',   desc: 'Never tracks momentum — always neutral, no reward or penalty for skipping. Good for scheduled treats. Still appears on its normal cadence like any habit.' },
