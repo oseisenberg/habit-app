@@ -1291,6 +1291,7 @@
 
         function updateInstallPromptVisibility() {
             const prompt = document.getElementById('installPrompt');
+            if (!prompt) return; // install prompt UI removed
             const notifEnabled = document.getElementById('notificationsEnabled').checked;
             // Show install prompt if notifications enabled but not installed as PWA
             if (notifEnabled && !isStandalone()) {
@@ -4401,8 +4402,10 @@
 
         let allHabitsSort = 'status';   // status | alpha | momentum | overdue
         let allHabitsFilter = 'all';    // all | reminders | subtasks | snoozed | archived
+        let allHabitsSortReversed = false;
         function setAllHabitsSort(v) { allHabitsSort = v; renderAllHabitsGrid(); }
         function setAllHabitsFilter(v) { allHabitsFilter = v; renderAllHabitsGrid(); }
+        function toggleAllHabitsSortDir() { allHabitsSortReversed = !allHabitsSortReversed; renderAllHabitsGrid(); }
 
         function allHabitsFilterPredicate(h) {
             switch (allHabitsFilter) {
@@ -4495,6 +4498,7 @@
                 filtered = [...habits];
             }
             filtered = filtered.filter(allHabitsFilterPredicate).sort(allHabitsSortCompare);
+            if (allHabitsSortReversed) filtered.reverse();
 
             if (!filtered.length) {
                 grid.innerHTML = '';
@@ -4607,6 +4611,10 @@
                                 <option value="snoozed" ${allHabitsFilter === 'snoozed' ? 'selected' : ''}>Snoozed</option>
                                 <option value="archived" ${allHabitsFilter === 'archived' ? 'selected' : ''}>Archived</option>
                             </select>
+                        </label>
+                        <label class="ah-select-wrap" style="flex:0 0 auto">
+                            <span class="ah-select-label">Order</span>
+                            <button class="ah-select" style="cursor:pointer;min-width:46px;text-align:center" onclick="toggleAllHabitsSortDir()" aria-label="Reverse sort order" title="Reverse sort order">${allHabitsSortReversed ? '↓' : '↑'}</button>
                         </label>
                     </div>
                     <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 14px 10px;color:#aaa;font-size:0.82rem">
