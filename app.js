@@ -4835,7 +4835,7 @@
                 // .details-scroll-area / .all-habits-scroll-area / nested
                 // .subtasks-scroll-container.
                 const scrollable = e.target.closest(
-                    '.details-scroll-area, .all-habits-scroll-area, .subtasks-scroll-container') || modal;
+                    '.details-scroll-area, .all-habits-scroll-area, .subtasks-scroll-container, .subtask-popup-list, .emoji-picker') || modal;
                 if (scrollable.scrollTop <= 0) {
                     swipeStartY = e.touches[0].clientY;
                     swipeElement = modal;
