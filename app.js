@@ -254,7 +254,7 @@
                         <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.DAY}')">day</button>
                         <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.WEEK}')">wk</button>
                         <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.MONTH ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.MONTH}')">mo</button>
-                    </div><span style="color:#888">after</span>`;
+                    </div>`;
             } else if (state.frequency === FREQ.TIMES_PER_PERIOD) {
                 if (state.isPointsMode) {
                     const ptsVal = state.pointsValue ?? habit?.frequency?.pointsPerDay ?? habit?.frequency?.pointsPerWeek ?? habit?.frequency?.pointsPerMonth ?? DEFAULTS.POINTS_PER_PERIOD;
