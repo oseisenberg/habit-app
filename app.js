@@ -4329,7 +4329,10 @@
                         <button class="modal-close" onclick="closeDetails()" style="flex-shrink:0">&times;</button>
                     </div>`;
                 const _dBody = `
-                    ${habit.description ? `<div style="color:#888;font-size:0.85rem;margin-bottom:12px;text-align:center">${formatDescription(habit.description)}</div>` : ''}
+                    ${habit.description ? `<div style="margin-bottom:14px">
+                        <div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Description</div>
+                        <div style="color:#aaa;font-size:0.85rem;line-height:1.4">${formatDescription(habit.description)}</div>
+                    </div>` : ''}
                     ${!isReminder && !habit.noMomentum ? `<div class="momentum-display" style="margin-top:0;margin-bottom:12px">
                         <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
                         <div class="momentum-label">Momentum${recoveryText}</div>
