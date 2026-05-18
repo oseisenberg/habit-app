@@ -866,6 +866,7 @@
                 quietHoursEnd: 7,
                 weeklySummaryEnabled: false,
                 separateBedtimeSection: true,
+                showDebug: false,
                 disabledTags: []
             };
             try {
@@ -1019,6 +1020,8 @@
             } else {
                 document.getElementById('timeNote').textContent = '';
             }
+            const dbgBtn = document.getElementById('debugToggle');
+            if (dbgBtn) dbgBtn.style.display = s.showDebug ? '' : 'none';
             renderHabits();
             // Re-render open panels to update subtask states for new day
             if (selectedHabitId) renderDetails();
@@ -1258,7 +1261,7 @@
             const chk = (id) => { const e = document.getElementById(id); return e ? e.checked : settingsDraft[id]; };
             settingsDraft.morningStart = num('morningStart', 5);
             settingsDraft.nightStart = num('nightStart', 18);
-            settingsDraft.separateBedtimeSection = chk('separateBedtimeSection');
+            settingsDraft.showDebug = chk('showDebugIcon');
             settingsDraft.notificationsEnabled = chk('notificationsEnabled');
             settingsDraft.morningReminderTime = num('morningReminderTime', 5);
             settingsDraft.nightReminderTime = num('nightReminderTime', 18);
@@ -1272,7 +1275,7 @@
             const set = (id, v) => { const e = document.getElementById(id); if (e) { if (e.type === 'checkbox') e.checked = !!v; else e.value = v; } };
             set('morningStart', s.morningStart);
             set('nightStart', s.nightStart);
-            set('separateBedtimeSection', s.separateBedtimeSection);
+            set('showDebugIcon', s.showDebug);
             set('notificationsEnabled', s.notificationsEnabled);
             set('morningReminderTime', s.morningReminderTime);
             set('nightReminderTime', s.nightReminderTime);
@@ -1322,9 +1325,9 @@
                     </div>
                 </div>
                 <div class="settings-row">
-                    <span class="settings-label">Separate bedtime section</span>
+                    <span class="settings-label">Show debug icon</span>
                     <label class="toggle-switch">
-                        <input type="checkbox" id="separateBedtimeSection">
+                        <input type="checkbox" id="showDebugIcon">
                         <span class="toggle-slider"></span>
                     </label>
                 </div>`;
