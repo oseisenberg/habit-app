@@ -226,9 +226,16 @@
         // the All Habits fixed-header pattern, scoped via the .details-*
         // classes to #detailsOverlay so other modals are unaffected).
         // Used by the edit form and the details view.
+        // Shared bottom-sheet shell: pinned header + a single scrolling body
+        // (the footer scrolls within the body for sheets). All sheets —
+        // Create, Details, Edit, Settings, All Habits — use this structure.
+        function renderSheet({ headerHtml, bodyHtml, footerHtml = '' }) {
+            return `<div class="overlay-fixed-header">${headerHtml}</div>`
+                 + `<div class="overlay-scroll">${bodyHtml}${footerHtml}</div>`;
+        }
+        // Back-compat alias used by the habit form / details view.
         function detailsShell(headerHtml, bodyHtml, footerHtml = '') {
-            return `<div class="details-fixed-header">${headerHtml}</div>`
-                 + `<div class="details-scroll-area">${bodyHtml}${footerHtml}</div>`;
+            return renderSheet({ headerHtml, bodyHtml, footerHtml });
         }
 
         // Render the habit form (shared between Create and Edit modes)
@@ -474,7 +481,7 @@
                 </div>`;
             // Edit form lives in the details modal → pin header/footer.
             // Create form keeps its single-scroll layout unchanged.
-            return isEdit ? detailsShell(_hdr, _body, _footer) : (_hdr + _body + _footer);
+            return renderSheet({ headerHtml: _hdr, bodyHtml: _body, footerHtml: _footer });
         }
 
         // ========================================
@@ -704,10 +711,11 @@
                     <div style="color:#aaa;font-size:0.8rem;line-height:1.4">${t.desc}</div>
                 </div>`
             ).join('');
-            document.getElementById('tagGlossaryPopup').innerHTML = `
-                ${popupHeader({ title: 'Options reference', onClose: 'closeTagGlossary()' })}
-                <div style="max-height:60vh;overflow-y:auto;padding:0 4px">${rows}</div>
-                <button class="submit-btn" style="margin-top:12px;width:100%" onclick="closeTagGlossary()">Close</button>`;
+            renderPopup('tagGlossaryPopup', {
+                title: 'Options reference', onClose: 'closeTagGlossary()',
+                bodyHtml: rows,
+                footerHtml: `<div style="padding:10px 14px"><button class="submit-btn" style="width:100%" onclick="closeTagGlossary()">Close</button></div>`
+            });
             showOverlay('tagGlossaryOverlay');
         }
 
@@ -816,7 +824,10 @@
                     </div>
                 </div>`;
             }
-            document.getElementById('emojiPopup').innerHTML = html;
+            renderPopup('emojiPopup', {
+                title: 'Choose icon', onClose: 'closeEmojiPopup()',
+                bodyHtml: html
+            });
         }
 
         function selectEmojiFromPopup(emoji) {
@@ -1166,29 +1177,32 @@
         function handleOverlayClick(e, id, closeFn) { if (e.target === document.getElementById(id)) closeFn(); }
 
         function syncBodyScrollLock() {
-            const anyOpen = document.querySelector(
-                '.modal-overlay.active, .subtask-popup-overlay.active, .points-popup-overlay.active, .emoji-popup-overlay.active');
+            const anyOpen = document.querySelector('.modal-overlay.active, .popup-overlay.active');
             document.body.classList.toggle('modal-open', !!anyOpen);
         }
         function showOverlay(id) { document.getElementById(id).classList.add('active'); syncBodyScrollLock(); }
         function hideOverlay(id) { document.getElementById(id).classList.remove('active'); syncBodyScrollLock(); }
         function isOverlayActive(id) { return !!document.getElementById(id)?.classList.contains('active'); }
 
-        // Shared popup header. `variant` 'subtask' (left-aligned, optional
-        // close X) is the canonical look; 'points' keeps the centered,
-        // close-less points-popup header so that popup stays pixel-identical.
-        function popupHeader({ icon, title, onClose, variant = 'subtask' }) {
-            if (variant === 'points') {
-                return `<div class="points-popup-header">
-                    ${icon ? `<span class="points-popup-icon">${icon}</span>` : ''}
-                    <span class="points-popup-title">${escapeHtml(title)}</span>
+        // One header for every overlay (sheets + popups): optional icon,
+        // title, and a close (×) shown by default. Pass showClose:false to
+        // omit it (e.g. action-only popups).
+        function popupHeader({ icon, title, onClose, showClose = true }) {
+            return `<div class="modal-header">
+                    ${icon ? `<span class="modal-icon">${icon}</span>` : ''}
+                    <span class="modal-title">${escapeHtml(title || '')}</span>
+                    ${showClose && onClose ? `<button class="modal-close" onclick="${onClose}">&times;</button>` : ''}
                 </div>`;
-            }
-            return `<div class="subtask-popup-header">
-                    ${icon ? `<span class="subtask-popup-icon">${icon}</span>` : ''}
-                    <span class="subtask-popup-title">${escapeHtml(title)}</span>
-                    ${onClose ? `<button class="subtask-popup-close" onclick="${onClose}">&times;</button>` : ''}
-                </div>`;
+        }
+
+        // Shared centered-popup renderer: pinned header, scrolling body,
+        // optional pinned footer. Differences (title/icon, close button,
+        // body content, footer buttons) are all params.
+        function renderPopup(targetId, { icon, title, onClose, showClose = true, bodyHtml = '', footerHtml = '' }) {
+            document.getElementById(targetId).innerHTML =
+                `<div class="overlay-fixed-header">${popupHeader({ icon, title, onClose, showClose })}</div>`
+              + `<div class="overlay-scroll">${bodyHtml}</div>`
+              + (footerHtml || '');
         }
 
         function openModal() {
@@ -2047,10 +2061,11 @@
             const currentSnooze = (habit && habit.snoozedUntil && habit.snoozedUntil !== PERIOD.NIGHT && habit.snoozedUntil > today)
                 ? habit.snoozedUntil : '';
 
-            document.getElementById('snoozePopup').innerHTML = `
-                <div class="snooze-popup-content">
-                    <div class="snooze-popup-title">${pauseMomentum ? 'Snooze' : 'Ignore'}</div>
-                    <div style="color:#888;font-size:0.8rem;line-height:1.4;margin:-4px 0 12px;text-align:center">${pauseMomentum
+            renderPopup('snoozePopup', {
+                title: pauseMomentum ? 'Snooze' : 'Ignore',
+                onClose: 'closeSnoozePopup()',
+                bodyHtml: `
+                    <div style="color:#888;font-size:0.8rem;line-height:1.4;margin:0 0 12px;text-align:center">${pauseMomentum
                         ? 'Hides this habit and pauses momentum — no penalty for the skipped days.'
                         : 'Hides this habit but momentum keeps running — missed days still count against you.'}</div>
                     <div class="snooze-section">
@@ -2082,15 +2097,15 @@
                         <div class="snooze-date-row">
                             <input type="date" id="snoozeCustomDate" class="snooze-date-input" min="${tomorrowStr}" value="${currentSnooze}" onchange="snoozeToDate()">
                         </div>
-                    </div>
-                    <div style="display:flex;gap:6px">
-                        <button class="snooze-option skip-cycle-btn" onclick="snoozeHabit(${cycleDays})" style="flex:1;margin:0">
-                            <span class="snooze-option-icon">⏭️</span>
-                            <span>Skip cycle</span>
-                        </button>
-                        <button class="snooze-cancel" onclick="closeSnoozePopup()" style="flex:1;margin:0">Cancel</button>
-                    </div>
-                </div>`;
+                    </div>`,
+                footerHtml: `<div style="display:flex;gap:6px;padding:10px 14px">
+                    <button class="snooze-option skip-cycle-btn" onclick="snoozeHabit(${cycleDays})" style="flex:1;margin:0">
+                        <span class="snooze-option-icon">⏭️</span>
+                        <span>Skip cycle</span>
+                    </button>
+                    <button class="snooze-cancel" onclick="closeSnoozePopup()" style="flex:1;margin:0">Cancel</button>
+                </div>`
+            });
             showOverlay('snoozePopupOverlay');
         }
 
@@ -3728,11 +3743,11 @@
                 </div>`;
             }).join('');
 
-            document.getElementById(targetId).innerHTML = `
-                ${popupHeader({ icon, title, onClose })}
-                ${preamble || ''}
-                <div class="subtask-popup-list">${rows}</div>
-                ${footer}`;
+            renderPopup(targetId, {
+                icon, title, onClose,
+                bodyHtml: `${preamble || ''}<div class="subtask-popup-list">${rows}</div>`,
+                footerHtml: footer || ''
+            });
         }
 
         function renderSubtaskPopup() {
@@ -3907,14 +3922,15 @@
             const target = isDaily ? (freq.pointsPerDay || 4) : isWeekly ? (freq.pointsPerWeek || 12) : (freq.pointsPerMonth || 30);
             const period = isDaily ? PERIOD.DAY : isWeekly ? PERIOD.WEEK : PERIOD.MONTH;
 
-            document.getElementById('pointsPopup').innerHTML = `
-                ${popupHeader({ icon, title: habit.name, variant: 'points' })}
-                <div class="points-popup-target">Target: ${target} pts / ${period}</div>
+            renderPopup('pointsPopup', {
+                icon, title: habit.name, onClose: 'closePointsPopup()',
+                bodyHtml: `<div class="points-popup-target">Target: ${target} pts / ${period}</div>
                 <div class="points-popup-buttons">
                     <button class="points-btn" onclick="completeWithPoints(${habit.id}, 1)">1</button>
                     <button class="points-btn" onclick="completeWithPoints(${habit.id}, 2)">2</button>
                     <button class="points-btn" onclick="completeWithPoints(${habit.id}, 3)">3</button>
-                </div>`;
+                </div>`
+            });
         }
 
         function completeWithPoints(habitId, points) {
@@ -4596,7 +4612,7 @@
             }
 
             modal.innerHTML = `
-                <div class="all-habits-fixed-header">
+                <div class="overlay-fixed-header">
                     <div class="modal-header">
                         <h2 class="modal-title">All Habits</h2>
                         <button class="modal-close" onclick="closeAllHabits()">&times;</button>
@@ -4638,7 +4654,7 @@
                         </label>
                     </div>
                 </div>
-                <div class="all-habits-scroll-area">
+                <div class="overlay-scroll">
                     <div id="allHabitsNoResults" class="empty-state" style="display:none;padding:20px 0">
                         <div style="color:#888">No matching habits</div>
                     </div>
@@ -4832,18 +4848,16 @@
             // interpreted as a dismiss gesture and closes the popup. Tap-
             // outside still closes them via handleOverlayClick.
             if (e.target.closest('[data-no-swipe-dismiss]')) return;
-            const modal = e.target.closest('.modal, .subtask-popup, .points-popup, .emoji-popup');
+            const modal = e.target.closest('.modal, .popup');
             if (modal) {
                 // Only arm swipe-to-dismiss when the actual scroll container
                 // under the finger is at the very top — otherwise a normal
                 // downward scroll would be hijacked into a dismiss (and its
-                // preventDefault would cancel the scroll). The modal itself
-                // is overflow:hidden in the reworked details view, so its
-                // scrollTop is always 0; the real scroller is the inner
-                // .details-scroll-area / .all-habits-scroll-area / nested
-                // .subtasks-scroll-container.
+                // preventDefault would cancel the scroll). Every overlay now
+                // uses a single .overlay-scroll body, with .subtasks-scroll
+                // -container as the one nested exception (details subtasks).
                 const scrollable = e.target.closest(
-                    '.details-scroll-area, .all-habits-scroll-area, .subtasks-scroll-container, .subtask-popup-list, .emoji-picker') || modal;
+                    '.overlay-scroll, .subtasks-scroll-container') || modal;
                 if (scrollable.scrollTop <= 0) {
                     swipeStartY = e.touches[0].clientY;
                     swipeElement = modal;

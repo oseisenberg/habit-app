@@ -40,10 +40,13 @@
     <!-- Settings Modal -->
     <div class="modal-overlay" id="settingsOverlay" onclick="handleOverlayClick(event, 'settingsOverlay', closeSettings)">
         <div class="modal">
-            <div class="modal-header">
-                <h2 class="modal-title">Settings</h2>
-                <button class="modal-close" onclick="closeSettings()">&times;</button>
+            <div class="overlay-fixed-header">
+                <div class="modal-header">
+                    <h2 class="modal-title">Settings</h2>
+                    <button class="modal-close" onclick="closeSettings()">&times;</button>
+                </div>
             </div>
+            <div class="overlay-scroll">
             <div class="settings-row">
                 <span class="settings-label">Morning starts at</span>
                 <div class="settings-value">
@@ -126,42 +129,43 @@
                 <button class="submit-btn secondary" onclick="resetAllMomentum()" style="flex:1;font-size:0.85rem;background:#dc2626">Reset All Momentum</button>
                 <button class="submit-btn secondary" onclick="reloadDefaultTasks()" style="flex:1;font-size:0.85rem;background:#dc2626">Reload Default Tasks</button>
             </div>
+            </div>
         </div>
     </div>
 
     <!-- Subtask Popup -->
-    <div class="subtask-popup-overlay" id="subtaskPopupOverlay" onclick="handleOverlayClick(event, 'subtaskPopupOverlay', closeSubtaskPopup)">
-        <div class="subtask-popup" id="subtaskPopup"></div>
+    <div class="popup-overlay" id="subtaskPopupOverlay" onclick="handleOverlayClick(event, 'subtaskPopupOverlay', closeSubtaskPopup)">
+        <div class="popup" id="subtaskPopup"></div>
     </div>
 
     <!-- Points Popup -->
-    <div class="points-popup-overlay" id="pointsPopupOverlay" onclick="handleOverlayClick(event, 'pointsPopupOverlay', closePointsPopup)">
-        <div class="points-popup" id="pointsPopup"></div>
+    <div class="popup-overlay" id="pointsPopupOverlay" onclick="handleOverlayClick(event, 'pointsPopupOverlay', closePointsPopup)">
+        <div class="popup" id="pointsPopup"></div>
     </div>
 
     <!-- Emoji Picker Popup -->
-    <div class="emoji-popup-overlay" id="emojiPopupOverlay" onclick="handleOverlayClick(event, 'emojiPopupOverlay', closeEmojiPopup)">
-        <div class="emoji-popup" id="emojiPopup"></div>
+    <div class="popup-overlay" id="emojiPopupOverlay" onclick="handleOverlayClick(event, 'emojiPopupOverlay', closeEmojiPopup)">
+        <div class="popup popup--wide" id="emojiPopup"></div>
     </div>
 
     <!-- Snooze Popup -->
-    <div class="points-popup-overlay" id="snoozePopupOverlay" onclick="handleOverlayClick(event, 'snoozePopupOverlay', closeSnoozePopup)">
-        <div class="points-popup" id="snoozePopup"></div>
+    <div class="popup-overlay" id="snoozePopupOverlay" onclick="handleOverlayClick(event, 'snoozePopupOverlay', closeSnoozePopup)">
+        <div class="popup" id="snoozePopup"></div>
     </div>
 
     <!-- Description Confirmation Popup -->
-    <div class="subtask-popup-overlay" id="confirmDescPopupOverlay" onclick="handleOverlayClick(event, 'confirmDescPopupOverlay', closeConfirmDescPopup)">
-        <div class="subtask-popup" id="confirmDescPopup"></div>
+    <div class="popup-overlay" id="confirmDescPopupOverlay" onclick="handleOverlayClick(event, 'confirmDescPopupOverlay', closeConfirmDescPopup)">
+        <div class="popup" id="confirmDescPopup"></div>
     </div>
 
     <!-- Tag Glossary Popup -->
-    <div class="points-popup-overlay" id="tagGlossaryOverlay" onclick="handleOverlayClick(event, 'tagGlossaryOverlay', closeTagGlossary)">
-        <div class="points-popup" id="tagGlossaryPopup" data-no-swipe-dismiss></div>
+    <div class="popup-overlay" id="tagGlossaryOverlay" onclick="handleOverlayClick(event, 'tagGlossaryOverlay', closeTagGlossary)">
+        <div class="popup" id="tagGlossaryPopup" data-no-swipe-dismiss></div>
     </div>
 
     <!-- All Habits View -->
     <div class="modal-overlay" id="allHabitsOverlay" onclick="handleOverlayClick(event, 'allHabitsOverlay', closeAllHabits)">
-        <div class="modal" id="allHabitsModal"></div>
+        <div class="modal modal--full" id="allHabitsModal"></div>
     </div>
 
     <!-- Debug -->
