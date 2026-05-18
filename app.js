@@ -4012,9 +4012,16 @@
             const target = isDaily ? (freq.pointsPerDay || 4) : isWeekly ? (freq.pointsPerWeek || 12) : (freq.pointsPerMonth || 30);
             const period = isDaily ? PERIOD.DAY : isWeekly ? PERIOD.WEEK : PERIOD.MONTH;
 
+            // Points habits complete straight through this popup (they skip
+            // the confirm-description gate), so surface the description here
+            // — same Description section the subtask/confirm popups use.
+            const descSection = (habit.confirmDescription && habit.description)
+                ? popupSection('Description', `<div style="color:#ccc;font-size:0.85rem;line-height:1.4">${formatDescription(habit.description)}</div>`)
+                : '';
+
             renderPopup('pointsPopup', {
                 icon, title: habit.name, onClose: 'closePointsPopup()',
-                bodyHtml: `<div class="points-popup-target">Target: ${target} pts / ${period}</div>
+                bodyHtml: `${descSection}<div class="points-popup-target">Target: ${target} pts / ${period}</div>
                 <div class="points-popup-buttons">
                     <button class="points-btn" onclick="completeWithPoints(${habit.id}, 1)">1</button>
                     <button class="points-btn" onclick="completeWithPoints(${habit.id}, 2)">2</button>
