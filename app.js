@@ -221,15 +221,14 @@
             return formState;
         }
 
-        // Wrap details-modal content so the header pins to the top and the
-        // action bar pins to the bottom while only the middle scrolls
-        // (mirrors the All Habits fixed-header pattern, scoped via the
-        // .details-* classes to #detailsOverlay so other modals are
-        // unaffected). Used by the edit form and the details view.
+        // Wrap details-modal content so the header pins to the top while
+        // everything else (body + action bar) scrolls beneath it (mirrors
+        // the All Habits fixed-header pattern, scoped via the .details-*
+        // classes to #detailsOverlay so other modals are unaffected).
+        // Used by the edit form and the details view.
         function detailsShell(headerHtml, bodyHtml, footerHtml = '') {
             return `<div class="details-fixed-header">${headerHtml}</div>`
-                 + `<div class="details-scroll-area">${bodyHtml}</div>`
-                 + (footerHtml ? `<div class="details-fixed-footer">${footerHtml}</div>` : '');
+                 + `<div class="details-scroll-area">${bodyHtml}${footerHtml}</div>`;
         }
 
         // Render the habit form (shared between Create and Edit modes)
