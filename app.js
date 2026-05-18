@@ -4874,11 +4874,15 @@
             // Only activate swipe if moving down
             if (delta > 10) {
                 swipeActive = true;
-                // Apply transform with resistance (moves slower than finger)
-                const resistance = 0.5;
-                const translateY = Math.min(delta * resistance, 200);
-                swipeElement.style.transform = `translateY(${translateY}px)`;
-                swipeElement.style.transition = 'none';
+                // Only the bottom-sheet (.modal) follows the finger. Centered
+                // popups don't translate — they just dismiss on release if
+                // the pull is far enough.
+                if (swipeElement.classList.contains('modal')) {
+                    const resistance = 0.5; // moves slower than finger
+                    const translateY = Math.min(delta * resistance, 200);
+                    swipeElement.style.transform = `translateY(${translateY}px)`;
+                    swipeElement.style.transition = 'none';
+                }
                 e.preventDefault();
             }
         }, { passive: false });
@@ -4893,15 +4897,17 @@
             // 80px threshold. Full modals (details/edit/create/settings) use
             // a larger 95px pull so the details/edit pages aren't dismissed
             // too easily by a light downward drag.
-            const dismissThreshold = swipeElement.classList.contains('modal') ? 95 : 80;
+            const isSheet = swipeElement.classList.contains('modal');
+            const dismissThreshold = isSheet ? 95 : 80;
             if (swipeActive && swipeDelta > dismissThreshold) {
-                // Animate the slide-out via inline transform AND close the
-                // overlay immediately so it stops catching taps that should
-                // reach the buttons underneath. Both happen in parallel: the
-                // overlay fades via its CSS opacity transition while the
-                // modal continues its inline translate animation.
-                swipeElement.style.transition = 'transform 0.2s ease-out';
-                swipeElement.style.transform = 'translateY(100%)';
+                // Sheets slide out via inline transform; popups just close
+                // (the overlay fade handles their disappearance — they never
+                // moved). Close the overlay immediately so it stops catching
+                // taps meant for the buttons underneath.
+                if (isSheet) {
+                    swipeElement.style.transition = 'transform 0.2s ease-out';
+                    swipeElement.style.transform = 'translateY(100%)';
+                }
                 if (isOverlayActive('modalOverlay')) closeModal();
                 else if (isOverlayActive('detailsOverlay')) closeDetails();
                 else if (isOverlayActive('settingsOverlay')) closeSettings();
