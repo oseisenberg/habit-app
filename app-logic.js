@@ -199,6 +199,22 @@
             populateSettingsFields();
         }
 
+        // Body for Settings → Tags: active vs. inactive tag chips, toggled
+        // via the saved disabledTags list.
+        function buildTagsSettingsBody() {
+            const disabled = getSettings().disabledTags || [];
+            const chip = t => `<label class="option-pill ${disabled.includes(t.id) ? '' : 'active'}" onclick="toggleTagEnabled('${t.id}')">
+                        <span class="option-pill-check">✓</span><span>${t.label}</span>
+                    </label>`;
+            const activeChips = TAG_LIST.filter(t => !disabled.includes(t.id)).map(chip).join('');
+            const inactiveChips = TAG_LIST.filter(t => disabled.includes(t.id)).map(chip).join('');
+            const sectionLabel = txt => `<div style="font-size:0.7rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin:4px 0 8px">${txt}</div>`;
+            return sectionLabel('Active')
+                + `<div class="task-options">${activeChips || '<span style="color:#666;font-size:0.85rem">None</span>'}</div>`
+                + `<div style="margin-top:16px">${sectionLabel('Inactive')}</div>`
+                + `<div class="task-options">${inactiveChips || '<span style="color:#666;font-size:0.85rem">None</span>'}</div>`;
+        }
+
         function renderSettings() {
             const generalRows = `
                 <div class="settings-row">
@@ -299,18 +315,8 @@
                 headerHtml = subHeader('Data & Backup');
                 bodyHtml = dataSection;
             } else if (settingsView === 'tags') {
-                const disabled = getSettings().disabledTags || [];
-                const chip = t => `<label class="option-pill ${disabled.includes(t.id) ? '' : 'active'}" onclick="toggleTagEnabled('${t.id}')">
-                        <span class="option-pill-check">✓</span><span>${t.label}</span>
-                    </label>`;
-                const activeChips = TAG_LIST.filter(t => !disabled.includes(t.id)).map(chip).join('');
-                const inactiveChips = TAG_LIST.filter(t => disabled.includes(t.id)).map(chip).join('');
-                const sectionLabel = txt => `<div style="font-size:0.7rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin:4px 0 8px">${txt}</div>`;
                 headerHtml = subHeader('Tags');
-                bodyHtml = sectionLabel('Active')
-                    + `<div class="task-options">${activeChips || '<span style="color:#666;font-size:0.85rem">None</span>'}</div>`
-                    + `<div style="margin-top:16px">${sectionLabel('Inactive')}</div>`
-                    + `<div class="task-options">${inactiveChips || '<span style="color:#666;font-size:0.85rem">None</span>'}</div>`;
+                bodyHtml = buildTagsSettingsBody();
             } else {
                 headerHtml = popupHeader({ title: 'Settings', onClose: 'closeSettings()' });
                 bodyHtml = generalRows

@@ -127,32 +127,14 @@
             return { now, optional, later, done, morning: morningFiltered, bedtime: bedtimeFiltered, anytime: anytimeFiltered, reminders, timeOfDay };
         }
 
-        function renderHabits() {
-            const allHabits = loadHabits(), container = document.getElementById('habitsContainer');
-            // Filter out archived habits for main view
-            const habits = allHabits.filter(h => !h.archived);
-            // Preserve scroll position
-            const scrollY = window.scrollY;
-
-            if (!habits.length) {
-                container.innerHTML = '<div class="habits-section"><div class="empty-state"><div class="empty-state-icon">✨</div><div>No habits yet</div></div></div>';
-                return;
-            }
-
-            const cat = categorizeHabits(habits);
-
-            // An auto-complete target stays independent in its own slot
-            // until it's actually auto-completed (then categorizeHabits
-            // hides it via autoCompletedToday) — so it is NOT consumed here.
-            // Companion links still de-dup so the pair isn't drawn twice.
+        // A linked pair both point at each other; only one slot renders the
+        // pair. Returns the set of habit ids to drop from the visible lists:
+        //  - exactly one done today   → drop the done one (pending shows alone)
+        //  - both done / both pending → drop the higher id (lower renders pair)
+        function computeConsumedLinkedIds(habits, cat) {
             const consumedLinkedIds = new Set();
             const visibleIds = new Set();
             [cat.now, cat.optional, cat.later, cat.done].forEach(arr => arr.forEach(h => visibleIds.add(h.id)));
-            // Companion links: both partners point at each other.
-            // - If exactly one is completed today, drop the completed one so
-            //   only the still-pending partner shows (alone, no pair).
-            // - Otherwise (both done OR both pending), drop the higher-id
-            //   partner so the lower-id one renders the pair.
             habits.forEach(h => {
                 if (!visibleIds.has(h.id) || !h.linkedHabit) return;
                 const lid = Number(h.linkedHabit);
@@ -169,6 +151,26 @@
                     consumedLinkedIds.add(lid);
                 }
             });
+            return consumedLinkedIds;
+        }
+
+        function renderHabits() {
+            const allHabits = loadHabits(), container = document.getElementById('habitsContainer');
+            // Filter out archived habits for main view
+            const habits = allHabits.filter(h => !h.archived);
+            // Preserve scroll position
+            const scrollY = window.scrollY;
+
+            if (!habits.length) {
+                container.innerHTML = '<div class="habits-section"><div class="empty-state"><div class="empty-state-icon">✨</div><div>No habits yet</div></div></div>';
+                return;
+            }
+
+            const cat = categorizeHabits(habits);
+
+            // Auto-complete targets stay independent (NOT consumed here);
+            // companion links de-dup so a linked pair isn't drawn twice.
+            const consumedLinkedIds = computeConsumedLinkedIds(habits, cat);
             const drop = arr => arr.filter(h => !consumedLinkedIds.has(h.id));
             const nowHabits = drop(cat.now);
             const optionalHabits = drop(cat.optional);
@@ -268,74 +270,41 @@
         // Renders just the inner <div class="habit-icon">…</div> block — no wrapper.
         // opts.muted adds .linked-muted (used for the trailing icon of a linked
         // pair when it isn't due today).
-        function renderHabitIconInner(habit, isLater = false, isCompleted = false, opts = {}) {
-            const status = getCompletionStatus(habit);
-            const scoreData = calculateMomentumScore(habit);
-            const isReminder = habit.isReminder || habit.frequency.type === FREQ.REMINDER;
-            const hasHistory = !!(habit.lastScoreUpdate || habit.createdAt);
-
-            let neglectLevel = 0;
-            if (isReminder) {
-                const lastCompletion = getLastCompletionDate(habit);
-                const resetDate = habit.momentumResetDate;
-                const referenceDate = (lastCompletion && resetDate) ? (lastCompletion > resetDate ? lastCompletion : resetDate) :
-                                      (lastCompletion || resetDate);
-                if (referenceDate) {
-                    const freq = habit.frequency;
-                    let expectedCycle = 7;
-                    if (freq.reminderDays) expectedCycle = freq.reminderDays;
-                    else if (freq.everyXWeeks) expectedCycle = freq.everyXWeeks * 7;
-                    else if (freq.everyXMonths) expectedCycle = freq.everyXMonths * 30;
-                    else if (freq.everyXDays) expectedCycle = freq.everyXDays;
-
-                    // Neglect is counted from the reminder's last APPEARANCE
-                    // (referenceDate + one interval), not its last completion —
-                    // the dormant waiting period before it reappears is not
-                    // neglect. Each full interval ignored past reappearance is
-                    // one dot (so a daily reminder ignored for one day = 1 dot).
-                    const interval = expectedCycle || 1;
-                    const daysSince = daysBetween(referenceDate, getTodayString());
-                    const daysIgnored = daysSince - interval;
-                    neglectLevel = daysIgnored > 0 ? Math.min(3, Math.floor(daysIgnored / interval)) : 0;
-                }
-            } else {
-                neglectLevel = hasHistory && scoreData.display < 0 ? Math.min(3, Math.abs(scoreData.display)) : 0;
+        // Number of neglect dots (0-3) to draw on a habit's ring. For
+        // reminders this is full intervals ignored past reappearance; for
+        // everything else it tracks how negative the momentum score is.
+        function computeNeglectLevel(habit, isReminder, hasHistory, scoreData) {
+            if (!isReminder) {
+                return hasHistory && scoreData.display < 0 ? Math.min(3, Math.abs(scoreData.display)) : 0;
             }
-            const icon = habit.icon || '📌';
+            const lastCompletion = getLastCompletionDate(habit);
+            const resetDate = habit.momentumResetDate;
+            const referenceDate = (lastCompletion && resetDate) ? (lastCompletion > resetDate ? lastCompletion : resetDate) :
+                                  (lastCompletion || resetDate);
+            if (!referenceDate) return 0;
+            const freq = habit.frequency;
+            let expectedCycle = 7;
+            if (freq.reminderDays) expectedCycle = freq.reminderDays;
+            else if (freq.everyXWeeks) expectedCycle = freq.everyXWeeks * 7;
+            else if (freq.everyXMonths) expectedCycle = freq.everyXMonths * 30;
+            else if (freq.everyXDays) expectedCycle = freq.everyXDays;
 
+            // Neglect is counted from the reminder's last APPEARANCE
+            // (referenceDate + one interval), not its last completion — the
+            // dormant waiting period before it reappears is not neglect. Each
+            // full interval ignored past reappearance is one dot (so a daily
+            // reminder ignored for one day = 1 dot).
+            const interval = expectedCycle || 1;
+            const daysSince = daysBetween(referenceDate, getTodayString());
+            const daysIgnored = daysSince - interval;
+            return daysIgnored > 0 ? Math.min(3, Math.floor(daysIgnored / interval)) : 0;
+        }
+
+        // Ring fill (progress %) and ring CSS class for a non-twice-daily
+        // habit, derived from completion status / subtask progress / points.
+        function computeRingState(habit, status, isCompleted, hasSubtasks, subtaskPct, allSubtasksDone) {
             let progress = '0%';
             let ringClass = '';
-
-            const isPointsBased = habit.frequency.type === FREQ.POINTS_PER_DAY || habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH;
-            const leftClick = isCompleted ? `openDetails(${habit.id})` : (isPointsBased ? `openPointsPopup(${habit.id})` : `completeHabit(${habit.id})`);
-            const rightClick = `event.preventDefault();openDetails(${habit.id})`;
-            const mutedClass = opts.muted ? ' linked-muted' : '';
-
-            const neglectDots = neglectLevel > 0 ?
-                `<div class="neglect-dots">${'<div class="neglect-dot"></div>'.repeat(neglectLevel)}</div>` : '';
-
-            if (habit.frequency.type === FREQ.TWICE_DAILY) {
-                const bothDone = status.morningDone && status.nightDone;
-                const twiceDailyHasSubtasks = habit.subtasks && habit.subtasks.length > 0;
-                const twiceDailyHasConfirm = !!(habit.confirmDescription && habit.description);
-                const twiceDailyExtraIndicator = (twiceDailyHasSubtasks || twiceDailyHasConfirm) ? '<div class="extra-indicator"></div>' : '';
-                return `<div class="habit-icon${mutedClass}" data-habit-id="${habit.id}" onclick="${bothDone ? `openDetails(${habit.id})` : `completeTwiceDaily(${habit.id})`}" oncontextmenu="${rightClick}">
-                    <div class="habit-ring split ${bothDone ? 'completed' : ''}">
-                        <div class="half-fill left ${status.morningDone ? 'filled' : ''}"></div>
-                        <div class="half-fill right ${status.nightDone ? 'filled' : ''}"></div>
-                        <div class="divider"></div>
-                        <span class="habit-emoji">${icon}</span>
-                        ${neglectDots}
-                        ${twiceDailyExtraIndicator}
-                    </div>
-                </div>`;
-            }
-
-            const subtaskProgress = getSubtaskProgress(habit);
-            const hasSubtasks = subtaskProgress && subtaskProgress.total > 0;
-            const subtaskPct = hasSubtasks ? Math.round((subtaskProgress.completed / subtaskProgress.total) * 100) : 0;
-            const allSubtasksDone = hasSubtasks && subtaskProgress.completed === subtaskProgress.total;
-
             if (isCompleted) {
                 const today = getTodayString();
                 const completedToday = habit.completions.some(c => c.date === today);
@@ -377,6 +346,49 @@
             } else {
                 progress = '0%';
             }
+            return { progress, ringClass };
+        }
+
+        function renderHabitIconInner(habit, isLater = false, isCompleted = false, opts = {}) {
+            const status = getCompletionStatus(habit);
+            const scoreData = calculateMomentumScore(habit);
+            const isReminder = habit.isReminder || habit.frequency.type === FREQ.REMINDER;
+            const hasHistory = !!(habit.lastScoreUpdate || habit.createdAt);
+
+            const neglectLevel = computeNeglectLevel(habit, isReminder, hasHistory, scoreData);
+            const icon = habit.icon || '📌';
+
+            const isPointsBased = habit.frequency.type === FREQ.POINTS_PER_DAY || habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH;
+            const leftClick = isCompleted ? `openDetails(${habit.id})` : (isPointsBased ? `openPointsPopup(${habit.id})` : `completeHabit(${habit.id})`);
+            const rightClick = `event.preventDefault();openDetails(${habit.id})`;
+            const mutedClass = opts.muted ? ' linked-muted' : '';
+
+            const neglectDots = neglectLevel > 0 ?
+                `<div class="neglect-dots">${'<div class="neglect-dot"></div>'.repeat(neglectLevel)}</div>` : '';
+
+            if (habit.frequency.type === FREQ.TWICE_DAILY) {
+                const bothDone = status.morningDone && status.nightDone;
+                const twiceDailyHasSubtasks = habit.subtasks && habit.subtasks.length > 0;
+                const twiceDailyHasConfirm = !!(habit.confirmDescription && habit.description);
+                const twiceDailyExtraIndicator = (twiceDailyHasSubtasks || twiceDailyHasConfirm) ? '<div class="extra-indicator"></div>' : '';
+                return `<div class="habit-icon${mutedClass}" data-habit-id="${habit.id}" onclick="${bothDone ? `openDetails(${habit.id})` : `completeTwiceDaily(${habit.id})`}" oncontextmenu="${rightClick}">
+                    <div class="habit-ring split ${bothDone ? 'completed' : ''}">
+                        <div class="half-fill left ${status.morningDone ? 'filled' : ''}"></div>
+                        <div class="half-fill right ${status.nightDone ? 'filled' : ''}"></div>
+                        <div class="divider"></div>
+                        <span class="habit-emoji">${icon}</span>
+                        ${neglectDots}
+                        ${twiceDailyExtraIndicator}
+                    </div>
+                </div>`;
+            }
+
+            const subtaskProgress = getSubtaskProgress(habit);
+            const hasSubtasks = subtaskProgress && subtaskProgress.total > 0;
+            const subtaskPct = hasSubtasks ? Math.round((subtaskProgress.completed / subtaskProgress.total) * 100) : 0;
+            const allSubtasksDone = hasSubtasks && subtaskProgress.completed === subtaskProgress.total;
+
+            const { progress, ringClass } = computeRingState(habit, status, isCompleted, hasSubtasks, subtaskPct, allSubtasksDone);
 
             // Grey dot = "tapping Complete opens a popup first": subtasks,
             // points entry, or a confirm-description prompt.
@@ -1083,6 +1095,88 @@
             closeDetails();
         }
 
+        // Status pill text + color for the details view (snoozed / done /
+        // optional / later / reappears-on / ready). Pure given the habit
+        // and today's date string.
+        function computeHabitStatus(habit, today) {
+            let habitStatus = '';
+            let statusColor = '#3b82f6'; // Default blue for Ready
+
+            if (habit.snoozedUntil === 'night') {
+                habitStatus = 'Snoozed until tonight';
+                statusColor = '#f59e0b';
+            } else if (habit.snoozedUntil && habit.snoozedUntil > today) {
+                // Show time-until (rounded days/weeks/months), not the date.
+                const d = Math.max(1, daysBetween(today, habit.snoozedUntil));
+                if (d === 1) {
+                    habitStatus = 'Snoozed until tomorrow';
+                } else if (d < 7) {
+                    habitStatus = `Snoozed for ${d} days`;
+                } else if (d < 30) {
+                    const w = Math.round(d / 7);
+                    habitStatus = `Snoozed for ${w} week${w !== 1 ? 's' : ''}`;
+                } else {
+                    const m = Math.round(d / 30);
+                    habitStatus = `Snoozed for ${m} month${m !== 1 ? 's' : ''}`;
+                }
+                statusColor = '#f59e0b';
+            } else if (isCompletedToday(habit)) {
+                habitStatus = 'Done';
+                statusColor = '#22c55e';
+            } else if (isOptional(habit)) {
+                habitStatus = 'Optional';
+                statusColor = '#a855f7';
+            } else if (habit.timeOfDay === 'night' && getTimeOfDayNow() === 'morning') {
+                habitStatus = 'Later (bedtime)';
+                statusColor = '#888';
+            } else if (habit.frequency.type === FREQ.TWICE_DAILY) {
+                const twiceStatus = getCompletionStatus(habit);
+                if (twiceStatus.morningDone && !twiceStatus.nightDone) {
+                    if (getTimeOfDayNow() === 'morning') {
+                        habitStatus = 'Later (bedtime)';
+                        statusColor = '#888';
+                    } else {
+                        habitStatus = 'Ready';
+                    }
+                } else {
+                    habitStatus = 'Ready';
+                }
+            } else if (habit.frequency.type === FREQ.EVERY_X_DAYS || habit.frequency.type === FREQ.REMINDER) {
+                const lastCompletion = getLastCompletionDate(habit);
+                if (lastCompletion) {
+                    let intervalDays;
+                    if (habit.frequency.everyXWeeks) intervalDays = habit.frequency.everyXWeeks * 7;
+                    else if (habit.frequency.everyXMonths) intervalDays = habit.frequency.everyXMonths * 30;
+                    else intervalDays = habit.frequency.everyXDays || habit.frequency.reminderDays || 2;
+
+                    const lastDate = new Date(lastCompletion + 'T00:00:00');
+                    const nextDueDate = new Date(lastDate);
+                    nextDueDate.setDate(nextDueDate.getDate() + intervalDays);
+                    const nextDueStr = nextDueDate.toISOString().split('T')[0];
+
+                    if (nextDueStr > today) {
+                        const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+                        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+                        if (nextDueStr === tomorrowStr) {
+                            habitStatus = 'Reappears tomorrow';
+                        } else {
+                            habitStatus = `Reappears ${nextDueDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`;
+                        }
+                        statusColor = '#888';
+                    } else {
+                        habitStatus = 'Ready';
+                    }
+                } else {
+                    habitStatus = 'Ready';
+                }
+            } else if (canDoNow(habit)) {
+                habitStatus = 'Ready';
+            } else {
+                habitStatus = 'Ready';
+            }
+            return { habitStatus, statusColor };
+        }
+
         function renderDetails() {
             const habit = loadHabits().find(h => h.id === selectedHabitId);
             if (!habit) return;
@@ -1126,82 +1220,7 @@
                 const isSnoozed = habit.snoozedUntil && (habit.snoozedUntil === 'night' || habit.snoozedUntil > today);
                 const canSnooze = !isSnoozed && !isCompletedToday(habit);
 
-                // Determine habit status
-                let habitStatus = '';
-                let statusColor = '#3b82f6'; // Default blue for Ready
-
-                if (habit.snoozedUntil === 'night') {
-                    habitStatus = 'Snoozed until tonight';
-                    statusColor = '#f59e0b';
-                } else if (habit.snoozedUntil && habit.snoozedUntil > today) {
-                    // Show time-until (rounded days/weeks/months), not the date.
-                    const d = Math.max(1, daysBetween(today, habit.snoozedUntil));
-                    if (d === 1) {
-                        habitStatus = 'Snoozed until tomorrow';
-                    } else if (d < 7) {
-                        habitStatus = `Snoozed for ${d} days`;
-                    } else if (d < 30) {
-                        const w = Math.round(d / 7);
-                        habitStatus = `Snoozed for ${w} week${w !== 1 ? 's' : ''}`;
-                    } else {
-                        const m = Math.round(d / 30);
-                        habitStatus = `Snoozed for ${m} month${m !== 1 ? 's' : ''}`;
-                    }
-                    statusColor = '#f59e0b';
-                } else if (isCompletedToday(habit)) {
-                    habitStatus = 'Done';
-                    statusColor = '#22c55e';
-                } else if (isOptional(habit)) {
-                    habitStatus = 'Optional';
-                    statusColor = '#a855f7';
-                } else if (habit.timeOfDay === 'night' && getTimeOfDayNow() === 'morning') {
-                    habitStatus = 'Later (bedtime)';
-                    statusColor = '#888';
-                } else if (habit.frequency.type === FREQ.TWICE_DAILY) {
-                    const twiceStatus = getCompletionStatus(habit);
-                    if (twiceStatus.morningDone && !twiceStatus.nightDone) {
-                        if (getTimeOfDayNow() === 'morning') {
-                            habitStatus = 'Later (bedtime)';
-                            statusColor = '#888';
-                        } else {
-                            habitStatus = 'Ready';
-                        }
-                    } else {
-                        habitStatus = 'Ready';
-                    }
-                } else if (habit.frequency.type === FREQ.EVERY_X_DAYS || habit.frequency.type === FREQ.REMINDER) {
-                    const lastCompletion = getLastCompletionDate(habit);
-                    if (lastCompletion) {
-                        let intervalDays;
-                        if (habit.frequency.everyXWeeks) intervalDays = habit.frequency.everyXWeeks * 7;
-                        else if (habit.frequency.everyXMonths) intervalDays = habit.frequency.everyXMonths * 30;
-                        else intervalDays = habit.frequency.everyXDays || habit.frequency.reminderDays || 2;
-
-                        const lastDate = new Date(lastCompletion + 'T00:00:00');
-                        const nextDueDate = new Date(lastDate);
-                        nextDueDate.setDate(nextDueDate.getDate() + intervalDays);
-                        const nextDueStr = nextDueDate.toISOString().split('T')[0];
-
-                        if (nextDueStr > today) {
-                            const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-                            const tomorrowStr = tomorrow.toISOString().split('T')[0];
-                            if (nextDueStr === tomorrowStr) {
-                                habitStatus = 'Reappears tomorrow';
-                            } else {
-                                habitStatus = `Reappears ${nextDueDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`;
-                            }
-                            statusColor = '#888';
-                        } else {
-                            habitStatus = 'Ready';
-                        }
-                    } else {
-                        habitStatus = 'Ready';
-                    }
-                } else if (canDoNow(habit)) {
-                    habitStatus = 'Ready';
-                } else {
-                    habitStatus = 'Ready';
-                }
+                const { habitStatus, statusColor } = computeHabitStatus(habit, today);
 
                 // Build "after completion" label dynamically
                 const afterLabel = habit.frequency.everyXWeeks ? `${habit.frequency.everyXWeeks} weeks after` :
