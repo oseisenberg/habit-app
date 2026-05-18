@@ -97,12 +97,10 @@
             // isNegative: false,                   // negative habit (track avoiding)
             noMomentum: false,                   // never track momentum (always neutral)
             confirmDescription: false,           // show description popup before completing
-            // --- DISABLED: auto-complete feature (kept commented for future re-enable) ---
-            // autoCompletes: '',                   // habit ID to auto-complete when this is done
-            // showAutoCompletes: false,            // show auto-completes field
-            // --- DISABLED: linked-habit (companion) feature ---
-            // linkedHabit: '',                     // habit ID of a companion habit (visual link only, bidirectional, no auto-completion)
-            // showLinkedHabit: false,              // show linked-habit field
+            autoCompletes: '',                   // habit ID to auto-complete when this is done
+            showAutoCompletes: false,            // show auto-completes field
+            linkedHabit: '',                     // habit ID of a companion habit (visual link only, bidirectional, no auto-completion)
+            showLinkedHabit: false,              // show linked-habit field
             conflictsWith: '',                   // habit ID this conflicts with: hidden on days that habit is due
             showConflictsWith: false,            // show conflicts-with field
             sequentialSubtasks: false,           // subtasks must be completed in order; popup shows "Complete Next" instead of "Complete All"
@@ -137,12 +135,10 @@
             // formState.isNegative = false;
             formState.noMomentum = false;
             formState.confirmDescription = false;
-            // --- DISABLED: auto-complete feature ---
-            // formState.autoCompletes = '';
-            // formState.showAutoCompletes = false;
-            // --- DISABLED: linked-habit feature ---
-            // formState.linkedHabit = '';
-            // formState.showLinkedHabit = false;
+            formState.autoCompletes = '';
+            formState.showAutoCompletes = false;
+            formState.linkedHabit = '';
+            formState.showLinkedHabit = false;
             formState.conflictsWith = '';
             formState.showConflictsWith = false;
             formState.sequentialSubtasks = false;
@@ -197,12 +193,10 @@
             // formState.isNegative = habit.isNegative || false;
             formState.noMomentum = habit.noMomentum || false;
             formState.confirmDescription = habit.confirmDescription || false;
-            // --- DISABLED: auto-complete feature ---
-            // formState.autoCompletes = habit.autoCompletes || '';
-            // formState.showAutoCompletes = !!habit.autoCompletes;
-            // --- DISABLED: linked-habit feature ---
-            // formState.linkedHabit = habit.linkedHabit || '';
-            // formState.showLinkedHabit = !!habit.linkedHabit;
+            formState.autoCompletes = habit.autoCompletes || '';
+            formState.showAutoCompletes = !!habit.autoCompletes;
+            formState.linkedHabit = habit.linkedHabit || '';
+            formState.showLinkedHabit = !!habit.linkedHabit;
             formState.conflictsWith = habit.conflictsWith || '';
             formState.showConflictsWith = !!habit.conflictsWith;
             formState.sequentialSubtasks = !!habit.sequentialSubtasks;
@@ -391,6 +385,8 @@
                                 { id: 'desc',        label: 'Description',   active: state.showDescription,     domId: isEdit ? 'editDescPill' : 'descPill',                   onclick: 'toggleFormDescription()',       usage: count(h => !!h.description) },
                                 { id: 'noMomentum',  label: 'Untracked',   active: state.noMomentum,          domId: isEdit ? 'editNoMomentumPill' : 'noMomentumPill',       onclick: 'toggleFormNoMomentum()',        usage: count(h => h.noMomentum) },
                                 { id: 'conflicts',   label: 'Conflicts',     active: state.showConflictsWith,   domId: isEdit ? 'editConflictsPill' : 'conflictsPill',         onclick: 'toggleFormConflictsWith()',     usage: count(h => !!h.conflictsWith) },
+                                { id: 'autoComplete', label: 'Auto-complete', active: state.showAutoCompletes,   domId: isEdit ? 'editAutoCompletePill' : 'autoCompletePill',   onclick: 'toggleFormAutoCompletes()',     usage: count(h => !!h.autoCompletes) },
+                                { id: 'linkedHabit',  label: 'Linked',        active: state.showLinkedHabit,     domId: isEdit ? 'editLinkedPill' : 'linkedPill',               onclick: 'toggleFormLinkedHabit()',       usage: count(h => !!h.linkedHabit) },
                             ].filter(p => !(getSettings().disabledTags || []).includes(p.id));
 
                             // Render every pill with its usage as data so the
@@ -423,7 +419,7 @@
                     </label>
                     <textarea class="form-input" id="${isEdit ? 'editHabitDesc' : 'habitDesc'}" placeholder="Add a description..." rows="2" style="resize:none;font-size:0.85rem">${habitDesc}</textarea>
                 </div>` : ''}
-                ${false /* DISABLED: auto-complete feature */ && state.showAutoCompletes ? `<div class="form-group">
+                ${state.showAutoCompletes ? `<div class="form-group">
                     <label class="form-label">Auto-completes another habit</label>
                     <select class="form-input" id="${isEdit ? 'editAutoCompletes' : 'autoCompletes'}" style="font-size:0.85rem">
                         <option value="">None</option>
@@ -432,7 +428,7 @@
                         ).join('')}
                     </select>
                 </div>` : ''}
-                ${false /* DISABLED: linked-habit feature */ && state.showLinkedHabit ? `<div class="form-group">
+                ${state.showLinkedHabit ? `<div class="form-group">
                     <label class="form-label">Linked with (often done together)</label>
                     <select class="form-input" id="${isEdit ? 'editLinkedHabit' : 'linkedHabit'}" style="font-size:0.85rem">
                         <option value="">None</option>
@@ -504,12 +500,10 @@
 
             // Save number input values before re-rendering
             const isEdit = formMode === 'edit';
-            // --- DISABLED: auto-complete feature ---
-            // const autoCompletesSelect = document.getElementById(isEdit ? 'editAutoCompletes' : 'autoCompletes');
-            // if (autoCompletesSelect) formState.autoCompletes = autoCompletesSelect.value;
-            // --- DISABLED: linked-habit feature ---
-            // const linkedHabitSelect = document.getElementById(isEdit ? 'editLinkedHabit' : 'linkedHabit');
-            // if (linkedHabitSelect) formState.linkedHabit = linkedHabitSelect.value;
+            const autoCompletesSelect = document.getElementById(isEdit ? 'editAutoCompletes' : 'autoCompletes');
+            if (autoCompletesSelect) formState.autoCompletes = autoCompletesSelect.value;
+            const linkedHabitSelect = document.getElementById(isEdit ? 'editLinkedHabit' : 'linkedHabit');
+            if (linkedHabitSelect) formState.linkedHabit = linkedHabitSelect.value;
             const conflictsWithSelect = document.getElementById(isEdit ? 'editConflictsWith' : 'conflictsWith');
             if (conflictsWithSelect) formState.conflictsWith = conflictsWithSelect.value;
             const everyXInput = document.getElementById(isEdit ? 'editEveryXPeriod' : 'everyXPeriod');
@@ -614,17 +608,15 @@
             rerenderForm();
         }
 
-        // --- DISABLED: auto-complete feature (kept for future re-enable) ---
-        // function toggleFormAutoCompletes() {
-        //     formState.showAutoCompletes = !formState.showAutoCompletes;
-        //     rerenderForm();
-        // }
+        function toggleFormAutoCompletes() {
+            formState.showAutoCompletes = !formState.showAutoCompletes;
+            rerenderForm();
+        }
 
-        // --- DISABLED: linked-habit feature (kept for future re-enable) ---
-        // function toggleFormLinkedHabit() {
-        //     formState.showLinkedHabit = !formState.showLinkedHabit;
-        //     rerenderForm();
-        // }
+        function toggleFormLinkedHabit() {
+            formState.showLinkedHabit = !formState.showLinkedHabit;
+            rerenderForm();
+        }
 
         function toggleFormConflictsWith() {
             formState.showConflictsWith = !formState.showConflictsWith;
@@ -705,6 +697,8 @@
             { id: 'desc',       label: 'Description' },
             { id: 'noMomentum', label: 'Untracked' },
             { id: 'conflicts',  label: 'Conflicts' },
+            { id: 'autoComplete', label: 'Auto-complete' },
+            { id: 'linkedHabit',  label: 'Linked' },
         ];
 
         const TAG_GLOSSARY = [
@@ -714,6 +708,8 @@
             { label: 'Description',   desc: 'Attach freeform notes that show on the details page.' },
             { label: 'Untracked',   desc: 'Never tracks momentum — always neutral, no reward or penalty for skipping. Good for scheduled treats. Still appears on its normal cadence like any habit.' },
             { label: 'Conflicts',     desc: 'Hide this habit on any day the chosen habit is due (e.g. skip serum on shampoo days). One-way; momentum is not penalized for those days.' },
+            { label: 'Auto-complete', desc: 'Completing this habit also marks another chosen habit done for the day (one-way). Off by default — enable in Settings → Tags.' },
+            { label: 'Linked',        desc: 'Visually pair this habit with a companion you usually do together (bidirectional, no auto-completion). Off by default — enable in Settings → Tags.' },
         ];
 
         function openTagGlossary() {
@@ -744,11 +740,7 @@
         // B, B's link is set to A — and any previous partner of either is
         // cleared so we never end up with a triangle. Mutates `habits` in
         // place; caller is responsible for saveHabits().
-        // --- DISABLED: linked-habit feature. Stubbed to a no-op; original
-        // bidirectional-sync body kept below for future re-enable. ---
         function syncLinkedHabit(habits, habitId, newLinkedRaw) {
-            return;
-            /*
             const habit = habits.find(h => h.id === habitId);
             if (!habit) return;
             const newLinkedId = Number(newLinkedRaw) || null;
@@ -781,7 +773,6 @@
                     newPartner.linkedHabit = habitId;
                 }
             }
-            */
         }
 
         function toggleFormSubtasks() {
@@ -872,7 +863,7 @@
                 weeklySummaryEnabled: false,
                 separateBedtimeSection: true,
                 showDebug: false,
-                disabledTags: []
+                disabledTags: ['autoComplete', 'linkedHabit']
             };
             try {
                 const s = localStorage.getItem('habit_settings');
@@ -1143,16 +1134,16 @@
                         }
                     });
                 }
-                // --- DISABLED: auto-complete feature. Cascade undo of a
-                // linked target kept commented for future re-enable. ---
-                // if (habit.autoCompletes) {
-                //     const linkedId = Number(habit.autoCompletes);
-                //     const linked = habits.find(h => h.id === linkedId);
-                //     if (linked && linked.autoCompletedToday === lastCompletion.date) {
-                //         linked.completions = linked.completions.filter(c => !(c.date === lastCompletion.date && c.autoCompleted));
-                //         delete linked.autoCompletedToday;
-                //     }
-                // }
+                // Cascade: if this completion auto-completed a linked target,
+                // un-mark the linked target too.
+                if (habit.autoCompletes) {
+                    const linkedId = Number(habit.autoCompletes);
+                    const linked = habits.find(h => h.id === linkedId);
+                    if (linked && linked.autoCompletedToday === lastCompletion.date) {
+                        linked.completions = linked.completions.filter(c => !(c.date === lastCompletion.date && c.autoCompleted));
+                        delete linked.autoCompletedToday;
+                    }
+                }
             } else if (lastCompletion.type === 'subtask' && lastCompletion.subtaskId) {
                 const subtask = habit.subtasks?.find(s => s.id === lastCompletion.subtaskId);
                 if (subtask && subtask.completedPeriods) {
@@ -2183,17 +2174,15 @@
                 // isNegative: formState.isNegative,
                 noMomentum: formState.noMomentum,
                 confirmDescription: formState.confirmDescription,
-                // --- DISABLED: auto-complete & linked-habit features ---
-                // autoCompletes: document.getElementById('autoCompletes')?.value.trim() || '',
-                // linkedHabit: '',
+                autoCompletes: document.getElementById('autoCompletes')?.value.trim() || '',
+                linkedHabit: '',
                 conflictsWith: document.getElementById('conflictsWith')?.value.trim() || '',
                 sequentialSubtasks: formState.sequentialSubtasks,
                 completions: [], skippedDates: [], snoozedUntil: null, subtasks: [...newHabitSubtasks], createdAt: getTodayString()
             });
-            // --- DISABLED: linked-habit feature ---
-            // const newId = habits[habits.length - 1].id;
-            // const linkedRaw = document.getElementById('linkedHabit')?.value.trim() || '';
-            // if (linkedRaw) syncLinkedHabit(habits, newId, linkedRaw);
+            const newId = habits[habits.length - 1].id;
+            const linkedRaw = document.getElementById('linkedHabit')?.value.trim() || '';
+            if (linkedRaw) syncLinkedHabit(habits, newId, linkedRaw);
             saveHabits(habits);
             closeModal();
             renderHabits();
@@ -2202,11 +2191,10 @@
         function deleteHabit(id) {
             confirmDialog({ title: 'Delete habit?', message: 'This permanently removes the habit and all its history.', confirmLabel: 'Delete', danger: true, onConfirm: () => {
                 const habits = loadHabits().filter(h => h.id !== id);
-                // --- DISABLED: linked-habit feature. Back-reference cleanup
-                // kept commented for future re-enable. ---
-                // habits.forEach(h => {
-                //     if (Number(h.linkedHabit) === id) h.linkedHabit = '';
-                // });
+                // Clear any companion back-references to the deleted habit.
+                habits.forEach(h => {
+                    if (Number(h.linkedHabit) === id) h.linkedHabit = '';
+                });
                 saveHabits(habits);
                 closeDetails();
                 renderHabits();
@@ -2859,8 +2847,7 @@
                 habit.snoozedUntil = null;
                 delete habit.snoozedUntilPeriod;
                 habit.snoozeHistory = [];
-                // --- DISABLED: auto-complete feature ---
-                // delete habit.autoCompletedToday;
+                delete habit.autoCompletedToday;
                 if (habit.subtasks) {
                     habit.subtasks.forEach(s => { s.completedPeriods = {}; });
                 }
@@ -3017,13 +3004,9 @@
             doCompleteHabit(id, period);
         }
 
-        // --- DISABLED: auto-complete feature. Stubbed to a no-op; original
-        // body kept below for future re-enable. If `habit` has an
-        // autoCompletes link, it marked the linked habit complete for today
-        // (and hid it via autoCompletedToday). ---
+        // If `habit` has an autoCompletes link, mark the linked habit
+        // complete for today (and hide it via autoCompletedToday).
         function triggerAutoComplete(habits, habit) {
-            return;
-            /*
             if (!habit.autoCompletes) return;
             const today = getTodayString();
             const autoId = Number(habit.autoCompletes);
@@ -3038,7 +3021,6 @@
                 linkedHabit.snoozedUntil = null;
                 delete linkedHabit.snoozedUntilPeriod;
             }
-            */
         }
 
         // Record a habit completion driven by finishing its subtasks.
@@ -3056,8 +3038,7 @@
             habit.lastScoreUpdate = today;
             lastCompletion = { habitId: habit.id, date: today, period: period || null, timestamp, type: 'complete', resetSubtasks: true, periodKey };
             showUndoToast();
-            // --- DISABLED: auto-complete feature ---
-            // if (isCompletedToday(habit)) triggerAutoComplete(habits, habit);
+            if (isCompletedToday(habit)) triggerAutoComplete(habits, habit);
         }
 
         function doCompleteHabit(id, period = null, skipSubtaskCheck = false) {
@@ -3103,8 +3084,7 @@
                     habit.momentumScore = 0;
                 }
 
-                // --- DISABLED: auto-complete feature ---
-                // triggerAutoComplete(habits, habit);
+                triggerAutoComplete(habits, habit);
             }
             saveHabits(habits);
             renderHabits();
@@ -3355,9 +3335,8 @@
                     if (h.snoozedUntil !== PERIOD.NIGHT && h.snoozedUntil > today) return;
                 }
 
-                // --- DISABLED: auto-complete feature ---
                 // Hide habits that were auto-completed today by another habit
-                // if (h.autoCompletedToday === today) return;
+                if (h.autoCompletedToday === today) return;
 
                 // Hide habits suppressed today by a "Conflicts with" partner
                 if (isConflictSuppressed(h)) return;
@@ -3437,17 +3416,12 @@
 
             const cat = categorizeHabits(habits);
 
-            // --- DISABLED: auto-complete & linked-habit features. The
-            // connected-pair rendering / bucket de-duplication is kept
-            // commented for future re-enable. consumedLinkedIds stays an
-            // empty Set so drop() is now an identity filter. ---
-            const consumedLinkedIds = new Set();
-            /*
             // A habit with autoCompletes renders inline as a connected pair
             // (see renderHabitIcon), so filter the linked target out of every
             // bucket to avoid drawing it twice. Only consume the target if
             // its trigger habit is actually visible somewhere — otherwise a
             // snoozed/skipped trigger would silently hide the target too.
+            const consumedLinkedIds = new Set();
             const visibleIds = new Set();
             [cat.now, cat.optional, cat.later, cat.done].forEach(arr => arr.forEach(h => visibleIds.add(h.id)));
             habits.forEach(h => {
@@ -3476,7 +3450,6 @@
                     consumedLinkedIds.add(lid);
                 }
             });
-            */
             const drop = arr => arr.filter(h => !consumedLinkedIds.has(h.id));
             const nowHabits = drop(cat.now);
             const optionalHabits = drop(cat.optional);
@@ -3711,10 +3684,6 @@
         }
 
         function renderHabitIcon(habit, isLater = false, isCompleted = false) {
-            // --- DISABLED: auto-complete & linked-habit features. The
-            // connected-pair rendering is kept commented for future
-            // re-enable; habits now always render as a single icon. ---
-            /*
             // If this habit auto-completes another, render them as a connected
             // pair (icon — line — icon) sharing one 2-column wrapper. The
             // linked target is shown muted when it isn't due today, but the
@@ -3753,7 +3722,6 @@
                     }
                 }
             }
-            */
 
             return `<div class="habit-icon-wrapper">${renderHabitIconInner(habit, isLater, isCompleted)}</div>`;
         }
@@ -3792,11 +3760,11 @@
                 hapticFeedback();
                 lastCompletion = { habitId: id, date: today, period, timestamp, type: 'complete' };
                 showUndoToast();
-                // --- DISABLED: auto-complete feature. Fired only once the
-                // habit was fully done for the day (both morning AND night). ---
-                // const fullyDone = habit.completions.some(c => c.date === today && c.period === PERIOD.MORNING)
-                //     && habit.completions.some(c => c.date === today && c.period === PERIOD.NIGHT);
-                // if (fullyDone) triggerAutoComplete(habits, habit);
+                // Fire auto-complete only once the habit is fully done for
+                // the day (both morning AND night).
+                const fullyDone = habit.completions.some(c => c.date === today && c.period === PERIOD.MORNING)
+                    && habit.completions.some(c => c.date === today && c.period === PERIOD.NIGHT);
+                if (fullyDone) triggerAutoComplete(habits, habit);
             }
             saveHabits(habits);
             renderHabits();
@@ -3946,12 +3914,9 @@
             return popupSection('Description', `<div style="color:#aaa;font-size:0.85rem;line-height:1.4;border:1px solid #2a2a3e;border-radius:8px;padding:10px 12px;background:rgba(255,255,255,0.02)">${formatDescription(habit.description)}</div>`);
         }
 
-        // --- DISABLED: auto-complete feature. Stubbed to return ''; original
-        // body (info about a habit's auto-completed partner shown in the
-        // trigger's completion popup) kept below for future re-enable. ---
+        // Info about a habit's auto-completed partner, shown in the
+        // trigger's completion popup.
         function linkedAutoInfoHtml(habit) {
-            return '';
-            /*
             if (!habit.autoCompletes) return '';
             const cid = Number(habit.autoCompletes);
             const linked = loadHabits().find(h =>
@@ -3971,7 +3936,6 @@
                 inner += `<div style="margin-top:6px;color:#aaa;font-size:0.8rem;line-height:1.4">${formatDescription(linked.description)}</div>`;
             }
             return popupSection('Also completes', inner);
-            */
         }
 
         function renderChecklistPopup(targetId, { icon, title, onClose, items, marker, footer, preamble }) {
@@ -4196,8 +4160,7 @@
             // Boost momentum based on points
             boostMomentumScore(habit, points);
 
-            // --- DISABLED: auto-complete feature ---
-            // if (!wasCompleted && isCompletedToday(habit)) triggerAutoComplete(habits, habit);
+            if (!wasCompleted && isCompletedToday(habit)) triggerAutoComplete(habits, habit);
 
             saveHabits(habits);
             closePointsPopup();
@@ -4407,14 +4370,12 @@
             // Save confirm description flag
             habit.confirmDescription = formState.confirmDescription;
 
-            // --- DISABLED: auto-complete feature ---
             // Save auto-completes
-            // habit.autoCompletes = document.getElementById('editAutoCompletes')?.value.trim() || '';
+            habit.autoCompletes = document.getElementById('editAutoCompletes')?.value.trim() || '';
 
-            // --- DISABLED: linked-habit feature ---
             // Save linked-habit (bidirectional companion)
-            // const linkedRaw = document.getElementById('editLinkedHabit')?.value.trim() || '';
-            // syncLinkedHabit(habits, habit.id, linkedRaw);
+            const linkedRaw = document.getElementById('editLinkedHabit')?.value.trim() || '';
+            syncLinkedHabit(habits, habit.id, linkedRaw);
 
             // Save conflicts-with (one-directional: hide on days that habit is due)
             habit.conflictsWith = document.getElementById('editConflictsWith')?.value.trim() || '';

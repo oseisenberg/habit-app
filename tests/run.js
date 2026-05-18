@@ -280,30 +280,38 @@ console.log('\nH. Daily×N delay-after-completion');
       { completed: true }), false);
 }
 
-// === I. Disabled features stay inert (guards intentional removal) =====
-console.log('\nI. auto-complete & linked-habit disabled');
+// === I. auto-complete & linked-habit re-enabled, inactive by default ==
+console.log('\nI. auto-complete & linked-habit (re-enabled, opt-in)');
 {
+  // Inactive by default: both tags start in disabledTags so they don't
+  // appear as form pills until enabled in Settings → Tags. (The harness
+  // settings record has no disabledTags key, so the default applies.)
+  const dt = F.getSettings().disabledTags || [];
+  ok('autoComplete disabled by default', dt.includes('autoComplete'), dt);
+  ok('linkedHabit disabled by default', dt.includes('linkedHabit'), dt);
   const defs = F.getDefaultHabits();
   eq('no seed habit carries autoCompletes', defs.some(h => 'autoCompletes' in h), false);
   eq('no seed habit carries linkedHabit', defs.some(h => 'linkedHabit' in h), false);
 
-  // triggerAutoComplete must be a no-op: trigger A (autoCompletes -> 20),
-  // B(id 20) is due, yet B must gain no completion / hidden flag.
+  // triggerAutoComplete works: A(autoCompletes -> 20) marks B done today.
   const A = mkHabit({ id: 10, name: 'Trigger', frequency: { type: 'everyXDays', everyXDays: 2 }, autoCompletes: '20' });
   const B = mkHabit({ id: 20, name: 'Target', frequency: { type: 'everyXDays', everyXDays: 2 }, completions: [{ date: dayOff(-5) }] });
   const arr = [A, B];
   seed(arr);
   F.triggerAutoComplete(arr, A);
-  eq('triggerAutoComplete adds no completion', B.completions.filter(c => c.date === today).length, 0);
-  eq('triggerAutoComplete sets no autoCompletedToday', B.autoCompletedToday, undefined);
+  eq('triggerAutoComplete records one completion today', B.completions.filter(c => c.date === today).length, 1);
+  eq('triggerAutoComplete flags autoCompletedToday', B.autoCompletedToday, today);
+  // Idempotent within the day.
+  F.triggerAutoComplete(arr, A);
+  eq('triggerAutoComplete is idempotent same day', B.completions.filter(c => c.date === today).length, 1);
 
-  // syncLinkedHabit must not mutate either side.
+  // syncLinkedHabit wires both sides bidirectionally.
   const L1 = mkHabit({ id: 30, linkedHabit: '' });
   const L2 = mkHabit({ id: 31, linkedHabit: '' });
   const larr = [L1, L2];
   F.syncLinkedHabit(larr, 30, '31');
-  eq('syncLinkedHabit leaves source link empty', L1.linkedHabit, '');
-  eq('syncLinkedHabit leaves partner link empty', L2.linkedHabit, '');
+  eq('syncLinkedHabit sets source link', Number(L1.linkedHabit), 31);
+  eq('syncLinkedHabit sets partner link back', Number(L2.linkedHabit), 30);
 }
 
 // === J. Delay feature extra edges ====================================
