@@ -57,6 +57,7 @@ const sandbox = {
   parseInt, parseFloat, isNaN, isFinite,
   setTimeout: () => 0, clearTimeout: () => {},
   setInterval: () => 0, clearInterval: () => {},
+  requestAnimationFrame: () => 0,
   localStorage,
   document: documentStub,
   navigator: {},
@@ -385,6 +386,59 @@ console.log('\nL. twiceDaily / reminder / timesPerWeek status');
   const tw = F.getCompletionStatus(tpw);
   ok('timesPerWeek fresh: 0/3 not completed',
     tw.completed === false && tw.count === 0 && tw.target === 3, tw);
+}
+
+// === M. Shared UI factories + dialog wiring (regression smoke) =======
+console.log('\nM. shared overlay factories & dialogs');
+{
+  // renderSheet: pinned header + single scroll body with footer inside it
+  eq('renderSheet structure',
+    F.renderSheet({ headerHtml: 'H', bodyHtml: 'B', footerHtml: 'F' }),
+    '<div class="overlay-fixed-header">H</div><div class="overlay-scroll">BF</div>');
+
+  // popupHeader: × shown only with onClose and showClose !== false
+  ok('popupHeader shows close with onClose',
+    /modal-close/.test(F.popupHeader({ title: 'T', onClose: 'x()' })));
+  ok('popupHeader no close without onClose',
+    !/modal-close/.test(F.popupHeader({ title: 'T' })));
+  ok('popupHeader showClose:false hides close',
+    !/modal-close/.test(F.popupHeader({ title: 'T', onClose: 'x()', showClose: false })));
+
+  // Memoize getElementById so dialog/popup innerHTML is observable.
+  const realGEI = F.document.getElementById;
+  const els = {};
+  F.document.getElementById = id => (els[id] || (els[id] = makeEl()));
+
+  // confirmDialog renders Cancel + a danger confirm; wiring fires the
+  // right callback and Cancel is a no-op.
+  let confirmed = 0;
+  F.confirmDialog({ title: 't', message: 'm', confirmLabel: 'Del', danger: true, onConfirm: () => confirmed++ });
+  const dlg = els['dialogPopup'].innerHTML;
+  // (button label text is escaped via a DOM element → empty under the
+  // stub, so assert on the non-escaped wiring instead.)
+  ok('confirmDialog has header close', /modal-close/.test(dlg), dlg.slice(0, 80));
+  ok('confirmDialog wires Cancel (btn 0)', /dialogButton\(0\)/.test(dlg));
+  ok('confirmDialog wires Confirm (btn 1)', /dialogButton\(1\)/.test(dlg));
+  ok('confirmDialog has × + 2 actions', (dlg.match(/<button/g) || []).length === 3, (dlg.match(/<button/g) || []).length);
+  ok('confirmDialog danger styling', /background:#dc2626/.test(dlg));
+  F.dialogButton(0);                       // Cancel
+  eq('Cancel does not confirm', confirmed, 0);
+  F.confirmDialog({ title: 't', message: 'm', confirmLabel: 'Del', danger: true, onConfirm: () => confirmed++ });
+  F.dialogButton(1);                       // Confirm
+  eq('Confirm fires onConfirm', confirmed, 1);
+
+  // alertDialog: single acknowledge button
+  F.alertDialog('something failed');
+  const al = els['dialogPopup'].innerHTML;
+  ok('alertDialog wires single action (btn 0)', /dialogButton\(0\)/.test(al) && !/dialogButton\(1\)/.test(al));
+  ok('alertDialog has × + 1 action', (al.match(/<button/g) || []).length === 2, (al.match(/<button/g) || []).length);
+
+  // notify: must not throw under the harness
+  let threw = false;
+  try { F.notify('hi'); } catch (e) { threw = true; }
+  ok('notify does not throw', !threw);
+
+  F.document.getElementById = realGEI;
 }
 
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
