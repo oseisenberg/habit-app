@@ -1306,29 +1306,41 @@
 
         // Settings renders through the shared sheet base like every other
         // bottom-sheet modal (Create/Details/Edit/All Habits).
-        // Settings supports in-sheet sub-views (main ⇄ Notifications). An
-        // in-memory draft holds field values so navigating between views
-        // doesn't lose edits; only Save commits, × still cancels.
+        // Hybrid model: every change persists immediately — toggles/selects
+        // on change, number fields on change (i.e. blur/Enter), tag chips on
+        // tap. No draft and no Save button; ×/back just close.
         let settingsView = 'main';
-        let settingsDraft = null;
 
-        function captureSettingsDraft() {
-            if (!settingsDraft) settingsDraft = getSettings();
-            const num = (id, def) => { const e = document.getElementById(id); return e ? (parseInt(e.value) || def) : settingsDraft[id]; };
-            const chk = (id) => { const e = document.getElementById(id); return e ? e.checked : settingsDraft[id]; };
-            settingsDraft.morningStart = num('morningStart', 5);
-            settingsDraft.nightStart = num('nightStart', 18);
-            settingsDraft.showDebug = chk('showDebugIcon');
-            settingsDraft.notificationsEnabled = chk('notificationsEnabled');
-            settingsDraft.morningReminderTime = num('morningReminderTime', 5);
-            settingsDraft.nightReminderTime = num('nightReminderTime', 18);
-            settingsDraft.momentumAlertEnabled = chk('momentumAlertEnabled');
-            settingsDraft.momentumAlertTime = num('momentumAlertTime', 18);
-            settingsDraft.momentumAlertThreshold = num('momentumAlertThreshold', -20);
+        // Read whatever fields are present in the current view and persist
+        // them merged over stored settings (absent fields keep their value).
+        function commitSettings() {
+            const prev = getSettings();
+            const num = (id, def) => { const e = document.getElementById(id); return e ? (parseInt(e.value) || def) : prev[id]; };
+            const chk = (id) => { const e = document.getElementById(id); return e ? e.checked : prev[id]; };
+            const s = {
+                ...prev,
+                morningStart: num('morningStart', 5),
+                nightStart: num('nightStart', 18),
+                showDebug: chk('showDebugIcon'),
+                notificationsEnabled: chk('notificationsEnabled'),
+                morningReminderTime: num('morningReminderTime', 5),
+                nightReminderTime: num('nightReminderTime', 18),
+                momentumAlertEnabled: chk('momentumAlertEnabled'),
+                momentumAlertTime: num('momentumAlertTime', 18),
+                momentumAlertThreshold: num('momentumAlertThreshold', -20),
+            };
+            try {
+                localStorage.setItem('habit_settings', JSON.stringify(s));
+            } catch (e) {
+                console.error('Failed to save settings:', e);
+                alertDialog('Failed to save settings. Changes may not persist.');
+            }
+            if (s.notificationsEnabled) scheduleNotifications();
+            updateDisplay();
         }
 
         function populateSettingsFields() {
-            const s = settingsDraft || getSettings();
+            const s = getSettings();
             const set = (id, v) => { const e = document.getElementById(id); if (e) { if (e.type === 'checkbox') e.checked = !!v; else e.value = v; } };
             set('morningStart', s.morningStart);
             set('nightStart', s.nightStart);
@@ -1339,30 +1351,30 @@
             set('momentumAlertEnabled', s.momentumAlertEnabled);
             set('momentumAlertTime', s.momentumAlertTime);
             set('momentumAlertThreshold', s.momentumAlertThreshold);
-            // Notification fields are always shown in the sub-view, even
-            // when the master toggle is off.
             const ms = document.getElementById('momentumAlertSettings');
             if (ms) ms.style.display = s.momentumAlertEnabled ? 'block' : 'none';
             updateInstallPromptVisibility();
         }
 
-        // Navigate between the settings views without losing edits.
+        // Navigate between settings views (current view already persisted).
         function settingsNavigate(view) {
-            captureSettingsDraft();
+            commitSettings();
             settingsView = view;
             renderSettings();
             populateSettingsFields();
         }
 
-        // Move a tag between Active/Inactive in the draft (committed on Save,
-        // like every other setting). Form pills read the saved value.
+        // Move a tag between Active/Inactive and persist immediately.
         function toggleTagEnabled(id) {
-            if (!settingsDraft) settingsDraft = getSettings();
-            const cur = Array.isArray(settingsDraft.disabledTags) ? settingsDraft.disabledTags.slice() : [];
+            commitSettings();
+            const cur = (getSettings().disabledTags || []).slice();
             const i = cur.indexOf(id);
             if (i >= 0) cur.splice(i, 1); else cur.push(id);
-            settingsDraft.disabledTags = cur;
+            try {
+                localStorage.setItem('habit_settings', JSON.stringify({ ...getSettings(), disabledTags: cur }));
+            } catch (e) {}
             renderSettings();
+            populateSettingsFields();
         }
 
         function renderSettings() {
@@ -1370,21 +1382,21 @@
                 <div class="settings-row">
                     <span class="settings-label">Morning starts at</span>
                     <div class="settings-value">
-                        <input type="number" class="settings-input" id="morningStart" min="0" max="23" value="5">
+                        <input type="number" class="settings-input" id="morningStart" min="0" max="23" value="5" onchange="commitSettings()">
                         <span style="color:#666">:00</span>
                     </div>
                 </div>
                 <div class="settings-row">
                     <span class="settings-label">Bedtime starts at</span>
                     <div class="settings-value">
-                        <input type="number" class="settings-input" id="nightStart" min="0" max="23" value="18">
+                        <input type="number" class="settings-input" id="nightStart" min="0" max="23" value="18" onchange="commitSettings()">
                         <span style="color:#666">:00</span>
                     </div>
                 </div>
                 <div class="settings-row">
                     <span class="settings-label">Show debug icon</span>
                     <label class="toggle-switch">
-                        <input type="checkbox" id="showDebugIcon">
+                        <input type="checkbox" id="showDebugIcon" onchange="commitSettings()">
                         <span class="toggle-slider"></span>
                     </label>
                 </div>`;
@@ -1400,14 +1412,14 @@
                     <div class="settings-row">
                         <span class="settings-label">Morning reminder</span>
                         <div class="settings-value">
-                            <input type="number" class="settings-input" id="morningReminderTime" min="0" max="23" value="5">
+                            <input type="number" class="settings-input" id="morningReminderTime" min="0" max="23" value="5" onchange="commitSettings()">
                             <span style="color:#666">:00</span>
                         </div>
                     </div>
                     <div class="settings-row">
                         <span class="settings-label">Night reminder</span>
                         <div class="settings-value">
-                            <input type="number" class="settings-input" id="nightReminderTime" min="0" max="23" value="18">
+                            <input type="number" class="settings-input" id="nightReminderTime" min="0" max="23" value="18" onchange="commitSettings()">
                             <span style="color:#666">:00</span>
                         </div>
                     </div>
@@ -1422,19 +1434,18 @@
                         <div class="settings-row">
                             <span class="settings-label" style="padding-left:12px">Alert time</span>
                             <div class="settings-value">
-                                <input type="number" class="settings-input" id="momentumAlertTime" min="0" max="23" value="18">
+                                <input type="number" class="settings-input" id="momentumAlertTime" min="0" max="23" value="18" onchange="commitSettings()">
                                 <span style="color:#666">:00</span>
                             </div>
                         </div>
                         <div class="settings-row">
                             <span class="settings-label" style="padding-left:12px">Threshold</span>
                             <div class="settings-value">
-                                <input type="number" class="settings-input" id="momentumAlertThreshold" min="-100" max="0" value="-20">
+                                <input type="number" class="settings-input" id="momentumAlertThreshold" min="-100" max="0" value="-20" onchange="commitSettings()">
                             </div>
                         </div>
                     </div>
                 </div>`;
-            const saveButton = `<button class="submit-btn" onclick="saveSettings()">Save Settings</button>`;
             const navRow = (label, view) => `<div class="settings-row settings-nav" onclick="settingsNavigate('${view}')" style="cursor:pointer;margin-top:8px;padding-top:10px">
                     <span class="settings-label">${label}</span>
                     <span style="color:#666;font-size:1.2rem;line-height:1">›</span>
@@ -1447,15 +1458,8 @@
             // #2: one Export (scope chosen by a "tasks only" toggle) paired
             // with Import on a single row, instead of two Export buttons.
             const dataSection = `
-                <div class="settings-row">
-                    <span class="settings-label">Export tasks only</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="exportTasksOnly">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-                <div style="display:flex;gap:8px;margin-top:8px">
-                    <button class="submit-btn secondary" style="flex:1;font-size:0.85rem" onclick="exportData(!!document.getElementById('exportTasksOnly')?.checked)">Export</button>
+                <div style="display:flex;gap:8px">
+                    <button class="submit-btn secondary" style="flex:1;font-size:0.85rem" onclick="chooseExport()">Export</button>
                     <button class="submit-btn secondary" style="flex:1;font-size:0.85rem" onclick="triggerImport()">Import</button>
                 </div>
                 <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(event)">
@@ -1468,13 +1472,12 @@
             let headerHtml, bodyHtml;
             if (settingsView === 'notifications') {
                 headerHtml = subHeader('Notifications');
-                bodyHtml = notificationsBlock
-                    + `<button class="submit-btn" style="margin-top:14px" onclick="saveSettings()">Save Settings</button>`;
+                bodyHtml = notificationsBlock;
             } else if (settingsView === 'data') {
                 headerHtml = subHeader('Data & Backup');
                 bodyHtml = dataSection;
             } else if (settingsView === 'tags') {
-                const disabled = (settingsDraft && settingsDraft.disabledTags) || [];
+                const disabled = getSettings().disabledTags || [];
                 const chip = t => `<label class="option-pill ${disabled.includes(t.id) ? '' : 'active'}" onclick="toggleTagEnabled('${t.id}')">
                         <span class="option-pill-check">✓</span><span>${t.label}</span>
                     </label>`;
@@ -1485,63 +1488,36 @@
                 bodyHtml = sectionLabel('Active')
                     + `<div class="task-options">${activeChips || '<span style="color:#666;font-size:0.85rem">None</span>'}</div>`
                     + `<div style="margin-top:16px">${sectionLabel('Inactive')}</div>`
-                    + `<div class="task-options">${inactiveChips || '<span style="color:#666;font-size:0.85rem">None</span>'}</div>`
-                    + `<button class="submit-btn" style="margin-top:18px" onclick="saveSettings()">Save Settings</button>`;
+                    + `<div class="task-options">${inactiveChips || '<span style="color:#666;font-size:0.85rem">None</span>'}</div>`;
             } else {
                 headerHtml = popupHeader({ title: 'Settings', onClose: 'closeSettings()' });
                 bodyHtml = generalRows
                     + navRow('Notifications', 'notifications')
                     + navRow('Tags', 'tags')
-                    + navRow('Data & Backup', 'data')
-                    + saveButton;
+                    + navRow('Data & Backup', 'data');
             }
             document.getElementById('settingsModal').innerHTML = renderSheet({ headerHtml, bodyHtml });
         }
 
         function openSettings() {
             settingsView = 'main';
-            settingsDraft = getSettings();
             renderSettings();
             populateSettingsFields();
             showOverlay('settingsOverlay');
         }
-        function closeSettings() { hideOverlay('settingsOverlay'); settingsDraft = null; }
+        function closeSettings() { commitSettings(); hideOverlay('settingsOverlay'); }
         function toggleMomentumSettings() {
             const enabled = document.getElementById('momentumAlertEnabled').checked;
             document.getElementById('momentumAlertSettings').style.display = enabled ? 'block' : 'none';
+            commitSettings();
         }
         function toggleQuietHoursSettings() {
             const enabled = document.getElementById('quietHoursEnabled').checked;
             document.getElementById('quietHoursSettings').style.display = enabled ? 'block' : 'none';
         }
-        async function saveSettings() {
-            // Pull whatever view is currently rendered into the draft so we
-            // persist edits from either the main or Notifications sub-view.
-            captureSettingsDraft();
-            if (settingsDraft.notificationsEnabled && 'Notification' in window && Notification.permission !== 'granted') {
-                // Turned on but not yet granted (e.g. first run): request now,
-                // else scheduleNotifications() runs but sends are dropped.
-                const permission = await requestNotificationPermission();
-                if (permission !== 'granted') {
-                    settingsDraft.notificationsEnabled = false;
-                    const cb = document.getElementById('notificationsEnabled');
-                    if (cb) cb.checked = false;
-                    alertDialog('Notification permission denied. Enable it in your browser settings.');
-                }
-            }
-            const settings = { ...getSettings(), ...settingsDraft };
-            try {
-                localStorage.setItem('habit_settings', JSON.stringify(settings));
-            } catch (e) {
-                console.error('Failed to save settings:', e);
-                alertDialog('Failed to save settings. Changes may not persist.');
-            }
-            if (settings.notificationsEnabled) {
-                scheduleNotifications();
-            }
-            closeSettings();
-            updateDisplay();
-        }
+        // (Hybrid model — no Save button; commitSettings() persists on every
+        // change. The notification permission prompt now lives in
+        // toggleNotifications, fired when the toggle is switched on.)
 
         // ========================================
         // NOTIFICATIONS
@@ -1576,12 +1552,15 @@
                 if (permission !== 'granted') {
                     checkbox.checked = false;
                     alertDialog('Notification permission denied. Enable it in your browser settings.');
+                    commitSettings();
+                    updateInstallPromptVisibility();
                     return;
                 }
             } else {
                 clearNotificationTimers();
             }
             updateInstallPromptVisibility();
+            commitSettings();
         }
 
         async function requestNotificationPermission() {
@@ -1857,6 +1836,19 @@
                     // Service worker registration failed
                 }
             }
+        }
+
+        // Scope is chosen on the action (like Import's Merge/Replace),
+        // not a separate setting-looking toggle.
+        function chooseExport() {
+            openDialog({
+                title: 'Export',
+                message: 'What should the backup file include?',
+                buttons: [
+                    { label: 'All data', onClick: () => exportData(false) },
+                    { label: 'Tasks only', onClick: () => exportData(true) },
+                ]
+            });
         }
 
         function exportData(noHistory = false) {
