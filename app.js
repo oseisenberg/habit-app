@@ -371,7 +371,7 @@
                                 { id: 'points',      label: 'Points',        active: state.isPointsMode,        domId: isEdit ? 'editPointsPill' : 'pointsPill',               onclick: 'toggleFormPointsMode()',        usage: count(h => h.usePoints), extraClass: pointsDisabled ? 'disabled' : '' },
                                 { id: 'reminder',    label: 'Reminder',      active: state.isReminderMode,      domId: isEdit ? 'editReminderPill' : 'reminderPill',           onclick: 'toggleFormReminderMode()',      usage: count(h => h.isReminder || h.frequency?.type === FREQ.REMINDER) },
                                 { id: 'desc',        label: 'Description',   active: state.showDescription,     domId: isEdit ? 'editDescPill' : 'descPill',                   onclick: 'toggleFormDescription()',       usage: count(h => !!h.description) },
-                                { id: 'noMomentum',  label: 'No momentum',   active: state.noMomentum,          domId: isEdit ? 'editNoMomentumPill' : 'noMomentumPill',       onclick: 'toggleFormNoMomentum()',        usage: count(h => h.noMomentum) },
+                                { id: 'noMomentum',  label: 'Untracked',   active: state.noMomentum,          domId: isEdit ? 'editNoMomentumPill' : 'noMomentumPill',       onclick: 'toggleFormNoMomentum()',        usage: count(h => h.noMomentum) },
                                 { id: 'conflicts',   label: 'Conflicts',     active: state.showConflictsWith,   domId: isEdit ? 'editConflictsPill' : 'conflictsPill',         onclick: 'toggleFormConflictsWith()',     usage: count(h => !!h.conflictsWith) },
                             ];
 
@@ -678,7 +678,7 @@
             { label: 'Points',        desc: 'Score each completion (1, 2, or 3 points) and aim for a daily, weekly, or monthly target instead of a fixed count.' },
             { label: 'Reminder',      desc: 'Treat as a recurring nudge rather than a streak — momentum resets to zero on completion instead of building up.' },
             { label: 'Description',   desc: 'Attach freeform notes that show on the details page.' },
-            { label: 'No momentum',   desc: 'Never tracks momentum — always neutral, no reward or penalty. Still appears in its normal sections like any habit.' },
+            { label: 'Untracked',   desc: 'Never tracks momentum — always neutral, no reward or penalty for skipping. Good for scheduled treats. Still appears on its normal cadence like any habit.' },
             { label: 'Conflicts',     desc: 'Hide this habit on any day the chosen habit is due (e.g. skip serum on shampoo days). One-way; momentum is not penalized for those days.' },
         ];
 
@@ -2344,8 +2344,8 @@
         // ========================================
 
         function calculateMomentumScore(habit) {
-            // "No momentum" habits are always neutral — never rewarded or
-            // penalized — but otherwise behave like any other habit.
+            // "Untracked" (noMomentum) habits are always neutral — never
+            // rewarded or penalized — but otherwise behave like any habit.
             if (habit.noMomentum) return { raw: 0, display: 0 };
             const today = getTodayString();
             const freq = habit.frequency;
