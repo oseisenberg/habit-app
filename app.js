@@ -93,13 +93,16 @@
             timesPeriod: PERIOD.WEEK,            // 'day', 'week' or 'month' for times
             pointsPeriod: PERIOD.WEEK,           // 'day', 'week' or 'month' for points
             afterPeriod: PERIOD.DAY,             // 'day', 'week' or 'month' for after completion
-            isNegative: false,                   // negative habit (track avoiding)
+            // --- DISABLED: negative-habit feature (kept commented) ---
+            // isNegative: false,                   // negative habit (track avoiding)
             noMomentum: false,                   // never track momentum (always neutral)
             confirmDescription: false,           // show description popup before completing
-            autoCompletes: '',                   // habit ID to auto-complete when this is done
-            showAutoCompletes: false,            // show auto-completes field
-            linkedHabit: '',                     // habit ID of a companion habit (visual link only, bidirectional, no auto-completion)
-            showLinkedHabit: false,              // show linked-habit field
+            // --- DISABLED: auto-complete feature (kept commented for future re-enable) ---
+            // autoCompletes: '',                   // habit ID to auto-complete when this is done
+            // showAutoCompletes: false,            // show auto-completes field
+            // --- DISABLED: linked-habit (companion) feature ---
+            // linkedHabit: '',                     // habit ID of a companion habit (visual link only, bidirectional, no auto-completion)
+            // showLinkedHabit: false,              // show linked-habit field
             conflictsWith: '',                   // habit ID this conflicts with: hidden on days that habit is due
             showConflictsWith: false,            // show conflicts-with field
             sequentialSubtasks: false,           // subtasks must be completed in order; popup shows "Complete Next" instead of "Complete All"
@@ -107,7 +110,8 @@
             everyXValue: null,                   // number value for "every X days/weeks/months"
             timesValue: null,                    // number value for "X times per period"
             pointsValue: null,                   // number value for "X points per period"
-            dailyTimesValue: null                // X times per day when frequency is Daily (1/null = once)
+            dailyTimesValue: null,               // X times per day when frequency is Daily (1/null = once)
+            delayHoursValue: null                // hours to hide a Daily×N habit after each completion (0/null = no delay)
         };
 
         // ========================================
@@ -129,13 +133,16 @@
             formState.timesPeriod = PERIOD.WEEK;
             formState.pointsPeriod = PERIOD.WEEK;
             formState.afterPeriod = PERIOD.DAY;
-            formState.isNegative = false;
+            // --- DISABLED: negative-habit feature ---
+            // formState.isNegative = false;
             formState.noMomentum = false;
             formState.confirmDescription = false;
-            formState.autoCompletes = '';
-            formState.showAutoCompletes = false;
-            formState.linkedHabit = '';
-            formState.showLinkedHabit = false;
+            // --- DISABLED: auto-complete feature ---
+            // formState.autoCompletes = '';
+            // formState.showAutoCompletes = false;
+            // --- DISABLED: linked-habit feature ---
+            // formState.linkedHabit = '';
+            // formState.showLinkedHabit = false;
             formState.conflictsWith = '';
             formState.showConflictsWith = false;
             formState.sequentialSubtasks = false;
@@ -144,6 +151,7 @@
             formState.timesValue = null;
             formState.pointsValue = null;
             formState.dailyTimesValue = null;
+            formState.delayHoursValue = null;
         }
 
         // Initialize form state from habit (for edit mode)
@@ -185,13 +193,16 @@
             else if (habit.frequency.everyXMonths) formState.afterPeriod = PERIOD.MONTH;
             else formState.afterPeriod = PERIOD.DAY;
 
-            formState.isNegative = habit.isNegative || false;
+            // --- DISABLED: negative-habit feature ---
+            // formState.isNegative = habit.isNegative || false;
             formState.noMomentum = habit.noMomentum || false;
             formState.confirmDescription = habit.confirmDescription || false;
-            formState.autoCompletes = habit.autoCompletes || '';
-            formState.showAutoCompletes = !!habit.autoCompletes;
-            formState.linkedHabit = habit.linkedHabit || '';
-            formState.showLinkedHabit = !!habit.linkedHabit;
+            // --- DISABLED: auto-complete feature ---
+            // formState.autoCompletes = habit.autoCompletes || '';
+            // formState.showAutoCompletes = !!habit.autoCompletes;
+            // --- DISABLED: linked-habit feature ---
+            // formState.linkedHabit = habit.linkedHabit || '';
+            // formState.showLinkedHabit = !!habit.linkedHabit;
             formState.conflictsWith = habit.conflictsWith || '';
             formState.showConflictsWith = !!habit.conflictsWith;
             formState.sequentialSubtasks = !!habit.sequentialSubtasks;
@@ -202,6 +213,7 @@
             formState.timesValue = habit.frequency.timesPerDay || habit.frequency.timesPerWeek || habit.frequency.timesPerMonth || null;
             formState.pointsValue = habit.frequency.pointsPerDay || habit.frequency.pointsPerWeek || habit.frequency.pointsPerMonth || null;
             formState.dailyTimesValue = (freqType === FREQ.TIMES_PER_DAY) ? (habit.frequency.timesPerDay || null) : null;
+            formState.delayHoursValue = habit.frequency.delayHours || null;
         }
 
         // Get current form state (for compatibility with renderHabitForm)
@@ -253,7 +265,7 @@
                 }
             } else if (state.frequency === FREQ.DAILY) {
                 const dailyVal = state.dailyTimesValue ?? habit?.frequency?.timesPerDay ?? 1;
-                freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'D' : 'd'}ailyTimes" value="${dailyVal}" min="1" max="31"><span style="color:#888">× / day</span>`;
+                freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'D' : 'd'}ailyTimes" value="${dailyVal}" min="1" max="31" oninput="rerenderForm()"><span style="color:#888">× / day</span>`;
             }
 
             // Subtasks section (show if toggle is on OR habit has existing subtasks)
@@ -359,7 +371,7 @@
                                 { id: 'points',      label: 'Points',        active: state.isPointsMode,        domId: isEdit ? 'editPointsPill' : 'pointsPill',               onclick: 'toggleFormPointsMode()',        usage: count(h => h.usePoints), extraClass: pointsDisabled ? 'disabled' : '' },
                                 { id: 'reminder',    label: 'Reminder',      active: state.isReminderMode,      domId: isEdit ? 'editReminderPill' : 'reminderPill',           onclick: 'toggleFormReminderMode()',      usage: count(h => h.isReminder || h.frequency?.type === FREQ.REMINDER) },
                                 { id: 'desc',        label: 'Description',   active: state.showDescription,     domId: isEdit ? 'editDescPill' : 'descPill',                   onclick: 'toggleFormDescription()',       usage: count(h => !!h.description) },
-                                { id: 'noMomentum',  label: 'No momentum',   active: state.noMomentum,          domId: isEdit ? 'editNoMomentumPill' : 'noMomentumPill',       onclick: 'toggleFormNoMomentum()',        usage: count(h => h.noMomentum) },
+                                { id: 'noMomentum',  label: 'Untracked',   active: state.noMomentum,          domId: isEdit ? 'editNoMomentumPill' : 'noMomentumPill',       onclick: 'toggleFormNoMomentum()',        usage: count(h => h.noMomentum) },
                                 { id: 'conflicts',   label: 'Conflicts',     active: state.showConflictsWith,   domId: isEdit ? 'editConflictsPill' : 'conflictsPill',         onclick: 'toggleFormConflictsWith()',     usage: count(h => !!h.conflictsWith) },
                             ];
 
@@ -393,7 +405,7 @@
                         <span>Show description before completing</span>
                     </label>
                 </div>` : ''}
-                ${state.showAutoCompletes ? `<div class="form-group">
+                ${false /* DISABLED: auto-complete feature */ && state.showAutoCompletes ? `<div class="form-group">
                     <label class="form-label">Auto-completes another habit</label>
                     <select class="form-input" id="${isEdit ? 'editAutoCompletes' : 'autoCompletes'}" style="font-size:0.85rem">
                         <option value="">None</option>
@@ -402,7 +414,7 @@
                         ).join('')}
                     </select>
                 </div>` : ''}
-                ${state.showLinkedHabit ? `<div class="form-group">
+                ${false /* DISABLED: linked-habit feature */ && state.showLinkedHabit ? `<div class="form-group">
                     <label class="form-label">Linked with (often done together)</label>
                     <select class="form-input" id="${isEdit ? 'editLinkedHabit' : 'linkedHabit'}" style="font-size:0.85rem">
                         <option value="">None</option>
@@ -431,6 +443,13 @@
                         </select>
                         <div id="${isEdit ? 'editFrequencyInputs' : 'frequencyInputs'}">${freqInputsHtml}</div>
                     </div>
+                    ${(state.frequency === FREQ.DAILY && (state.dailyTimesValue ?? habit?.frequency?.timesPerDay ?? 1) > 1) ? `<div class="frequency-row" style="justify-content:space-between;margin-top:8px">
+                        <span style="color:#aaa;font-size:0.85rem">Hide after each completion</span>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <input type="number" class="frequency-input" id="${isEdit ? 'editDelayHours' : 'delayHours'}" value="${state.delayHoursValue ?? habit?.frequency?.delayHours ?? 0}" min="0" max="24">
+                            <span style="color:#888">hours</span>
+                        </div>
+                    </div>` : ''}
                 </div>
                 ${subtasksHtml}
                 <div class="action-buttons">
@@ -463,20 +482,24 @@
 
             // Save number input values before re-rendering
             const isEdit = formMode === 'edit';
-            const autoCompletesSelect = document.getElementById(isEdit ? 'editAutoCompletes' : 'autoCompletes');
-            if (autoCompletesSelect) formState.autoCompletes = autoCompletesSelect.value;
-            const linkedHabitSelect = document.getElementById(isEdit ? 'editLinkedHabit' : 'linkedHabit');
-            if (linkedHabitSelect) formState.linkedHabit = linkedHabitSelect.value;
+            // --- DISABLED: auto-complete feature ---
+            // const autoCompletesSelect = document.getElementById(isEdit ? 'editAutoCompletes' : 'autoCompletes');
+            // if (autoCompletesSelect) formState.autoCompletes = autoCompletesSelect.value;
+            // --- DISABLED: linked-habit feature ---
+            // const linkedHabitSelect = document.getElementById(isEdit ? 'editLinkedHabit' : 'linkedHabit');
+            // if (linkedHabitSelect) formState.linkedHabit = linkedHabitSelect.value;
             const conflictsWithSelect = document.getElementById(isEdit ? 'editConflictsWith' : 'conflictsWith');
             if (conflictsWithSelect) formState.conflictsWith = conflictsWithSelect.value;
             const everyXInput = document.getElementById(isEdit ? 'editEveryXPeriod' : 'everyXPeriod');
             const timesInput = document.getElementById(isEdit ? 'editTimesPerPeriod' : 'timesPerPeriod');
             const pointsInput = document.getElementById(isEdit ? 'editPointsPerPeriod' : 'pointsPerPeriod');
             const dailyTimesInput = document.getElementById(isEdit ? 'editDailyTimes' : 'dailyTimes');
+            const delayHoursInput = document.getElementById(isEdit ? 'editDelayHours' : 'delayHours');
             if (everyXInput) formState.everyXValue = parseInt(everyXInput.value) || null;
             if (timesInput) formState.timesValue = parseInt(timesInput.value) || null;
             if (pointsInput) formState.pointsValue = parseInt(pointsInput.value) || null;
             if (dailyTimesInput) formState.dailyTimesValue = parseInt(dailyTimesInput.value) || null;
+            if (delayHoursInput) formState.delayHoursValue = parseInt(delayHoursInput.value) || null;
 
             // Remember focused element to restore after re-render
             const focusedId = document.activeElement?.id;
@@ -551,10 +574,11 @@
             }
         }
 
-        function toggleFormNegative() {
-            formState.isNegative = !formState.isNegative;
-            rerenderForm();
-        }
+        // --- DISABLED: negative-habit feature (orphaned; kept commented) ---
+        // function toggleFormNegative() {
+        //     formState.isNegative = !formState.isNegative;
+        //     rerenderForm();
+        // }
 
         // Confirm is a sub-option of Description (checkbox under the
         // textarea), not a standalone tag — no rerender needed since it
@@ -568,15 +592,17 @@
             rerenderForm();
         }
 
-        function toggleFormAutoCompletes() {
-            formState.showAutoCompletes = !formState.showAutoCompletes;
-            rerenderForm();
-        }
+        // --- DISABLED: auto-complete feature (kept for future re-enable) ---
+        // function toggleFormAutoCompletes() {
+        //     formState.showAutoCompletes = !formState.showAutoCompletes;
+        //     rerenderForm();
+        // }
 
-        function toggleFormLinkedHabit() {
-            formState.showLinkedHabit = !formState.showLinkedHabit;
-            rerenderForm();
-        }
+        // --- DISABLED: linked-habit feature (kept for future re-enable) ---
+        // function toggleFormLinkedHabit() {
+        //     formState.showLinkedHabit = !formState.showLinkedHabit;
+        //     rerenderForm();
+        // }
 
         function toggleFormConflictsWith() {
             formState.showConflictsWith = !formState.showConflictsWith;
@@ -652,7 +678,7 @@
             { label: 'Points',        desc: 'Score each completion (1, 2, or 3 points) and aim for a daily, weekly, or monthly target instead of a fixed count.' },
             { label: 'Reminder',      desc: 'Treat as a recurring nudge rather than a streak — momentum resets to zero on completion instead of building up.' },
             { label: 'Description',   desc: 'Attach freeform notes that show on the details page.' },
-            { label: 'No momentum',   desc: 'Never tracks momentum — always neutral, no reward or penalty. Still appears in its normal sections like any habit.' },
+            { label: 'Untracked',   desc: 'Never tracks momentum — always neutral, no reward or penalty for skipping. Good for scheduled treats. Still appears on its normal cadence like any habit.' },
             { label: 'Conflicts',     desc: 'Hide this habit on any day the chosen habit is due (e.g. skip serum on shampoo days). One-way; momentum is not penalized for those days.' },
         ];
 
@@ -678,7 +704,11 @@
         // B, B's link is set to A — and any previous partner of either is
         // cleared so we never end up with a triangle. Mutates `habits` in
         // place; caller is responsible for saveHabits().
+        // --- DISABLED: linked-habit feature. Stubbed to a no-op; original
+        // bidirectional-sync body kept below for future re-enable. ---
         function syncLinkedHabit(habits, habitId, newLinkedRaw) {
+            return;
+            /*
             const habit = habits.find(h => h.id === habitId);
             if (!habit) return;
             const newLinkedId = Number(newLinkedRaw) || null;
@@ -711,6 +741,7 @@
                     newPartner.linkedHabit = habitId;
                 }
             }
+            */
         }
 
         function toggleFormSubtasks() {
@@ -786,7 +817,7 @@
                 morningStart: 5,
                 nightStart: 18,
                 sortMethod: 'default',
-                notificationsEnabled: true,
+                notificationsEnabled: false,
                 morningReminderTime: 5,
                 nightReminderTime: 18,
                 momentumAlertEnabled: true,
@@ -1065,18 +1096,16 @@
                         }
                     });
                 }
-                // Cascade: if this habit auto-completed a linked target,
-                // un-mark the linked target too. Otherwise the user would
-                // be left with a silently-completed Shower (etc.) after
-                // undoing the trigger.
-                if (habit.autoCompletes) {
-                    const linkedId = Number(habit.autoCompletes);
-                    const linked = habits.find(h => h.id === linkedId);
-                    if (linked && linked.autoCompletedToday === lastCompletion.date) {
-                        linked.completions = linked.completions.filter(c => !(c.date === lastCompletion.date && c.autoCompleted));
-                        delete linked.autoCompletedToday;
-                    }
-                }
+                // --- DISABLED: auto-complete feature. Cascade undo of a
+                // linked target kept commented for future re-enable. ---
+                // if (habit.autoCompletes) {
+                //     const linkedId = Number(habit.autoCompletes);
+                //     const linked = habits.find(h => h.id === linkedId);
+                //     if (linked && linked.autoCompletedToday === lastCompletion.date) {
+                //         linked.completions = linked.completions.filter(c => !(c.date === lastCompletion.date && c.autoCompleted));
+                //         delete linked.autoCompletedToday;
+                //     }
+                // }
             } else if (lastCompletion.type === 'subtask' && lastCompletion.subtaskId) {
                 const subtask = habit.subtasks?.find(s => s.id === lastCompletion.subtaskId);
                 if (subtask && subtask.completedPeriods) {
@@ -1872,23 +1901,27 @@
                     pointsPerWeek: pointsVal,
                     pointsPerMonth: pointsVal,
                     pointsTarget: pointsTargetVal,
-                    reminderDays: reminderDaysVal
+                    reminderDays: reminderDaysVal,
+                    delayHours: Math.max(0, parseInt(document.getElementById('delayHours')?.value) || 0)
                 },
                 usePoints: formState.isPointsMode,
                 isReminder: formState.isReminderMode,
                 allowOptional: formState.allowOptional,
-                isNegative: formState.isNegative,
+                // --- DISABLED: negative-habit feature ---
+                // isNegative: formState.isNegative,
                 noMomentum: formState.noMomentum,
                 confirmDescription: formState.confirmDescription,
-                autoCompletes: document.getElementById('autoCompletes')?.value.trim() || '',
-                linkedHabit: '',
+                // --- DISABLED: auto-complete & linked-habit features ---
+                // autoCompletes: document.getElementById('autoCompletes')?.value.trim() || '',
+                // linkedHabit: '',
                 conflictsWith: document.getElementById('conflictsWith')?.value.trim() || '',
                 sequentialSubtasks: formState.sequentialSubtasks,
                 completions: [], skippedDates: [], snoozedUntil: null, subtasks: [...newHabitSubtasks], createdAt: getTodayString()
             });
-            const newId = habits[habits.length - 1].id;
-            const linkedRaw = document.getElementById('linkedHabit')?.value.trim() || '';
-            if (linkedRaw) syncLinkedHabit(habits, newId, linkedRaw);
+            // --- DISABLED: linked-habit feature ---
+            // const newId = habits[habits.length - 1].id;
+            // const linkedRaw = document.getElementById('linkedHabit')?.value.trim() || '';
+            // if (linkedRaw) syncLinkedHabit(habits, newId, linkedRaw);
             saveHabits(habits);
             closeModal();
             renderHabits();
@@ -1897,10 +1930,11 @@
         function deleteHabit(id) {
             if (confirm('Delete this habit?')) {
                 const habits = loadHabits().filter(h => h.id !== id);
-                // Clear any companion-link back-references to the deleted habit
-                habits.forEach(h => {
-                    if (Number(h.linkedHabit) === id) h.linkedHabit = '';
-                });
+                // --- DISABLED: linked-habit feature. Back-reference cleanup
+                // kept commented for future re-enable. ---
+                // habits.forEach(h => {
+                //     if (Number(h.linkedHabit) === id) h.linkedHabit = '';
+                // });
                 saveHabits(habits);
                 closeDetails();
                 renderHabits();
@@ -2310,8 +2344,8 @@
         // ========================================
 
         function calculateMomentumScore(habit) {
-            // "No momentum" habits are always neutral — never rewarded or
-            // penalized — but otherwise behave like any other habit.
+            // "Untracked" (noMomentum) habits are always neutral — never
+            // rewarded or penalized — but otherwise behave like any habit.
             if (habit.noMomentum) return { raw: 0, display: 0 };
             const today = getTodayString();
             const freq = habit.frequency;
@@ -2392,30 +2426,33 @@
                 }
 
                 if (wasDue) {
-                    const isNegativeHabit = habit.isNegative;
+                    // --- DISABLED: negative-habit feature. The isNegative
+                    // branches are kept commented for future re-enable; only
+                    // positive-habit scoring runs now. ---
+                    // const isNegativeHabit = habit.isNegative;
                     if (wasCompleted) {
-                        if (isNegativeHabit) {
+                        /* if (isNegativeHabit) {
                             // Negative habit: completing (doing bad thing) = penalty with acceleration
                             const basePenalty = score < 0 ? Math.min(45, 25 - score * 0.2) : 25;
                             const penalty = basePenalty * frequencyScale;
                             score = Math.max(-100, score - penalty);
-                        } else {
+                        } else { */
                             // Positive habit: completing = reward
                             const reward = 15 * frequencyScale;
                             score = Math.min(100, score + reward);
-                        }
+                        /* } */
                     } else {
-                        if (isNegativeHabit) {
+                        /* if (isNegativeHabit) {
                             // Negative habit: not doing (avoiding) = small reward
                             const reward = 5 * frequencyScale;
                             score = Math.min(100, score + reward);
-                        } else {
+                        } else { */
                             // Positive habit: missing = penalty with acceleration (worse when already negative)
                             const basePenalty = score < 0 ? Math.min(45, 25 - score * 0.2) : 25;
                             const isReminder = habit.isReminder || freqType === FREQ.REMINDER;
                             const penalty = (isReminder ? basePenalty * 0.5 : basePenalty) * frequencyScale;
                             score = Math.max(-100, score - penalty);
-                        }
+                        /* } */
                     }
                 }
 
@@ -2546,7 +2583,8 @@
                 habit.snoozedUntil = null;
                 delete habit.snoozedUntilPeriod;
                 habit.snoozeHistory = [];
-                delete habit.autoCompletedToday;
+                // --- DISABLED: auto-complete feature ---
+                // delete habit.autoCompletedToday;
                 if (habit.subtasks) {
                     habit.subtasks.forEach(s => { s.completedPeriods = {}; });
                 }
@@ -2705,10 +2743,13 @@
             doCompleteHabit(id, period);
         }
 
-        // If `habit` has an autoCompletes link, mark the linked habit complete
-        // for today (and hide it via autoCompletedToday). Mutates the `habits`
-        // array in place — caller is responsible for saveHabits().
+        // --- DISABLED: auto-complete feature. Stubbed to a no-op; original
+        // body kept below for future re-enable. If `habit` has an
+        // autoCompletes link, it marked the linked habit complete for today
+        // (and hid it via autoCompletedToday). ---
         function triggerAutoComplete(habits, habit) {
+            return;
+            /*
             if (!habit.autoCompletes) return;
             const today = getTodayString();
             const autoId = Number(habit.autoCompletes);
@@ -2723,6 +2764,7 @@
                 linkedHabit.snoozedUntil = null;
                 delete linkedHabit.snoozedUntilPeriod;
             }
+            */
         }
 
         // Record a habit completion driven by finishing its subtasks.
@@ -2740,7 +2782,8 @@
             habit.lastScoreUpdate = today;
             lastCompletion = { habitId: habit.id, date: today, period: period || null, timestamp, type: 'complete', resetSubtasks: true, periodKey };
             showUndoToast();
-            if (isCompletedToday(habit)) triggerAutoComplete(habits, habit);
+            // --- DISABLED: auto-complete feature ---
+            // if (isCompletedToday(habit)) triggerAutoComplete(habits, habit);
         }
 
         function doCompleteHabit(id, period = null, skipSubtaskCheck = false) {
@@ -2786,8 +2829,8 @@
                     habit.momentumScore = 0;
                 }
 
-                // Auto-complete linked habit if specified
-                triggerAutoComplete(habits, habit);
+                // --- DISABLED: auto-complete feature ---
+                // triggerAutoComplete(habits, habit);
             }
             saveHabits(habits);
             renderHabits();
@@ -2994,6 +3037,34 @@
             return habits;
         }
 
+        // A Daily×N habit (timesPerDay) can carry frequency.delayHours: after
+        // each completion it is hidden from the day's list until that many
+        // hours have elapsed, then it reappears (same day) until the daily
+        // target is met. Recomputed on every render, so no timer is needed.
+        function isDelayHidden(habit, status) {
+            if (habit.frequency.type !== FREQ.TIMES_PER_DAY) return false;
+            const delayHours = habit.frequency.delayHours;
+            if (!delayHours || delayHours <= 0) return false;
+            // Target met → fall through to normal Done/Optional handling.
+            // Reuse caller's status when provided to avoid recomputing it.
+            if ((status || getCompletionStatus(habit)).completed) return false;
+            const today = getTodayString();
+            const todaysCompletions = habit.completions.filter(c => c.date === today);
+            if (!todaysCompletions.length) return false;
+            // Mixed data: untimestamped taps are ignored here; if every
+            // completion lacks a timestamp the habit shows (legacy-safe).
+            const lastTs = Math.max(...todaysCompletions.map(c => c.timestamp || 0));
+            if (!lastTs) return false; // legacy completion with no timestamp → show
+            return (Date.now() - lastTs) < delayHours * 3600000;
+        }
+
+        // True if any habit is currently inside its post-completion delay
+        // window. Used by the minute tick to re-render the day view on its
+        // own once a delay elapses (no dedicated timer).
+        function anyDelayPending() {
+            return loadHabits().some(h => isDelayHidden(h));
+        }
+
         // Categorize habits into sections (Now, Optional, Later, Done) - each habit in ONE section only
         function categorizeHabits(habits) {
             const timeOfDay = getTimeOfDayNow();
@@ -3010,11 +3081,16 @@
                     if (h.snoozedUntil !== PERIOD.NIGHT && h.snoozedUntil > today) return;
                 }
 
+                // --- DISABLED: auto-complete feature ---
                 // Hide habits that were auto-completed today by another habit
-                if (h.autoCompletedToday === today) return;
+                // if (h.autoCompletedToday === today) return;
 
                 // Hide habits suppressed today by a "Conflicts with" partner
                 if (isConflictSuppressed(h)) return;
+
+                // Daily×N with a post-completion delay: hide until enough
+                // hours have passed since the last completion today.
+                if (isDelayHidden(h, status)) return;
 
                 // Twice daily: special handling
                 if (h.frequency.type === FREQ.TWICE_DAILY) {
@@ -3087,6 +3163,12 @@
 
             const cat = categorizeHabits(habits);
 
+            // --- DISABLED: auto-complete & linked-habit features. The
+            // connected-pair rendering / bucket de-duplication is kept
+            // commented for future re-enable. consumedLinkedIds stays an
+            // empty Set so drop() is now an identity filter. ---
+            const consumedLinkedIds = new Set();
+            /*
             // A habit with autoCompletes renders inline as a connected pair
             // (see renderHabitIcon), so filter the linked target out of every
             // bucket to avoid drawing it twice. Only consume the target if
@@ -3094,7 +3176,6 @@
             // snoozed/skipped trigger would silently hide the target too.
             const visibleIds = new Set();
             [cat.now, cat.optional, cat.later, cat.done].forEach(arr => arr.forEach(h => visibleIds.add(h.id)));
-            const consumedLinkedIds = new Set();
             habits.forEach(h => {
                 if (!visibleIds.has(h.id) || !h.autoCompletes) return;
                 const lid = Number(h.autoCompletes);
@@ -3121,11 +3202,10 @@
                     consumedLinkedIds.add(lid);
                 }
             });
+            */
             const drop = arr => arr.filter(h => !consumedLinkedIds.has(h.id));
             const nowHabits = drop(cat.now);
             const optionalHabits = drop(cat.optional);
-            const laterHabits = drop(cat.later);
-            const completedHabits = drop(cat.done);
             const morningSpecific = drop(cat.morning);
             const bedtimeSpecific = drop(cat.bedtime);
             const anytimeHabits = drop(cat.anytime);
@@ -3181,10 +3261,10 @@
                 </div>`;
             }
 
-            // Collapsible sections using helper
+            // Collapsible sections using helper. "Tonight" (later) and
+            // "Finished" (completed) are intentionally not shown on the main
+            // screen — use the All Habits view to review those.
             html += renderSection(optionalHabits, 'optional', '⭐', 'Optional', false, { inactive: true });
-            html += renderSection(laterHabits, 'later', '🌙', 'Tonight', true, { inactive: true, isLater: true });
-            html += renderSection(completedHabits, 'completed', '✓', 'Finished', true, { inactive: true, isCompleted: true });
 
             if (!html) html = '<div class="habits-section"><div class="empty-state"><div class="empty-state-icon">✓</div><div>All done!</div></div></div>';
             container.innerHTML = html;
@@ -3337,24 +3417,30 @@
             const hasConfirm = !!(habit.confirmDescription && habit.description);
             const extraIndicator = (hasSubtasks || isPointsBased || hasConfirm) ? '<div class="extra-indicator"></div>' : '';
 
-            const isNegative = habit.isNegative;
-            const today = getTodayString();
-            const loggedToday = habit.completions.some(c => c.date === today);
-
-            if (isNegative) {
-                ringClass = loggedToday ? 'negative-logged' : 'negative';
-            }
+            // --- DISABLED: negative-habit feature. Ring-state override kept
+            // commented for future re-enable; habits always render the
+            // normal ring + neglect dots now. ---
+            // const isNegative = habit.isNegative;
+            // const today = getTodayString();
+            // const loggedToday = habit.completions.some(c => c.date === today);
+            // if (isNegative) {
+            //     ringClass = loggedToday ? 'negative-logged' : 'negative';
+            // }
 
             return `<div class="habit-icon${mutedClass}" data-habit-id="${habit.id}" onclick="${leftClick}" oncontextmenu="${rightClick}">
                 <div class="habit-ring ${ringClass}" style="--progress: ${progress}">
                     <span class="habit-emoji">${icon}</span>
-                    ${isNegative && !loggedToday ? '' : neglectDots}
+                    ${neglectDots}
                     ${extraIndicator}
                 </div>
             </div>`;
         }
 
         function renderHabitIcon(habit, isLater = false, isCompleted = false) {
+            // --- DISABLED: auto-complete & linked-habit features. The
+            // connected-pair rendering is kept commented for future
+            // re-enable; habits now always render as a single icon. ---
+            /*
             // If this habit auto-completes another, render them as a connected
             // pair (icon — line — icon) sharing one 2-column wrapper. The
             // linked target is shown muted when it isn't due today, but the
@@ -3393,6 +3479,7 @@
                     }
                 }
             }
+            */
 
             return `<div class="habit-icon-wrapper">${renderHabitIconInner(habit, isLater, isCompleted)}</div>`;
         }
@@ -3431,12 +3518,11 @@
                 hapticFeedback();
                 lastCompletion = { habitId: id, date: today, period, timestamp, type: 'complete' };
                 showUndoToast();
-                // Fire auto-complete only once the habit is fully done for the day
-                // (both morning AND night). Otherwise the linked habit would be
-                // hidden as soon as the first half completes.
-                const fullyDone = habit.completions.some(c => c.date === today && c.period === PERIOD.MORNING)
-                    && habit.completions.some(c => c.date === today && c.period === PERIOD.NIGHT);
-                if (fullyDone) triggerAutoComplete(habits, habit);
+                // --- DISABLED: auto-complete feature. Fired only once the
+                // habit was fully done for the day (both morning AND night). ---
+                // const fullyDone = habit.completions.some(c => c.date === today && c.period === PERIOD.MORNING)
+                //     && habit.completions.some(c => c.date === today && c.period === PERIOD.NIGHT);
+                // if (fullyDone) triggerAutoComplete(habits, habit);
             }
             saveHabits(habits);
             renderHabits();
@@ -3576,10 +3662,12 @@
             </div>`;
         }
 
-        // Info about a habit's auto-completed partner (icon + name, its
-        // subtasks if any, and its description when it carries Confirm),
-        // shown in the trigger's completion popup. '' when no partner.
+        // --- DISABLED: auto-complete feature. Stubbed to return ''; original
+        // body (info about a habit's auto-completed partner shown in the
+        // trigger's completion popup) kept below for future re-enable. ---
         function linkedAutoInfoHtml(habit) {
+            return '';
+            /*
             if (!habit.autoCompletes) return '';
             const cid = Number(habit.autoCompletes);
             const linked = loadHabits().find(h =>
@@ -3599,6 +3687,7 @@
                 inner += `<div style="margin-top:6px;color:#aaa;font-size:0.8rem;line-height:1.4">${formatDescription(linked.description)}</div>`;
             }
             return popupSection('Also completes', inner);
+            */
         }
 
         function renderChecklistPopup(targetId, { icon, title, onClose, items, marker, footer, preamble }) {
@@ -3819,8 +3908,8 @@
             // Boost momentum based on points
             boostMomentumScore(habit, points);
 
-            // Fire auto-complete only when the habit's point target is first reached
-            if (!wasCompleted && isCompletedToday(habit)) triggerAutoComplete(habits, habit);
+            // --- DISABLED: auto-complete feature ---
+            // if (!wasCompleted && isCompletedToday(habit)) triggerAutoComplete(habits, habit);
 
             saveHabits(habits);
             closePointsPopup();
@@ -3909,7 +3998,14 @@
             backdrop.onclick = closeDetailsMoreMenu;
             const menu = document.createElement('div');
             menu.className = 'kebab-menu';
+            // "Move to Today" is always offered here and always pressable.
+            // It pulls the most recent past completion forward; when the
+            // habit is scheduled for a future day it drops the blocking
+            // completion (so today becomes due) instead. A no-op when there
+            // is nothing to move (e.g. already due/completed today).
+            const moveFutureDue = habit.completions.some(c => c.date !== getTodayString()) && !isDueToday(habit);
             menu.innerHTML = `
+                <button onclick="closeDetailsMoreMenu();${moveFutureDue ? `moveScheduleToToday(${id})` : `moveCompletionToToday(${id})`}">Move to Today</button>
                 <button onclick="closeDetailsMoreMenu();freshStartHabit(${id})">Reset Momentum</button>
                 <button onclick="closeDetailsMoreMenu();resetHabitStats(${id})">Reset Stats</button>
                 <button onclick="closeDetailsMoreMenu();${habit.archived ? `unarchiveHabit(${id})` : `archiveHabit(${id})`}">${habit.archived ? 'Unarchive' : 'Archive'}</button>
@@ -3981,6 +4077,9 @@
                 habit.frequency.timesPerWeek = val;
                 habit.frequency.timesPerMonth = val;
             }
+            // Delay-after-completion (Daily×N only). The input only exists
+            // when Daily with count > 1, so it clears itself otherwise.
+            habit.frequency.delayHours = Math.max(0, parseInt(document.getElementById('editDelayHours')?.value) || 0);
             if (finalFreqType === FREQ.EVERY_X_DAYS) {
                 const input = document.getElementById('editEveryXPeriod');
                 const val = Math.max(1, parseInt(input?.value) || DEFAULTS.EVERY_X_DAYS);
@@ -4010,8 +4109,9 @@
             // Save reminder mode flag
             habit.isReminder = formState.isReminderMode;
 
+            // --- DISABLED: negative-habit feature ---
             // Save negative habit flag
-            habit.isNegative = formState.isNegative;
+            // habit.isNegative = formState.isNegative;
 
             // Save no-momentum flag
             habit.noMomentum = formState.noMomentum;
@@ -4019,12 +4119,14 @@
             // Save confirm description flag
             habit.confirmDescription = formState.confirmDescription;
 
+            // --- DISABLED: auto-complete feature ---
             // Save auto-completes
-            habit.autoCompletes = document.getElementById('editAutoCompletes')?.value.trim() || '';
+            // habit.autoCompletes = document.getElementById('editAutoCompletes')?.value.trim() || '';
 
+            // --- DISABLED: linked-habit feature ---
             // Save linked-habit (bidirectional companion)
-            const linkedRaw = document.getElementById('editLinkedHabit')?.value.trim() || '';
-            syncLinkedHabit(habits, habit.id, linkedRaw);
+            // const linkedRaw = document.getElementById('editLinkedHabit')?.value.trim() || '';
+            // syncLinkedHabit(habits, habit.id, linkedRaw);
 
             // Save conflicts-with (one-directional: hide on days that habit is due)
             habit.conflictsWith = document.getElementById('editConflictsWith')?.value.trim() || '';
@@ -4151,7 +4253,7 @@
                                    habit.frequency.everyXMonths ? `${habit.frequency.everyXMonths} months after` :
                                    `${habit.frequency.everyXDays || 2} days after`;
                 const freqLabel = { daily: 'Daily', reminder: `${habit.frequency.reminderDays || 1} days after`, twiceDaily: 'Twice daily', timesPerDay: `${habit.frequency.timesPerDay || 1}× / day`, timesPerWeek: `${habit.frequency.timesPerWeek || 3}× / wk`, timesPerMonth: `${habit.frequency.timesPerMonth || 4}× / mo`, everyXDays: afterLabel, pointsPerDay: `${habit.frequency.pointsPerDay || 4} pts / day`, pointsPerWeek: `${habit.frequency.pointsPerWeek || 12} pts / wk`, pointsPerMonth: `${habit.frequency.pointsPerMonth || 30} pts / mo` }[habit.frequency.type];
-                const timeLabel = habit.timeOfDay ? { morning: 'Morning', night: 'Bedtime' }[habit.timeOfDay] : 'Anytime';
+                const timeIcon = habit.timeOfDay ? { morning: '🌅', night: '🌙' }[habit.timeOfDay] : '';
 
                 // Momentum score
                 const scoreData = calculateMomentumScore(habit);
@@ -4180,18 +4282,12 @@
 
                 let completeButton = '';
                 let undoButton = '';
-                let moveToTodayButton = '';
                 if (!completedToday) {
-                    const pastCompletions = habit.completions.filter(c => c.date !== today);
-                    // Already completed in the past and won't be due again
-                    // until a future day. Replace the green Complete with an
-                    // orange "Move to Today" — tapping it pulls the schedule
-                    // forward (drops the blocking past completion) so today
-                    // becomes due, leaving the user to tap Complete next.
-                    const futureDue = pastCompletions.length > 0 && !isDueToday(habit);
-                    if (futureDue) {
-                        completeButton = `<button id="detailsCompleteBtn" class="submit-btn" style="flex:1;background:#ea580c" onclick="moveScheduleToToday(${habit.id})">Move to Today</button>`;
-                    } else if (isPointsBased) {
+                    // "Move to Today" (for habits with past completions /
+                    // scheduled for a future day) now lives in the ⋮ menu
+                    // only — see openDetailsMoreMenu. The main bar always
+                    // shows the normal Complete action.
+                    if (isPointsBased) {
                         completeButton = `<button id="detailsCompleteBtn" class="submit-btn" style="flex:1;background:#4ade80" onclick="closeDetails();openPointsPopup(${habit.id})">Complete</button>`;
                     } else if (isTwiceDaily) {
                         const canComplete = !status.morningDone || !status.nightDone;
@@ -4200,13 +4296,6 @@
                         }
                     } else {
                         completeButton = `<button id="detailsCompleteBtn" class="submit-btn" style="flex:1;background:#4ade80" onclick="completeHabitFromDetails(${habit.id})">Complete</button>`;
-                    }
-                    // Show secondary "Move to Today" only when the habit is
-                    // already due today and has past completions to bring
-                    // forward — when futureDue, the orange primary already
-                    // covers the move action.
-                    if (!futureDue && pastCompletions.length > 0) {
-                        moveToTodayButton = `<button class="submit-btn secondary" style="flex:1" onclick="moveCompletionToToday(${habit.id})">Move to Today</button>`;
                     }
                 } else {
                     // Already completed: keep the Complete button visible but
@@ -4220,7 +4309,7 @@
                     <div class="modal-header"><span></span><button class="modal-close" onclick="closeDetails()">&times;</button></div>
                     <div style="margin-bottom:12px;text-align:center">
                         <div class="details-large-icon" style="margin:0 auto 8px">${icon}</div>
-                        <div class="details-habit-name" style="text-align:center">${escapeHtml(habit.name)}</div>
+                        <div class="details-habit-name" style="text-align:center">${escapeHtml(habit.name)}${timeIcon ? ` <span title="${habit.timeOfDay === 'morning' ? 'Morning' : 'Bedtime'}">${timeIcon}</span>` : ''}</div>
                         ${habit.description ? `<div style="color:#888;font-size:0.85rem;margin-top:8px">${formatDescription(habit.description)}</div>` : ''}
                         ${!isReminder && !habit.noMomentum ? `<div class="momentum-display" style="margin-top:10px;margin-bottom:0">
                             <div class="momentum-score ${scoreClass}">${rawScore}<span class="momentum-max">/100</span></div>
@@ -4231,7 +4320,6 @@
                         const isPts = habit.frequency.type === FREQ.POINTS_PER_DAY || habit.frequency.type === FREQ.POINTS_PER_WEEK || habit.frequency.type === FREQ.POINTS_PER_MONTH;
                         const cells = [
                             `<div class="detail-cell"><div class="dc-label">Status</div><div class="dc-value" style="color:${statusColor}">${habitStatus}</div></div>`,
-                            `<div class="detail-cell"><div class="dc-label">Time</div><div class="dc-value">${timeLabel}</div></div>`,
                             `<div class="detail-cell"><div class="dc-label">Frequency</div><div class="dc-value">${freqLabel}</div></div>`,
                         ];
                         if (isPts) cells.push(`<div class="detail-cell"><div class="dc-label">Progress</div><div class="dc-value">${getCompletionStatus(habit).text}</div></div>`);
@@ -4259,7 +4347,6 @@
                         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
                             ${completeButton}
                             ${undoButton}
-                            ${moveToTodayButton}
                             <button class="submit-btn secondary" style="flex:1" onclick="toggleEditMode()">Edit</button>
                         </div>
                         <div style="display:flex;gap:6px;margin-top:6px">
@@ -4287,7 +4374,7 @@
         }
 
         let allHabitsSort = 'status';   // status | alpha | momentum | overdue
-        let allHabitsFilter = 'all';    // all | reminders | subtasks | snoozed | negative | archived
+        let allHabitsFilter = 'all';    // all | reminders | subtasks | snoozed | archived
         function setAllHabitsSort(v) { allHabitsSort = v; renderAllHabitsGrid(); }
         function setAllHabitsFilter(v) { allHabitsFilter = v; renderAllHabitsGrid(); }
 
@@ -4296,7 +4383,8 @@
                 case 'reminders': return !h.archived && (h.isReminder || h.frequency?.type === FREQ.REMINDER);
                 case 'subtasks':  return !h.archived && h.subtasks && h.subtasks.length > 0;
                 case 'snoozed':   return !!h.snoozedUntil;
-                case 'negative':  return !h.archived && h.isNegative;
+                // --- DISABLED: negative-habit feature ---
+                // case 'negative':  return !h.archived && h.isNegative;
                 case 'archived':  return !!h.archived;
                 default:          return !h.archived; // 'all'
             }
@@ -4406,14 +4494,14 @@
                     // Map momentum (-100..100) to a 0..100% perimeter fill;
                     // higher momentum = more of the ring coloured. Hue runs
                     // red -> amber -> green so the colour itself reads as
-                    // low/mid/high, with a soft track and a faint glow.
+                    // low/mid/high, with a soft track (no outer glow).
                     const raw = Math.max(-100, Math.min(100, calculateMomentumScore(habit).raw));
                     const pct = Math.round((raw + 100) / 2);
                     const hue = Math.round((pct / 100) * 130); // 0=red .. 130=green
                     const color = `hsl(${hue} 70% 55%)`;
                     ringStyle = `--progress: ${pct}%;`
                         + `background: conic-gradient(${color} ${pct}%, #23233a ${pct}%);`
-                        + `box-shadow: 0 0 0 1px #23233a inset, 0 0 8px -2px ${color};`;
+                        + `box-shadow: 0 0 0 1px #23233a inset;`;
                 }
                 return `<div class="habit-icon-wrapper" style="${opacity}">
                     <div class="habit-icon" onclick="openDetailsFromAllHabits(${habit.id})">
@@ -4474,7 +4562,7 @@
                         <input type="text" id="allHabitsSearch" class="form-input" placeholder="Search habits..."
                             oninput="onAllHabitsSearch(this.value)" value="${escapeHtml(allHabitsSearchQuery)}" />
                     </div>
-                    <div style="display:flex;gap:8px;padding:0 14px 8px">
+                    <div style="display:flex;gap:8px;padding:14px 0 8px">
                         <label class="ah-select-wrap">
                             <span class="ah-select-label">Sort</span>
                             <select class="ah-select" onchange="setAllHabitsSort(this.value)">
@@ -4491,7 +4579,6 @@
                                 <option value="reminders" ${allHabitsFilter === 'reminders' ? 'selected' : ''}>Reminders</option>
                                 <option value="subtasks" ${allHabitsFilter === 'subtasks' ? 'selected' : ''}>Has subtasks</option>
                                 <option value="snoozed" ${allHabitsFilter === 'snoozed' ? 'selected' : ''}>Snoozed</option>
-                                <option value="negative" ${allHabitsFilter === 'negative' ? 'selected' : ''}>Negative</option>
                                 <option value="archived" ${allHabitsFilter === 'archived' ? 'selected' : ''}>Archived</option>
                             </select>
                         </label>
@@ -4776,6 +4863,9 @@
             loadTestData();
         }
 
+        // --- DISABLED: linked-habit feature. One-time companion-link
+        // migration kept commented for future re-enable. ---
+        /*
         // One-time companion-link migration. Apply curated pairings to
         // existing saved habits if neither side already has a link set —
         // never overwrite a user-chosen link. Tracked by a localStorage
@@ -4802,6 +4892,7 @@
             if (changed) saveHabits(habits);
             localStorage.setItem(KEY, '1');
         })();
+        */
 
         // Update scores on page load to persist momentum for missed days
         updateAllHabitScores();
@@ -4849,16 +4940,23 @@
         // Track current period to detect changes
         let lastPeriod = getTimeOfDayNow();
         let lastDate = getTodayString();
+        let lastDelayPending = false;
 
         // Check every minute if period or date changed
         setInterval(() => {
             updateBadge();
             const currentPeriod = getTimeOfDayNow();
             const currentDate = getTodayString();
+            const delayPending = anyDelayPending();
             if (currentPeriod !== lastPeriod || currentDate !== lastDate) {
                 lastPeriod = currentPeriod;
                 lastDate = currentDate;
                 updateDisplay();
                 scheduleNotifications();
+            } else if (delayPending || lastDelayPending) {
+                // A Daily×N habit is (or just was) within its hide window —
+                // re-render so it reappears on its own when the delay elapses.
+                updateDisplay();
             }
+            lastDelayPending = delayPending;
         }, 60000);

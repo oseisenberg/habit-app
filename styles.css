@@ -422,7 +422,7 @@
         label.toggle-switch input:checked + .toggle-slider { background: #4ade80; }
         label.toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
 
-        .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #2a2a3e; }
+        .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
         .settings-label { color: #ccc; font-size: 0.85rem; }
         .settings-value { display: flex; align-items: center; gap: 6px; }
         .settings-input { width: 52px; padding: 5px; border: 1px solid #2a2a3e; border-radius: 8px; background: #0f0f1a; color: #fff; text-align: center; font-size: 0.95rem; -moz-appearance: textfield; touch-action: manipulation; }
