@@ -3416,19 +3416,13 @@
 
             const cat = categorizeHabits(habits);
 
-            // A habit with autoCompletes renders inline as a connected pair
-            // (see renderHabitIcon), so filter the linked target out of every
-            // bucket to avoid drawing it twice. Only consume the target if
-            // its trigger habit is actually visible somewhere — otherwise a
-            // snoozed/skipped trigger would silently hide the target too.
+            // An auto-complete target stays independent in its own slot
+            // until it's actually auto-completed (then categorizeHabits
+            // hides it via autoCompletedToday) — so it is NOT consumed here.
+            // Companion links still de-dup so the pair isn't drawn twice.
             const consumedLinkedIds = new Set();
             const visibleIds = new Set();
             [cat.now, cat.optional, cat.later, cat.done].forEach(arr => arr.forEach(h => visibleIds.add(h.id)));
-            habits.forEach(h => {
-                if (!visibleIds.has(h.id) || !h.autoCompletes) return;
-                const lid = Number(h.autoCompletes);
-                if (lid && lid !== h.id) consumedLinkedIds.add(lid);
-            });
             // Companion links: both partners point at each other.
             // - If exactly one is completed today, drop the completed one so
             //   only the still-pending partner shows (alone, no pair).
@@ -3684,24 +3678,9 @@
         }
 
         function renderHabitIcon(habit, isLater = false, isCompleted = false) {
-            // If this habit auto-completes another, render them as a connected
-            // pair (icon — line — icon) sharing one 2-column wrapper. The
-            // linked target is shown muted when it isn't due today, but the
-            // tap target still routes through the normal completion flow.
-            if (habit.autoCompletes) {
-                const linkedId = Number(habit.autoCompletes);
-                if (linkedId && linkedId !== habit.id) {
-                    const linked = loadHabits().find(h => h.id === linkedId && !h.archived);
-                    if (linked) {
-                        const today = getTodayString();
-                        const linkedDoneToday = isCompletedToday(linked) || linked.autoCompletedToday === today;
-                        const linkedMuted = !linkedDoneToday && !isDueToday(linked);
-                        const aInner = renderHabitIconInner(habit, isLater, isCompleted);
-                        const bInner = renderHabitIconInner(linked, false, linkedDoneToday, { muted: linkedMuted });
-                        return `<div class="habit-icon-wrapper linked-pair">${aInner}<div class="link-line"></div>${bInner}</div>`;
-                    }
-                }
-            }
+            // Auto-complete: the target stays an independent icon in its own
+            // slot until it's auto-completed (then it's hidden), so the
+            // trigger is NOT drawn as a connected pair.
 
             // Companion link: bidirectional, visual only — no auto-completion.
             // Render as a pair only when both partners are in the same
