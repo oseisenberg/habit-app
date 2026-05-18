@@ -93,7 +93,8 @@
             timesPeriod: PERIOD.WEEK,            // 'day', 'week' or 'month' for times
             pointsPeriod: PERIOD.WEEK,           // 'day', 'week' or 'month' for points
             afterPeriod: PERIOD.DAY,             // 'day', 'week' or 'month' for after completion
-            isNegative: false,                   // negative habit (track avoiding)
+            // --- DISABLED: negative-habit feature (kept commented) ---
+            // isNegative: false,                   // negative habit (track avoiding)
             noMomentum: false,                   // never track momentum (always neutral)
             confirmDescription: false,           // show description popup before completing
             // --- DISABLED: auto-complete feature (kept commented for future re-enable) ---
@@ -132,7 +133,8 @@
             formState.timesPeriod = PERIOD.WEEK;
             formState.pointsPeriod = PERIOD.WEEK;
             formState.afterPeriod = PERIOD.DAY;
-            formState.isNegative = false;
+            // --- DISABLED: negative-habit feature ---
+            // formState.isNegative = false;
             formState.noMomentum = false;
             formState.confirmDescription = false;
             // --- DISABLED: auto-complete feature ---
@@ -191,7 +193,8 @@
             else if (habit.frequency.everyXMonths) formState.afterPeriod = PERIOD.MONTH;
             else formState.afterPeriod = PERIOD.DAY;
 
-            formState.isNegative = habit.isNegative || false;
+            // --- DISABLED: negative-habit feature ---
+            // formState.isNegative = habit.isNegative || false;
             formState.noMomentum = habit.noMomentum || false;
             formState.confirmDescription = habit.confirmDescription || false;
             // --- DISABLED: auto-complete feature ---
@@ -571,10 +574,11 @@
             }
         }
 
-        function toggleFormNegative() {
-            formState.isNegative = !formState.isNegative;
-            rerenderForm();
-        }
+        // --- DISABLED: negative-habit feature (orphaned; kept commented) ---
+        // function toggleFormNegative() {
+        //     formState.isNegative = !formState.isNegative;
+        //     rerenderForm();
+        // }
 
         // Confirm is a sub-option of Description (checkbox under the
         // textarea), not a standalone tag — no rerender needed since it
@@ -1903,7 +1907,8 @@
                 usePoints: formState.isPointsMode,
                 isReminder: formState.isReminderMode,
                 allowOptional: formState.allowOptional,
-                isNegative: formState.isNegative,
+                // --- DISABLED: negative-habit feature ---
+                // isNegative: formState.isNegative,
                 noMomentum: formState.noMomentum,
                 confirmDescription: formState.confirmDescription,
                 // --- DISABLED: auto-complete & linked-habit features ---
@@ -2421,30 +2426,33 @@
                 }
 
                 if (wasDue) {
-                    const isNegativeHabit = habit.isNegative;
+                    // --- DISABLED: negative-habit feature. The isNegative
+                    // branches are kept commented for future re-enable; only
+                    // positive-habit scoring runs now. ---
+                    // const isNegativeHabit = habit.isNegative;
                     if (wasCompleted) {
-                        if (isNegativeHabit) {
+                        /* if (isNegativeHabit) {
                             // Negative habit: completing (doing bad thing) = penalty with acceleration
                             const basePenalty = score < 0 ? Math.min(45, 25 - score * 0.2) : 25;
                             const penalty = basePenalty * frequencyScale;
                             score = Math.max(-100, score - penalty);
-                        } else {
+                        } else { */
                             // Positive habit: completing = reward
                             const reward = 15 * frequencyScale;
                             score = Math.min(100, score + reward);
-                        }
+                        /* } */
                     } else {
-                        if (isNegativeHabit) {
+                        /* if (isNegativeHabit) {
                             // Negative habit: not doing (avoiding) = small reward
                             const reward = 5 * frequencyScale;
                             score = Math.min(100, score + reward);
-                        } else {
+                        } else { */
                             // Positive habit: missing = penalty with acceleration (worse when already negative)
                             const basePenalty = score < 0 ? Math.min(45, 25 - score * 0.2) : 25;
                             const isReminder = habit.isReminder || freqType === FREQ.REMINDER;
                             const penalty = (isReminder ? basePenalty * 0.5 : basePenalty) * frequencyScale;
                             score = Math.max(-100, score - penalty);
-                        }
+                        /* } */
                     }
                 }
 
@@ -3409,18 +3417,20 @@
             const hasConfirm = !!(habit.confirmDescription && habit.description);
             const extraIndicator = (hasSubtasks || isPointsBased || hasConfirm) ? '<div class="extra-indicator"></div>' : '';
 
-            const isNegative = habit.isNegative;
-            const today = getTodayString();
-            const loggedToday = habit.completions.some(c => c.date === today);
-
-            if (isNegative) {
-                ringClass = loggedToday ? 'negative-logged' : 'negative';
-            }
+            // --- DISABLED: negative-habit feature. Ring-state override kept
+            // commented for future re-enable; habits always render the
+            // normal ring + neglect dots now. ---
+            // const isNegative = habit.isNegative;
+            // const today = getTodayString();
+            // const loggedToday = habit.completions.some(c => c.date === today);
+            // if (isNegative) {
+            //     ringClass = loggedToday ? 'negative-logged' : 'negative';
+            // }
 
             return `<div class="habit-icon${mutedClass}" data-habit-id="${habit.id}" onclick="${leftClick}" oncontextmenu="${rightClick}">
                 <div class="habit-ring ${ringClass}" style="--progress: ${progress}">
                     <span class="habit-emoji">${icon}</span>
-                    ${isNegative && !loggedToday ? '' : neglectDots}
+                    ${neglectDots}
                     ${extraIndicator}
                 </div>
             </div>`;
@@ -4099,8 +4109,9 @@
             // Save reminder mode flag
             habit.isReminder = formState.isReminderMode;
 
+            // --- DISABLED: negative-habit feature ---
             // Save negative habit flag
-            habit.isNegative = formState.isNegative;
+            // habit.isNegative = formState.isNegative;
 
             // Save no-momentum flag
             habit.noMomentum = formState.noMomentum;
@@ -4363,7 +4374,7 @@
         }
 
         let allHabitsSort = 'status';   // status | alpha | momentum | overdue
-        let allHabitsFilter = 'all';    // all | reminders | subtasks | snoozed | negative | archived
+        let allHabitsFilter = 'all';    // all | reminders | subtasks | snoozed | archived
         function setAllHabitsSort(v) { allHabitsSort = v; renderAllHabitsGrid(); }
         function setAllHabitsFilter(v) { allHabitsFilter = v; renderAllHabitsGrid(); }
 
@@ -4372,7 +4383,8 @@
                 case 'reminders': return !h.archived && (h.isReminder || h.frequency?.type === FREQ.REMINDER);
                 case 'subtasks':  return !h.archived && h.subtasks && h.subtasks.length > 0;
                 case 'snoozed':   return !!h.snoozedUntil;
-                case 'negative':  return !h.archived && h.isNegative;
+                // --- DISABLED: negative-habit feature ---
+                // case 'negative':  return !h.archived && h.isNegative;
                 case 'archived':  return !!h.archived;
                 default:          return !h.archived; // 'all'
             }
@@ -4482,14 +4494,14 @@
                     // Map momentum (-100..100) to a 0..100% perimeter fill;
                     // higher momentum = more of the ring coloured. Hue runs
                     // red -> amber -> green so the colour itself reads as
-                    // low/mid/high, with a soft track and a faint glow.
+                    // low/mid/high, with a soft track (no outer glow).
                     const raw = Math.max(-100, Math.min(100, calculateMomentumScore(habit).raw));
                     const pct = Math.round((raw + 100) / 2);
                     const hue = Math.round((pct / 100) * 130); // 0=red .. 130=green
                     const color = `hsl(${hue} 70% 55%)`;
                     ringStyle = `--progress: ${pct}%;`
                         + `background: conic-gradient(${color} ${pct}%, #23233a ${pct}%);`
-                        + `box-shadow: 0 0 0 1px #23233a inset, 0 0 8px -2px ${color};`;
+                        + `box-shadow: 0 0 0 1px #23233a inset;`;
                 }
                 return `<div class="habit-icon-wrapper" style="${opacity}">
                     <div class="habit-icon" onclick="openDetailsFromAllHabits(${habit.id})">
@@ -4567,7 +4579,6 @@
                                 <option value="reminders" ${allHabitsFilter === 'reminders' ? 'selected' : ''}>Reminders</option>
                                 <option value="subtasks" ${allHabitsFilter === 'subtasks' ? 'selected' : ''}>Has subtasks</option>
                                 <option value="snoozed" ${allHabitsFilter === 'snoozed' ? 'selected' : ''}>Snoozed</option>
-                                <option value="negative" ${allHabitsFilter === 'negative' ? 'selected' : ''}>Negative</option>
                                 <option value="archived" ${allHabitsFilter === 'archived' ? 'selected' : ''}>Archived</option>
                             </select>
                         </label>
