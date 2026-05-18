@@ -4866,10 +4866,11 @@
             const swipeDelta = swipeEndY - swipeStartY;
             const elementToReset = swipeElement; // Save reference before clearing
 
-            // Small popups (points/snooze/confirm/emoji/subtask) are easy to
-            // dismiss by accident — keep the older 80px threshold for them so
-            // the Confirm-description popup doesn't slip away mid-tap.
-            const dismissThreshold = swipeElement.classList.contains('modal') ? 40 : 80;
+            // Small popups (points/snooze/confirm/emoji/subtask) keep the
+            // 80px threshold. Full modals (details/edit/create/settings) use
+            // a larger 95px pull so the details/edit pages aren't dismissed
+            // too easily by a light downward drag.
+            const dismissThreshold = swipeElement.classList.contains('modal') ? 95 : 80;
             if (swipeActive && swipeDelta > dismissThreshold) {
                 // Animate the slide-out via inline transform AND close the
                 // overlay immediately so it stops catching taps that should
