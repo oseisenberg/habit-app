@@ -93,8 +93,6 @@
             timesPeriod: PERIOD.WEEK,            // 'day', 'week' or 'month' for times
             pointsPeriod: PERIOD.WEEK,           // 'day', 'week' or 'month' for points
             afterPeriod: PERIOD.DAY,             // 'day', 'week' or 'month' for after completion
-            // --- DISABLED: negative-habit feature (kept commented) ---
-            // isNegative: false,                   // negative habit (track avoiding)
             noMomentum: false,                   // never track momentum (always neutral)
             confirmDescription: false,           // show description popup before completing
             autoCompletes: '',                   // habit ID to auto-complete when this is done
@@ -131,8 +129,6 @@
             formState.timesPeriod = PERIOD.WEEK;
             formState.pointsPeriod = PERIOD.WEEK;
             formState.afterPeriod = PERIOD.DAY;
-            // --- DISABLED: negative-habit feature ---
-            // formState.isNegative = false;
             formState.noMomentum = false;
             formState.confirmDescription = false;
             formState.autoCompletes = '';
@@ -189,8 +185,6 @@
             else if (habit.frequency.everyXMonths) formState.afterPeriod = PERIOD.MONTH;
             else formState.afterPeriod = PERIOD.DAY;
 
-            // --- DISABLED: negative-habit feature ---
-            // formState.isNegative = habit.isNegative || false;
             formState.noMomentum = habit.noMomentum || false;
             formState.confirmDescription = habit.confirmDescription || false;
             formState.autoCompletes = habit.autoCompletes || '';
@@ -589,11 +583,6 @@
             }
         }
 
-        // --- DISABLED: negative-habit feature (orphaned; kept commented) ---
-        // function toggleFormNegative() {
-        //     formState.isNegative = !formState.isNegative;
-        //     rerenderForm();
-        // }
 
         // Confirm is a sub-option of Description (checkbox under the
         // textarea), not a standalone tag — no rerender needed since it
@@ -2167,8 +2156,6 @@
                 usePoints: formState.isPointsMode,
                 isReminder: formState.isReminderMode,
                 allowOptional: formState.allowOptional,
-                // --- DISABLED: negative-habit feature ---
-                // isNegative: formState.isNegative,
                 noMomentum: formState.noMomentum,
                 confirmDescription: formState.confirmDescription,
                 autoCompletes: document.getElementById('autoCompletes')?.value.trim() || '',
@@ -2687,33 +2674,15 @@
                 }
 
                 if (wasDue) {
-                    // --- DISABLED: negative-habit feature. The isNegative
-                    // branches are kept commented for future re-enable; only
-                    // positive-habit scoring runs now. ---
-                    // const isNegativeHabit = habit.isNegative;
                     if (wasCompleted) {
-                        /* if (isNegativeHabit) {
-                            // Negative habit: completing (doing bad thing) = penalty with acceleration
-                            const basePenalty = score < 0 ? Math.min(45, 25 - score * 0.2) : 25;
-                            const penalty = basePenalty * frequencyScale;
-                            score = Math.max(-100, score - penalty);
-                        } else { */
-                            // Positive habit: completing = reward
-                            const reward = 15 * frequencyScale;
-                            score = Math.min(100, score + reward);
-                        /* } */
+                        const reward = 15 * frequencyScale;
+                        score = Math.min(100, score + reward);
                     } else {
-                        /* if (isNegativeHabit) {
-                            // Negative habit: not doing (avoiding) = small reward
-                            const reward = 5 * frequencyScale;
-                            score = Math.min(100, score + reward);
-                        } else { */
-                            // Positive habit: missing = penalty with acceleration (worse when already negative)
-                            const basePenalty = score < 0 ? Math.min(45, 25 - score * 0.2) : 25;
-                            const isReminder = habit.isReminder || freqType === FREQ.REMINDER;
-                            const penalty = (isReminder ? basePenalty * 0.5 : basePenalty) * frequencyScale;
-                            score = Math.max(-100, score - penalty);
-                        /* } */
+                        // Missing = penalty with acceleration (worse when already negative)
+                        const basePenalty = score < 0 ? Math.min(45, 25 - score * 0.2) : 25;
+                        const isReminder = habit.isReminder || freqType === FREQ.REMINDER;
+                        const penalty = (isReminder ? basePenalty * 0.5 : basePenalty) * frequencyScale;
+                        score = Math.max(-100, score - penalty);
                     }
                 }
 
@@ -3655,16 +3624,6 @@
             const hasConfirm = !!(habit.confirmDescription && habit.description);
             const extraIndicator = (hasSubtasks || isPointsBased || hasConfirm) ? '<div class="extra-indicator"></div>' : '';
 
-            // --- DISABLED: negative-habit feature. Ring-state override kept
-            // commented for future re-enable; habits always render the
-            // normal ring + neglect dots now. ---
-            // const isNegative = habit.isNegative;
-            // const today = getTodayString();
-            // const loggedToday = habit.completions.some(c => c.date === today);
-            // if (isNegative) {
-            //     ringClass = loggedToday ? 'negative-logged' : 'negative';
-            // }
-
             return `<div class="habit-icon${mutedClass}" data-habit-id="${habit.id}" onclick="${leftClick}" oncontextmenu="${rightClick}">
                 <div class="habit-ring ${ringClass}" style="--progress: ${progress}">
                     <span class="habit-emoji">${icon}</span>
@@ -4336,10 +4295,6 @@
             // Save reminder mode flag
             habit.isReminder = formState.isReminderMode;
 
-            // --- DISABLED: negative-habit feature ---
-            // Save negative habit flag
-            // habit.isNegative = formState.isNegative;
-
             // Save no-momentum flag
             habit.noMomentum = formState.noMomentum;
 
@@ -4641,8 +4596,6 @@
                 case 'reminders': return !h.archived && (h.isReminder || h.frequency?.type === FREQ.REMINDER);
                 case 'subtasks':  return !h.archived && h.subtasks && h.subtasks.length > 0;
                 case 'snoozed':   return !!h.snoozedUntil;
-                // --- DISABLED: negative-habit feature ---
-                // case 'negative':  return !h.archived && h.isNegative;
                 case 'archived':  return !!h.archived;
                 default:          return !h.archived; // 'all'
             }
@@ -5137,37 +5090,6 @@
         if (!localStorage.getItem('habits_v3')) {
             loadTestData();
         }
-
-        // --- DISABLED: linked-habit feature. One-time companion-link
-        // migration kept commented for future re-enable. ---
-        /*
-        // One-time companion-link migration. Apply curated pairings to
-        // existing saved habits if neither side already has a link set —
-        // never overwrite a user-chosen link. Tracked by a localStorage
-        // flag so it runs at most once per device.
-        (function migrateCompanionLinks() {
-            const KEY = 'migration_companion_links_v1';
-            if (localStorage.getItem(KEY)) return;
-            const pairs = [
-                [36, 38],              // Brush teeth ↔ Floss
-                [3, 1776936635163],    // Strength training ↔ Cardio
-                [33, 47],              // Hair management ↔ Cut chest hair
-            ];
-            const habits = loadHabits();
-            let changed = false;
-            for (const [a, b] of pairs) {
-                const ha = habits.find(h => h.id === a);
-                const hb = habits.find(h => h.id === b);
-                if (!ha || !hb) continue;
-                if (ha.linkedHabit || hb.linkedHabit) continue;
-                ha.linkedHabit = b;
-                hb.linkedHabit = a;
-                changed = true;
-            }
-            if (changed) saveHabits(habits);
-            localStorage.setItem(KEY, '1');
-        })();
-        */
 
         // One-time: auto-complete & linked-habit ship inactive. Existing
         // installs may have a saved disabledTags from before these existed
