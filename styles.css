@@ -236,8 +236,14 @@
         }
 
         .overlay-fixed-header {
-            flex-shrink: 0; padding: calc(14px + env(safe-area-inset-top, 0px)) 18px 10px;
+            flex-shrink: 0; padding: 14px 18px 10px;
             background: #1a1a2e; border-bottom: 1px solid #2a2a3e;
+        }
+        /* Only the full-screen modal sits under the notch, so only it needs
+           the top safe-area inset. Bottom sheets/popups are lower down —
+           adding the inset there just created a big empty gap. */
+        .modal--full .overlay-fixed-header {
+            padding-top: calc(14px + env(safe-area-inset-top, 0px));
         }
         .overlay-fixed-header .modal-header { margin-bottom: 0; }
         .overlay-scroll {
@@ -458,7 +464,8 @@
         @supports (padding-bottom: env(safe-area-inset-bottom)) {
             body { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
             .fab { bottom: calc(20px + env(safe-area-inset-bottom)); }
-            .modal { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+            /* The safe-area bottom inset is handled inside .overlay-scroll;
+               adding it to .modal again just created dead footer space. */
         }
 
         .debug-toggle { position: fixed; top: calc(8px + env(safe-area-inset-top, 0px)); left: 8px; background: rgba(255,255,255,0.1); color: #666; border: none; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; z-index: 500; opacity: 0.4; }
