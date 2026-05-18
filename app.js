@@ -239,10 +239,9 @@
             const currentIcon = state.icon || (habit?.icon) || '📌';
             const habitName = escapeHtml(formState.name || '');
             const habitDesc = escapeHtml(formState.description || '');
-            // Points only applies to the "Within period" schedule
+            // Points only applies to the "Goal" schedule
             // (points per day/week/month) — disabled for every other type.
             const isTwiceDaily = state.frequency === FREQ.TWICE_DAILY;
-            const pointsDisabled = state.frequency !== FREQ.TIMES_PER_PERIOD;
             // Allow Extra is now compatible with all frequencies
 
             // Build frequency inputs (use lowercase IDs for create, camelCase with 'edit' prefix for edit)
@@ -251,29 +250,30 @@
             if (state.frequency === FREQ.EVERY_X_DAYS) {
                 const afterVal = state.everyXValue ?? habit?.frequency?.everyXDays ?? habit?.frequency?.everyXWeeks ?? habit?.frequency?.everyXMonths ?? DEFAULTS.EVERY_X_DAYS;
                 freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'E' : 'e'}veryXPeriod" value="${afterVal}" min="1">
-                    <div class="period-toggle">
-                        <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.DAY}')">day</button>
-                        <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.WEEK}')">wk</button>
-                        <button type="button" class="period-toggle-btn ${state.afterPeriod === PERIOD.MONTH ? 'active' : ''}" onclick="setFormPeriod('after', '${PERIOD.MONTH}')">mo</button>
-                    </div>`;
+                    <select class="period-select" onchange="setFormPeriod('after', this.value)">
+                        <option value="${PERIOD.DAY}" ${state.afterPeriod === PERIOD.DAY ? 'selected' : ''}>day</option>
+                        <option value="${PERIOD.WEEK}" ${state.afterPeriod === PERIOD.WEEK ? 'selected' : ''}>wk</option>
+                        <option value="${PERIOD.MONTH}" ${state.afterPeriod === PERIOD.MONTH ? 'selected' : ''}>mo</option>
+                    </select>`;
             } else if (state.frequency === FREQ.TIMES_PER_PERIOD) {
-                if (state.isPointsMode) {
-                    const ptsVal = state.pointsValue ?? habit?.frequency?.pointsPerDay ?? habit?.frequency?.pointsPerWeek ?? habit?.frequency?.pointsPerMonth ?? DEFAULTS.POINTS_PER_PERIOD;
-                    freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'P' : 'p'}ointsPerPeriod" value="${ptsVal}" min="1"><span style="color:#888">pts /</span>
-                        <div class="period-toggle">
-                            <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.DAY}')">day</button>
-                            <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.WEEK}')">wk</button>
-                            <button type="button" class="period-toggle-btn ${state.pointsPeriod === PERIOD.MONTH ? 'active' : ''}" onclick="setFormPeriod('points', '${PERIOD.MONTH}')">mo</button>
-                        </div>`;
-                } else {
-                    const timesVal = state.timesValue ?? habit?.frequency?.timesPerDay ?? habit?.frequency?.timesPerWeek ?? habit?.frequency?.timesPerMonth ?? DEFAULTS.TIMES_PER_PERIOD;
-                    freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'T' : 't'}imesPerPeriod" value="${timesVal}" min="1" max="31">
-                        <div class="period-toggle">
-                            <button type="button" class="period-toggle-btn ${state.timesPeriod === PERIOD.DAY ? 'active' : ''}" onclick="setFormPeriod('times', '${PERIOD.DAY}')">day</button>
-                            <button type="button" class="period-toggle-btn ${state.timesPeriod === PERIOD.WEEK ? 'active' : ''}" onclick="setFormPeriod('times', '${PERIOD.WEEK}')">wk</button>
-                            <button type="button" class="period-toggle-btn ${state.timesPeriod === PERIOD.MONTH ? 'active' : ''}" onclick="setFormPeriod('times', '${PERIOD.MONTH}')">mo</button>
-                        </div>`;
-                }
+                const isP = state.isPointsMode;
+                const numVal = isP
+                    ? (state.pointsValue ?? habit?.frequency?.pointsPerDay ?? habit?.frequency?.pointsPerWeek ?? habit?.frequency?.pointsPerMonth ?? DEFAULTS.POINTS_PER_PERIOD)
+                    : (state.timesValue ?? habit?.frequency?.timesPerDay ?? habit?.frequency?.timesPerWeek ?? habit?.frequency?.timesPerMonth ?? DEFAULTS.TIMES_PER_PERIOD);
+                const numId = `${idPrefix}${isP ? (isEdit ? 'P' : 'p') + 'ointsPerPeriod' : (isEdit ? 'T' : 't') + 'imesPerPeriod'}`;
+                const periodState = isP ? state.pointsPeriod : state.timesPeriod;
+                const periodType = isP ? 'points' : 'times';
+                freqInputsHtml = `<input type="number" class="frequency-input" id="${numId}" value="${numVal}" min="1"${isP ? '' : ' max="31"'}>
+                        <select class="period-select" onchange="toggleFormPointsMode()">
+                            <option value="times" ${isP ? '' : 'selected'}>times</option>
+                            <option value="points" ${isP ? 'selected' : ''}>points</option>
+                        </select>
+                        <span style="color:#888">/</span>
+                        <select class="period-select" onchange="setFormPeriod('${periodType}', this.value)">
+                            <option value="${PERIOD.DAY}" ${periodState === PERIOD.DAY ? 'selected' : ''}>day</option>
+                            <option value="${PERIOD.WEEK}" ${periodState === PERIOD.WEEK ? 'selected' : ''}>wk</option>
+                            <option value="${PERIOD.MONTH}" ${periodState === PERIOD.MONTH ? 'selected' : ''}>mo</option>
+                        </select>`;
             } else if (state.frequency === FREQ.DAILY) {
                 const dailyVal = state.dailyTimesValue ?? habit?.frequency?.timesPerDay ?? 1;
                 freqInputsHtml = `<input type="number" class="frequency-input" id="${idPrefix}${isEdit ? 'D' : 'd'}ailyTimes" value="${dailyVal}" min="1" max="31" oninput="rerenderForm()"><span style="color:#888">× / day</span>`;
@@ -380,7 +380,6 @@
                             const count = fn => allHabits.filter(fn).length;
                             const pills = [
                                 { id: 'subtasks',    label: 'Subtasks',      active: state.showSubtasks,        domId: isEdit ? 'editSubtasksPill' : 'subtasksPill',           onclick: 'toggleFormSubtasks()',          usage: count(h => h.subtasks?.length > 0) },
-                                { id: 'points',      label: 'Points',        active: state.isPointsMode,        domId: isEdit ? 'editPointsPill' : 'pointsPill',               onclick: 'toggleFormPointsMode()',        usage: count(h => h.usePoints), extraClass: pointsDisabled ? 'disabled' : '' },
                                 { id: 'reminder',    label: 'Reminder',      active: state.isReminderMode,      domId: isEdit ? 'editReminderPill' : 'reminderPill',           onclick: 'toggleFormReminderMode()',      usage: count(h => h.isReminder || h.frequency?.type === FREQ.REMINDER) },
                                 { id: 'desc',        label: 'Description',   active: state.showDescription,     domId: isEdit ? 'editDescPill' : 'descPill',                   onclick: 'toggleFormDescription()',       usage: count(h => !!h.description) },
                                 { id: 'noMomentum',  label: 'Untracked',   active: state.noMomentum,          domId: isEdit ? 'editNoMomentumPill' : 'noMomentumPill',       onclick: 'toggleFormNoMomentum()',        usage: count(h => h.noMomentum) },
@@ -451,9 +450,9 @@
                     <div class="frequency-row" id="${isEdit ? 'editFrequencyRow' : 'frequencyRow'}">
                         <select class="form-input" id="${isEdit ? 'editFrequencySelect' : 'frequencySelect'}" onchange="selectFormFrequency(this.value)" style="flex:1">
                             <option value="${FREQ.DAILY}" ${state.frequency === FREQ.DAILY ? 'selected' : ''}>Daily</option>
-                            <option value="${FREQ.TWICE_DAILY}" ${state.frequency === FREQ.TWICE_DAILY ? 'selected' : ''} ${state.isPointsMode ? 'disabled' : ''}>Morning & Bedtime${state.isPointsMode ? ' (not with Points)' : ''}</option>
+                            <option value="${FREQ.TWICE_DAILY}" ${state.frequency === FREQ.TWICE_DAILY ? 'selected' : ''}>Morning & Bedtime</option>
                             <option value="${FREQ.EVERY_X_DAYS}" ${state.frequency === FREQ.EVERY_X_DAYS ? 'selected' : ''}>Completion</option>
-                            <option value="${FREQ.TIMES_PER_PERIOD}" ${state.frequency === FREQ.TIMES_PER_PERIOD ? 'selected' : ''}>Within period</option>
+                            <option value="${FREQ.TIMES_PER_PERIOD}" ${state.frequency === FREQ.TIMES_PER_PERIOD ? 'selected' : ''}>Goal</option>
                         </select>
                         <div id="${isEdit ? 'editFrequencyInputs' : 'frequencyInputs'}">${freqInputsHtml}</div>
                     </div>
@@ -570,7 +569,7 @@
         }
 
         function toggleFormPointsMode() {
-            // Points only makes sense with the "Within period" schedule.
+            // Points only makes sense with the "Goal" schedule.
             if (formState.frequency !== FREQ.TIMES_PER_PERIOD) return;
             formState.isPointsMode = !formState.isPointsMode;
             rerenderForm();
@@ -692,7 +691,6 @@
         // tags appear as option pills in the habit form.
         const TAG_LIST = [
             { id: 'subtasks',   label: 'Subtasks' },
-            { id: 'points',     label: 'Points' },
             { id: 'reminder',   label: 'Reminder' },
             { id: 'desc',       label: 'Description' },
             { id: 'noMomentum', label: 'Untracked' },
@@ -703,7 +701,6 @@
 
         const TAG_GLOSSARY = [
             { label: 'Subtasks',      desc: 'Break the habit into a checklist; the habit auto-completes when every subtask is done.' },
-            { label: 'Points',        desc: 'Score each completion (1, 2, or 3 points) and aim for a daily, weekly, or monthly target instead of a fixed count.' },
             { label: 'Reminder',      desc: 'Treat as a recurring nudge rather than a streak — momentum resets to zero on completion instead of building up.' },
             { label: 'Description',   desc: 'Attach freeform notes that show on the details page.' },
             { label: 'Untracked',   desc: 'Never tracks momentum — always neutral, no reward or penalty for skipping. Good for scheduled treats. Still appears on its normal cadence like any habit.' },
@@ -790,7 +787,7 @@
             if (f === FREQ.TWICE_DAILY) {
                 formState.time = null;
             }
-            // Points only applies to "Within period"; clear it otherwise.
+            // Points only applies to the "Goal" schedule; clear it otherwise.
             if (f !== FREQ.TIMES_PER_PERIOD && formState.isPointsMode) {
                 formState.isPointsMode = false;
             }
