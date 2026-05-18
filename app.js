@@ -4614,7 +4614,7 @@
                         </label>
                         <label class="ah-select-wrap" style="flex:0 0 auto">
                             <span class="ah-select-label">Order</span>
-                            <button class="ah-select" style="cursor:pointer;min-width:46px;text-align:center" onclick="toggleAllHabitsSortDir()" aria-label="Reverse sort order" title="Reverse sort order">${allHabitsSortReversed ? '↓' : '↑'}</button>
+                            <button class="ah-select ah-order" style="cursor:pointer;min-width:46px" onclick="toggleAllHabitsSortDir()" aria-label="Reverse sort order" title="Reverse sort order">${allHabitsSortReversed ? '↓' : '↑'}</button>
                         </label>
                     </div>
                     <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 14px 10px;color:#aaa;font-size:0.82rem">
