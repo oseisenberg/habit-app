@@ -3679,7 +3679,9 @@
         // bulleted lines. Used to show a confirm-description and any
         // auto-completed partner's details inside the completion popup.
         function popupSection(label, innerHtml) {
-            return `<div style="margin:10px 0;padding-top:10px;border-top:1px solid #2a2a3e">
+            // No top border here — the popup header already draws a divider
+            // directly above this section; a second line looked doubled.
+            return `<div style="margin:10px 0">
                 <div style="font-size:0.7rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">${escapeHtml(label)}</div>
                 ${innerHtml}
             </div>`;
