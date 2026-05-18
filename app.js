@@ -410,11 +410,11 @@
                 </div>
                 ${state.showDescription ? `<div class="form-group">
                     <label class="form-label">Description</label>
-                    <textarea class="form-input" id="${isEdit ? 'editHabitDesc' : 'habitDesc'}" placeholder="Add a description..." rows="2" style="resize:none;font-size:0.85rem">${habitDesc}</textarea>
-                    <label style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#aaa;font-size:0.82rem;cursor:pointer">
-                        <input type="checkbox" ${state.confirmDescription ? 'checked' : ''} onchange="setFormConfirmDescription(this.checked)" style="accent-color:#f59e0b">
+                    <label style="display:flex;align-items:center;gap:8px;margin:2px 0 8px;color:#aaa;font-size:0.82rem;cursor:pointer">
+                        <input type="checkbox" ${state.confirmDescription ? 'checked' : ''} onchange="setFormConfirmDescription(this.checked)" style="accent-color:#667eea">
                         <span>Show description before completing</span>
                     </label>
+                    <textarea class="form-input" id="${isEdit ? 'editHabitDesc' : 'habitDesc'}" placeholder="Add a description..." rows="2" style="resize:none;font-size:0.85rem">${habitDesc}</textarea>
                 </div>` : ''}
                 ${false /* DISABLED: auto-complete feature */ && state.showAutoCompletes ? `<div class="form-group">
                     <label class="form-label">Auto-completes another habit</label>
@@ -4334,7 +4334,7 @@
                     <div class="modal-header" style="gap:10px">
                         <div style="display:flex;align-items:center;gap:10px;min-width:0">
                             <span style="font-size:1.6rem;flex-shrink:0;line-height:1">${icon}</span>
-                            <span class="details-habit-name" style="text-align:left;font-size:1.05rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(habit.name)}${timeIcon ? ` <span title="${habit.timeOfDay === 'morning' ? 'Morning' : 'Bedtime'}">${timeIcon}</span>` : ''}</span>
+                            <span class="details-habit-name" style="text-align:left;font-size:1.05rem;min-width:0;overflow-wrap:anywhere;line-height:1.25">${escapeHtml(habit.name)}${timeIcon ? ` <span title="${habit.timeOfDay === 'morning' ? 'Morning' : 'Bedtime'}">${timeIcon}</span>` : ''}</span>
                         </div>
                         <button class="modal-close" onclick="closeDetails()" style="flex-shrink:0">&times;</button>
                     </div>`;
@@ -4411,7 +4411,14 @@
         let allHabitsSortReversed = false;
         function setAllHabitsSort(v) { allHabitsSort = v; renderAllHabitsGrid(); }
         function setAllHabitsFilter(v) { allHabitsFilter = v; renderAllHabitsGrid(); }
-        function toggleAllHabitsSortDir() { allHabitsSortReversed = !allHabitsSortReversed; renderAllHabitsGrid(); }
+        function toggleAllHabitsSortDir() {
+            allHabitsSortReversed = !allHabitsSortReversed;
+            // The button lives in the fixed header (rendered once), so update
+            // its arrow directly — renderAllHabitsGrid only redraws the list.
+            const btn = document.getElementById('ahOrderBtn');
+            if (btn) btn.textContent = allHabitsSortReversed ? '↓' : '↑';
+            renderAllHabitsGrid();
+        }
 
         function allHabitsFilterPredicate(h) {
             switch (allHabitsFilter) {
@@ -4620,7 +4627,7 @@
                         </label>
                         <label class="ah-select-wrap" style="flex:0 0 auto">
                             <span class="ah-select-label">Order</span>
-                            <button class="ah-select ah-order" style="cursor:pointer;min-width:46px" onclick="toggleAllHabitsSortDir()" aria-label="Reverse sort order" title="Reverse sort order">${allHabitsSortReversed ? '↓' : '↑'}</button>
+                            <button id="ahOrderBtn" class="ah-select ah-order" style="cursor:pointer;min-width:46px" onclick="toggleAllHabitsSortDir()" aria-label="Reverse sort order" title="Reverse sort order">${allHabitsSortReversed ? '↓' : '↑'}</button>
                         </label>
                     </div>
                     <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 14px 10px;color:#aaa;font-size:0.82rem">
