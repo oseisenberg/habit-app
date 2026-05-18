@@ -1233,8 +1233,56 @@
 
         // Settings renders through the shared sheet base like every other
         // bottom-sheet modal (Create/Details/Edit/All Habits).
+        // Settings supports in-sheet sub-views (main ⇄ Notifications). An
+        // in-memory draft holds field values so navigating between views
+        // doesn't lose edits; only Save commits, × still cancels.
+        let settingsView = 'main';
+        let settingsDraft = null;
+
+        function captureSettingsDraft() {
+            if (!settingsDraft) settingsDraft = getSettings();
+            const num = (id, def) => { const e = document.getElementById(id); return e ? (parseInt(e.value) || def) : settingsDraft[id]; };
+            const chk = (id) => { const e = document.getElementById(id); return e ? e.checked : settingsDraft[id]; };
+            settingsDraft.morningStart = num('morningStart', 5);
+            settingsDraft.nightStart = num('nightStart', 18);
+            settingsDraft.separateBedtimeSection = chk('separateBedtimeSection');
+            settingsDraft.notificationsEnabled = chk('notificationsEnabled');
+            settingsDraft.morningReminderTime = num('morningReminderTime', 5);
+            settingsDraft.nightReminderTime = num('nightReminderTime', 18);
+            settingsDraft.momentumAlertEnabled = chk('momentumAlertEnabled');
+            settingsDraft.momentumAlertTime = num('momentumAlertTime', 18);
+            settingsDraft.momentumAlertThreshold = num('momentumAlertThreshold', -20);
+        }
+
+        function populateSettingsFields() {
+            const s = settingsDraft || getSettings();
+            const set = (id, v) => { const e = document.getElementById(id); if (e) { if (e.type === 'checkbox') e.checked = !!v; else e.value = v; } };
+            set('morningStart', s.morningStart);
+            set('nightStart', s.nightStart);
+            set('separateBedtimeSection', s.separateBedtimeSection);
+            set('notificationsEnabled', s.notificationsEnabled);
+            set('morningReminderTime', s.morningReminderTime);
+            set('nightReminderTime', s.nightReminderTime);
+            set('momentumAlertEnabled', s.momentumAlertEnabled);
+            set('momentumAlertTime', s.momentumAlertTime);
+            set('momentumAlertThreshold', s.momentumAlertThreshold);
+            const ns = document.getElementById('notificationSettings');
+            if (ns) ns.style.display = s.notificationsEnabled ? 'block' : 'none';
+            const ms = document.getElementById('momentumAlertSettings');
+            if (ms) ms.style.display = s.momentumAlertEnabled ? 'block' : 'none';
+            updateInstallPromptVisibility();
+        }
+
+        // Navigate between the settings views without losing edits.
+        function settingsNavigate(view) {
+            captureSettingsDraft();
+            settingsView = view;
+            renderSettings();
+            populateSettingsFields();
+        }
+
         function renderSettings() {
-            const body = `
+            const generalRows = `
                 <div class="settings-row">
                     <span class="settings-label">Morning starts at</span>
                     <div class="settings-value">
@@ -1255,8 +1303,9 @@
                         <input type="checkbox" id="separateBedtimeSection">
                         <span class="toggle-slider"></span>
                     </label>
-                </div>
-                <div class="settings-row" style="margin-top:8px; padding-top:10px;">
+                </div>`;
+            const notificationsBlock = `
+                <div class="settings-row">
                     <span class="settings-label">Notifications</span>
                     <label class="toggle-switch">
                         <input type="checkbox" id="notificationsEnabled" onchange="toggleNotifications()">
@@ -1300,7 +1349,8 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>`;
+            const dataButtons = `
                 <button class="submit-btn" onclick="saveSettings()">Save Settings</button>
                 <div style="display:flex;gap:8px;margin-top:8px">
                     <button class="submit-btn secondary" onclick="exportData()" style="flex:1;font-size:0.85rem">Export All Data</button>
@@ -1314,30 +1364,36 @@
                     <button class="submit-btn secondary" onclick="resetAllMomentum()" style="flex:1;font-size:0.85rem;background:#dc2626">Reset All Momentum</button>
                     <button class="submit-btn secondary" onclick="reloadDefaultTasks()" style="flex:1;font-size:0.85rem;background:#dc2626">Reload Default Tasks</button>
                 </div>`;
-            document.getElementById('settingsModal').innerHTML = renderSheet({
-                headerHtml: popupHeader({ title: 'Settings', onClose: 'closeSettings()' }),
-                bodyHtml: body
-            });
+
+            let headerHtml, bodyHtml;
+            if (settingsView === 'notifications') {
+                headerHtml = `<div class="modal-header">
+                    <button class="modal-close" onclick="settingsNavigate('main')" aria-label="Back" style="font-size:1.5rem;line-height:1">‹</button>
+                    <span class="modal-title">Notifications</span>
+                    <button class="modal-close" onclick="closeSettings()">&times;</button>
+                </div>`;
+                bodyHtml = notificationsBlock
+                    + `<button class="submit-btn" style="margin-top:14px" onclick="saveSettings()">Save Settings</button>`;
+            } else {
+                headerHtml = popupHeader({ title: 'Settings', onClose: 'closeSettings()' });
+                bodyHtml = generalRows
+                    + `<div class="settings-row settings-nav" onclick="settingsNavigate('notifications')" style="cursor:pointer;margin-top:8px;padding-top:10px">
+                        <span class="settings-label">Notifications</span>
+                        <span style="color:#666;font-size:1.2rem;line-height:1">›</span>
+                    </div>`
+                    + dataButtons;
+            }
+            document.getElementById('settingsModal').innerHTML = renderSheet({ headerHtml, bodyHtml });
         }
 
         function openSettings() {
+            settingsView = 'main';
+            settingsDraft = getSettings();
             renderSettings();
-            const s = getSettings();
-            document.getElementById('morningStart').value = s.morningStart;
-            document.getElementById('nightStart').value = s.nightStart;
-            document.getElementById('notificationsEnabled').checked = s.notificationsEnabled;
-            document.getElementById('morningReminderTime').value = s.morningReminderTime;
-            document.getElementById('nightReminderTime').value = s.nightReminderTime;
-            document.getElementById('momentumAlertEnabled').checked = s.momentumAlertEnabled;
-            document.getElementById('momentumAlertTime').value = s.momentumAlertTime;
-            document.getElementById('momentumAlertThreshold').value = s.momentumAlertThreshold;
-            document.getElementById('separateBedtimeSection').checked = s.separateBedtimeSection;
-            document.getElementById('notificationSettings').style.display = s.notificationsEnabled ? 'block' : 'none';
-            document.getElementById('momentumAlertSettings').style.display = s.momentumAlertEnabled ? 'block' : 'none';
-            updateInstallPromptVisibility();
+            populateSettingsFields();
             showOverlay('settingsOverlay');
         }
-        function closeSettings() { hideOverlay('settingsOverlay'); }
+        function closeSettings() { hideOverlay('settingsOverlay'); settingsDraft = null; }
         function toggleMomentumSettings() {
             const enabled = document.getElementById('momentumAlertEnabled').checked;
             document.getElementById('momentumAlertSettings').style.display = enabled ? 'block' : 'none';
@@ -1347,32 +1403,23 @@
             document.getElementById('quietHoursSettings').style.display = enabled ? 'block' : 'none';
         }
         async function saveSettings() {
-            const wantNotifications = document.getElementById('notificationsEnabled').checked;
-            // If notifications are turned on but the browser hasn't granted
-            // permission yet (e.g. first run with the default), request it now.
-            // Without this, scheduleNotifications() runs but every send is
-            // silently dropped until the user flips the toggle off and on.
-            if (wantNotifications && 'Notification' in window && Notification.permission !== 'granted') {
+            // Pull whatever view is currently rendered into the draft so we
+            // persist edits from either the main or Notifications sub-view.
+            captureSettingsDraft();
+            if (settingsDraft.notificationsEnabled && 'Notification' in window && Notification.permission !== 'granted') {
+                // Turned on but not yet granted (e.g. first run): request now,
+                // else scheduleNotifications() runs but sends are dropped.
                 const permission = await requestNotificationPermission();
                 if (permission !== 'granted') {
-                    document.getElementById('notificationsEnabled').checked = false;
-                    document.getElementById('notificationSettings').style.display = 'none';
+                    settingsDraft.notificationsEnabled = false;
+                    const cb = document.getElementById('notificationsEnabled');
+                    if (cb) cb.checked = false;
+                    const ns = document.getElementById('notificationSettings');
+                    if (ns) ns.style.display = 'none';
                     alert('Notification permission denied. Please enable in browser settings.');
                 }
             }
-            const prev = getSettings();
-            const settings = {
-                ...prev,
-                morningStart: parseInt(document.getElementById('morningStart').value) || 5,
-                nightStart: parseInt(document.getElementById('nightStart').value) || 18,
-                notificationsEnabled: document.getElementById('notificationsEnabled').checked,
-                morningReminderTime: parseInt(document.getElementById('morningReminderTime').value) || 5,
-                nightReminderTime: parseInt(document.getElementById('nightReminderTime').value) || 18,
-                momentumAlertEnabled: document.getElementById('momentumAlertEnabled').checked,
-                momentumAlertTime: parseInt(document.getElementById('momentumAlertTime').value) || 18,
-                momentumAlertThreshold: parseInt(document.getElementById('momentumAlertThreshold').value) || -20,
-                separateBedtimeSection: document.getElementById('separateBedtimeSection').checked
-            };
+            const settings = { ...getSettings(), ...settingsDraft };
             try {
                 localStorage.setItem('habit_settings', JSON.stringify(settings));
             } catch (e) {
