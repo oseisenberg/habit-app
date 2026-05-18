@@ -717,12 +717,17 @@
         ];
 
         function openTagGlossary() {
-            const rows = TAG_GLOSSARY.map(t =>
+            // Only reference the tags that are Active in Settings → Tags.
+            const disabled = getSettings().disabledTags || [];
+            const disabledLabels = new Set(
+                TAG_LIST.filter(t => disabled.includes(t.id)).map(t => t.label));
+            const visible = TAG_GLOSSARY.filter(t => !disabledLabels.has(t.label));
+            const rows = visible.length ? visible.map(t =>
                 `<div style="padding:8px 0;border-bottom:1px solid #2a2a3e">
                     <div style="font-weight:600;color:#e0e0e0;font-size:0.9rem;margin-bottom:2px">${t.label}</div>
                     <div style="color:#aaa;font-size:0.8rem;line-height:1.4">${t.desc}</div>
                 </div>`
-            ).join('');
+            ).join('') : `<div style="color:#666;font-size:0.85rem;padding:8px 0">No options are active. Enable some in Settings → Tags.</div>`;
             renderPopup('tagGlossaryPopup', {
                 title: 'Options reference', onClose: 'closeTagGlossary()',
                 bodyHtml: rows,
@@ -1447,9 +1452,10 @@
                     <button class="submit-btn secondary" style="flex:1;font-size:0.85rem" onclick="triggerImport()">Import</button>
                 </div>
                 <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(event)">
-                <div style="display:flex;gap:8px;margin-top:16px">
-                    <button class="submit-btn secondary" style="flex:1;font-size:0.85rem;background:#dc2626" onclick="resetAllMomentum()">Reset All Momentum</button>
-                    <button class="submit-btn secondary" style="flex:1;font-size:0.85rem;background:#dc2626" onclick="reloadDefaultTasks()">Reload Default Tasks</button>
+                <div style="font-size:0.7rem;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin:22px 0 8px">Danger zone</div>
+                <div style="display:flex;gap:8px">
+                    <button class="danger-zone-btn" onclick="resetAllMomentum()">Reset All Momentum</button>
+                    <button class="danger-zone-btn" onclick="reloadDefaultTasks()">Reload Default Tasks</button>
                 </div>`;
 
             let headerHtml, bodyHtml;
