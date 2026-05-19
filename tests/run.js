@@ -504,17 +504,6 @@ console.log('\nN. completion analytics');
   eq('weeklyTotals length = weeks', wk.length, 12);
   eq('weeklyTotals sum = completions in window', wk.reduce((a, b) => a + b, 0), 6);
 
-  const streakHabit = mkHabit({ completions: [
-    { date: D }, { date: back(1) }, { date: back(2) },   // current run 3
-    { date: back(5) }, { date: back(6) },                // older run 2
-  ]});
-  const st = F.completionStreaks(streakHabit, D);
-  ok('streaks current=3 longest=3', st.current === 3 && st.longest === 3, st);
-  // grace: today not logged yet but yesterday is -> streak still alive
-  const grace = mkHabit({ completions: [{ date: back(1) }, { date: back(2) }] });
-  eq('streak grace (today pending)', F.completionStreaks(grace, D).current, 2);
-  eq('empty streaks', F.completionStreaks(mkHabit({ completions: [] }), D).current, 0);
-
   eq('recentActiveRate 2/10 days', F.recentActiveRate(
      mkHabit({ completions: [{ date: D }, { date: back(1) }] }), D, 10), 20);
   eq('recentActiveRate dedups same day', F.recentActiveRate(

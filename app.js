@@ -2681,25 +2681,6 @@
             return totals;
         }
 
-        // Longest / current run of consecutive calendar days with >=1
-        // completion. The current streak stays alive if yesterday is done
-        // and today simply hasn't been logged yet.
-        function completionStreaks(habit, todayStr) {
-            const counts = completionCountsByDate(habit);
-            if (!counts.size) return { current: 0, longest: 0 };
-            const dates = [...counts.keys()].sort();
-            let longest = 0, run = 0, prev = null;
-            for (const ds of dates) {
-                run = (prev && daysBetween(prev, ds) === 1) ? run + 1 : 1;
-                if (run > longest) longest = run;
-                prev = ds;
-            }
-            let cursor = counts.has(todayStr) ? todayStr : shiftYMD(todayStr, -1);
-            let current = 0;
-            while (counts.has(cursor)) { current++; cursor = shiftYMD(cursor, -1); }
-            return { current, longest };
-        }
-
         // Headline rate: share of the last `days` calendar days (ending
         // today) that have >=1 completion. Simple, schedule-agnostic, and
         // honest for "how often lately" without the expected-occurrence
@@ -4852,12 +4833,11 @@
             const totalDone = (agg.completions || []).filter(c => c && c.date).length;
 
             const rows = tracked
-                .map(h => ({ h, rate: recentActiveRate(h, today, 30), streak: completionStreaks(h, today).current }))
+                .map(h => ({ h, rate: recentActiveRate(h, today, 30) }))
                 .sort((a, b) => b.rate - a.rate)
-                .map(({ h, rate, streak }) => `<div class="habit-stat-row">
+                .map(({ h, rate }) => `<div class="habit-stat-row">
                     <span class="hsr-icon">${h.icon || '📌'}</span>
                     <span class="hsr-name">${escapeHtml(h.name)}</span>
-                    <span class="hsr-streak">${streak ? `🔥${streak}` : ''}</span>
                     <span class="hsr-barwrap"><span class="hsr-bar" style="width:${rate}%"></span></span>
                     <span class="hsr-rate">${rate}%</span>
                 </div>`).join('');

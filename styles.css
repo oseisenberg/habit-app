@@ -419,7 +419,6 @@
         .habit-stat-row { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
         .hsr-icon { font-size: 1rem; flex-shrink: 0; width: 20px; text-align: center; }
         .hsr-name { flex: 1; min-width: 0; color: #ddd; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .hsr-streak { font-size: 0.72rem; color: #f59e0b; flex-shrink: 0; min-width: 30px; text-align: right; }
         .hsr-barwrap { flex: 0 0 84px; height: 6px; background: #0f0f1a; border-radius: 3px; overflow: hidden; }
         .hsr-bar { display: block; height: 100%; background: linear-gradient(90deg, #667eea, #7c6cff); }
         .hsr-rate { flex: 0 0 34px; text-align: right; color: #aaa; font-size: 0.75rem; }
