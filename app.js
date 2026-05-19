@@ -2596,6 +2596,185 @@
         }
         function daysBetween(d1, d2) { return Math.floor((new Date(d2) - new Date(d1)) / 86400000); }
 
+        // ========================================
+        // COMPLETION ANALYTICS (pure, headless-testable)
+        // ========================================
+        // Every function takes an explicit todayStr where "now" matters, so
+        // results are deterministic in tests and immune to the time-of-day
+        // rollover in getEffectiveDate(). Legacy taps with no timestamp are
+        // skipped only for time-of-day (their date is still always counted).
+
+        function shiftYMD(ds, n) {
+            const d = new Date(ds + 'T00:00:00');
+            d.setDate(d.getDate() + n);
+            return toDateString(d);
+        }
+
+        // Map 'YYYY-MM-DD' -> number of completions logged that day.
+        function completionCountsByDate(habit) {
+            const m = new Map();
+            for (const c of (habit.completions || [])) {
+                if (!c || !c.date) continue;
+                m.set(c.date, (m.get(c.date) || 0) + 1);
+            }
+            return m;
+        }
+
+        // Completions per weekday, Monday-first: [Mon,Tue,...,Sun].
+        function completionsByWeekday(habit) {
+            const out = [0, 0, 0, 0, 0, 0, 0];
+            for (const c of (habit.completions || [])) {
+                if (!c || !c.date) continue;
+                const d = new Date(c.date + 'T00:00:00');
+                if (isNaN(d)) continue;
+                out[(d.getDay() + 6) % 7]++;
+            }
+            return out;
+        }
+
+        // Completions per part of day, from the ms timestamp. Untimestamped
+        // (legacy) taps can't be placed and are excluded.
+        function completionsByTimeOfDay(habit) {
+            const out = { morning: 0, afternoon: 0, evening: 0, night: 0 };
+            for (const c of (habit.completions || [])) {
+                if (!c || !c.timestamp) continue;
+                const h = new Date(c.timestamp).getHours();
+                if (h >= 5 && h < 12) out.morning++;
+                else if (h >= 12 && h < 17) out.afternoon++;
+                else if (h >= 17 && h < 22) out.evening++;
+                else out.night++;
+            }
+            return out;
+        }
+
+        // Trailing Monday-aligned grid for a calendar heatmap: `weeks`
+        // columns x 7 rows in column-major order (col 0 = oldest week,
+        // row 0 = Monday). Future days are flagged so the grid stays
+        // rectangular without implying missed days.
+        function completionHeatmap(habit, todayStr, weeks = 16) {
+            const counts = completionCountsByDate(habit);
+            const today = new Date(todayStr + 'T00:00:00');
+            const dowMonFirst = (today.getDay() + 6) % 7;
+            const start = new Date(today);
+            start.setDate(today.getDate() - dowMonFirst - (weeks - 1) * 7);
+            const cells = [];
+            let maxCount = 0;
+            for (let w = 0; w < weeks; w++) {
+                for (let d = 0; d < 7; d++) {
+                    const day = new Date(start);
+                    day.setDate(start.getDate() + w * 7 + d);
+                    const ds = toDateString(day);
+                    const count = counts.get(ds) || 0;
+                    if (ds <= todayStr && count > maxCount) maxCount = count;
+                    cells.push({ date: ds, count, future: ds > todayStr });
+                }
+            }
+            return { cells, weeks, rows: 7, maxCount };
+        }
+
+        // Per-week completion totals (oldest first) over the same
+        // Monday-aligned window as the heatmap — for a trend sparkline.
+        function completionWeeklyTotals(habit, todayStr, weeks = 12) {
+            const hm = completionHeatmap(habit, todayStr, weeks);
+            const totals = new Array(weeks).fill(0);
+            hm.cells.forEach((c, i) => { if (!c.future) totals[Math.floor(i / 7)] += c.count; });
+            return totals;
+        }
+
+        // Headline rate: share of the last `days` calendar days (ending
+        // today) that have >=1 completion. Simple, schedule-agnostic, and
+        // honest for "how often lately" without the expected-occurrence
+        // math the Details "Rate" stat uses.
+        function recentActiveRate(habit, todayStr, days = 30) {
+            const counts = completionCountsByDate(habit);
+            let active = 0;
+            for (let i = 0; i < days; i++) {
+                if (counts.has(shiftYMD(todayStr, -i))) active++;
+            }
+            return Math.round((active / days) * 100);
+        }
+
+        // --- Approach C: navigable month-calendar popup ------------------
+        // "When did I actually do this?" answered on a familiar month grid
+        // you can page through. Lives behind the Details ⋮ menu, so it
+        // adds nothing to any always-visible surface.
+
+        const CAL_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May',
+            'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+        // Pure: a Monday-first month grid. Returns leading/trailing blanks
+        // so the grid is always whole weeks, each in-month day carrying its
+        // completion count. `todayStr` keeps it deterministic for tests.
+        function monthGrid(habit, year, month, todayStr) {
+            const counts = completionCountsByDate(habit);
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // Mon=0
+            const cells = [];
+            for (let i = 0; i < firstDow; i++) cells.push({ blank: true });
+            let monthTotal = 0, activeDays = 0;
+            for (let d = 1; d <= daysInMonth; d++) {
+                const ds = toDateString(new Date(year, month, d));
+                const count = counts.get(ds) || 0;
+                if (count > 0) { monthTotal += count; activeDays++; }
+                cells.push({ day: d, date: ds, count,
+                    today: ds === todayStr, future: ds > todayStr });
+            }
+            while (cells.length % 7 !== 0) cells.push({ blank: true });
+            return { label: `${CAL_MONTH_NAMES[month]} ${year}`, year, month,
+                cells, weeks: cells.length / 7, monthTotal, activeDays, daysInMonth };
+        }
+
+        let calHabitId = null, calYear = 0, calMonth = 0;
+
+        function renderHabitCalendar() {
+            const habit = loadHabits().find(h => h.id === calHabitId);
+            if (!habit) return;
+            const g = monthGrid(habit, calYear, calMonth, getTodayString());
+            const dow = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+                .map(l => `<div class="cal-dow">${l}</div>`).join('');
+            const grid = g.cells.map(c => {
+                if (c.blank) return `<div class="cal-cell cal-blank"></div>`;
+                const cls = ['cal-cell'];
+                if (c.count > 0) cls.push(c.count > 1 ? 'cal-done cal-done2' : 'cal-done');
+                if (c.today) cls.push('cal-today');
+                if (c.future) cls.push('cal-future');
+                const badge = c.count > 1 ? `<span class="cal-badge">${c.count}</span>` : '';
+                return `<div class="${cls.join(' ')}">${c.day}${badge}</div>`;
+            }).join('');
+            const summary = g.monthTotal === 0
+                ? `No completions in ${CAL_MONTH_NAMES[calMonth]}`
+                : `${g.activeDays} active ${g.activeDays === 1 ? 'day' : 'days'} · ${g.monthTotal} completion${g.monthTotal === 1 ? '' : 's'}`;
+            const header = `<div class="modal-header">
+                    <span class="modal-title">${habit.icon || '📌'} ${escapeHtml(habit.name)}</span>
+                    <button class="modal-close" onclick="closeHabitCalendar()">&times;</button>
+                </div>`;
+            const body = `<div class="cal-nav">
+                    <button class="cal-arrow" aria-label="Previous month" onclick="habitCalShift(-1)">‹</button>
+                    <span class="cal-month">${g.label}</span>
+                    <button class="cal-arrow" aria-label="Next month" onclick="habitCalShift(1)">›</button>
+                </div>
+                <div class="cal-grid">${dow}${grid}</div>
+                <div class="cal-summary">${summary}</div>`;
+            document.getElementById('habitCalPopup').innerHTML =
+                `<div class="overlay-fixed-header">${header}</div><div class="overlay-scroll">${body}</div>`;
+        }
+
+        function openHabitCalendar(id) {
+            calHabitId = id;
+            const now = new Date();
+            calYear = now.getFullYear();
+            calMonth = now.getMonth();
+            renderHabitCalendar();
+            showOverlay('habitCalPopupOverlay');
+        }
+        function closeHabitCalendar() { hideOverlay('habitCalPopupOverlay'); }
+        function habitCalShift(delta) {
+            calMonth += delta;
+            if (calMonth < 0) { calMonth = 11; calYear--; }
+            else if (calMonth > 11) { calMonth = 0; calYear++; }
+            renderHabitCalendar();
+        }
+
         // Check if a date was snoozed (for pausing momentum during snooze)
         function wasDateSnoozed(habit, dateStr) {
             if (!habit.snoozeHistory || !habit.snoozeHistory.length) return false;
@@ -4234,6 +4413,7 @@
             // is nothing to move (e.g. already due/completed today).
             const moveFutureDue = habit.completions.some(c => c.date !== getTodayString()) && !isDueToday(habit);
             menu.innerHTML = `
+                ${!habit.isReminder ? `<button onclick="closeDetailsMoreMenu();openHabitCalendar(${id})">Calendar</button>` : ''}
                 <button onclick="closeDetailsMoreMenu();${moveFutureDue ? `moveScheduleToToday(${id})` : `moveCompletionToToday(${id})`}">Move to Today</button>
                 <button onclick="closeDetailsMoreMenu();freshStartHabit(${id})">Reset Momentum</button>
                 <button onclick="closeDetailsMoreMenu();resetHabitStats(${id})">Reset Stats</button>
@@ -4938,6 +5118,7 @@
             const closers = [
                 ['dialogOverlay', closeDialog],
                 ['tagGlossaryOverlay', closeTagGlossary],
+                ['habitCalPopupOverlay', closeHabitCalendar],
                 ['confirmDescPopupOverlay', closeConfirmDescPopup],
                 ['snoozePopupOverlay', closeSnoozePopup],
                 ['emojiPopupOverlay', closeEmojiPopup],
