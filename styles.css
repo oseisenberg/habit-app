@@ -399,6 +399,18 @@
         .stat-number { font-size: 1rem; font-weight: 700; color: #fff; }
         .stat-label { font-size: 0.55rem; color: #666; margin-top: 1px; }
 
+        /* Approach C: one-line inline insight + micro sparkline */
+        .insight {
+            display: flex; align-items: center; gap: 10px;
+            background: #0f0f1a; border-radius: 8px;
+            padding: 9px 12px; margin: 8px 0;
+        }
+        .insight-text {
+            flex: 1; min-width: 0; font-size: 0.78rem;
+            color: #bbb; line-height: 1.35;
+        }
+        .spark { flex: 0 0 auto; display: block; opacity: 0.9; }
+
         .action-buttons { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
         .action-buttons .submit-btn { padding: 10px; font-size: 0.85rem; min-width: 88px; }
         .action-row { display: flex; gap: 6px; }

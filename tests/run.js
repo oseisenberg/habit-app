@@ -521,5 +521,47 @@ console.log('\nN. completion analytics');
      mkHabit({ completions: [{ date: D }, { date: D }] }), D, 10), 10);
 }
 
+// === O. Inline insight (Approach C) =================================
+console.log('\nO. inline insight');
+{
+  const D = '2024-03-13';
+  const back = n => F.shiftYMD(D, -n);
+  const tsAt = (ymd, h) => { const [y, m, d] = ymd.split('-').map(Number); return new Date(y, m - 1, d, h).getTime(); };
+
+  eq('no completions -> empty insight',
+     F.renderInlineInsight(mkHabit({ completions: [] }), D), '');
+  ok('no completions -> habitInsight total 0 / no parts',
+     F.habitInsight(mkHabit({ completions: [] }), D).parts.length === 0);
+
+  // sparse: just a 2-day streak, nothing else claimed
+  const sparse = F.habitInsight(mkHabit({ completions: [{ date: D }, { date: back(1) }] }), D);
+  ok('sparse: streak claimed, time/peak/trend withheld',
+     sparse.parts.some(p => /streak/.test(p)) && sparse.when === null && sparse.peakDay === null,
+     sparse.parts);
+
+  // rich morning habit, ~daily for 8 weeks, timestamped at 8am
+  const many = [];
+  for (let i = 0; i < 56; i++) many.push({ date: back(i), timestamp: tsAt(back(i), 8) });
+  const rich = F.habitInsight(mkHabit({ completions: many }), D);
+  eq('rich perWeek ~7', rich.perWeek, 7);
+  eq('rich dominant time = morning', rich.when, 'morning');
+  ok('rich parts include pace + time', rich.parts.some(p => /×\/wk/.test(p)) &&
+     rich.parts.some(p => /mostly mornings/.test(p)), rich.parts);
+
+  // trend up: nothing older, lots newer
+  const up = [];
+  for (let i = 0; i < 14; i++) up.push({ date: back(i) });   // last 2 weeks only
+  eq('trend up detected', F.habitInsight(mkHabit({ completions: up }), D).trend, 'up');
+
+  ok('microSparkline is an svg polyline for >=2 pts',
+     /<svg class="spark"[\s\S]*polyline/.test(F.renderMicroSparkline([1, 3, 2, 4])));
+  eq('microSparkline empty for <2 pts', F.renderMicroSparkline([5]), '');
+
+  const html = F.renderInlineInsight(mkHabit({ completions: many }), D);
+  ok('inline insight renders one .insight line with text + spark',
+     /class="insight"/.test(html) && /insight-text/.test(html) && /class="spark"/.test(html) &&
+     !/<details/.test(html), html.slice(0, 60));
+}
+
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
 if (fail) { console.log('FAILED:', fails.join(', ')); process.exit(1); }

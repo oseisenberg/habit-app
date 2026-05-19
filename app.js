@@ -2713,6 +2713,85 @@
             return Math.round((active / days) * 100);
         }
 
+        // --- Approach C: one-line auto insight + micro sparkline ----------
+
+        const DAY_NAMES_FULL = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+        // Distil a habit's history into a short, honest summary. Each field
+        // is null when there isn't enough data to claim it, so sparse
+        // habits get a short line instead of a wrong one.
+        function habitInsight(habit, todayStr) {
+            const dated = (habit.completions || []).filter(c => c && c.date);
+            if (!dated.length) return { total: 0, parts: [] };
+
+            const counts = completionCountsByDate(habit);
+            let recent = 0;
+            for (let i = 0; i < 56; i++) recent += counts.get(shiftYMD(todayStr, -i)) || 0;
+            const perWeek = Math.round((recent / 8) * 10) / 10;
+
+            const wk = completionWeeklyTotals(habit, todayStr, 8);
+            const older = wk.slice(0, 4).reduce((a, b) => a + b, 0);
+            const newer = wk.slice(4).reduce((a, b) => a + b, 0);
+            let trend = null;
+            if (older + newer >= 4) {
+                trend = newer > older * 1.15 ? 'up' : newer < older * 0.85 ? 'down' : 'steady';
+            }
+
+            const tod = completionsByTimeOfDay(habit);
+            const todTotal = tod.morning + tod.afternoon + tod.evening + tod.night;
+            let when = null;
+            if (todTotal >= 4) {
+                const top = Object.entries(tod).sort((a, b) => b[1] - a[1])[0];
+                if (top[1] / todTotal >= 0.4) when = top[0];
+            }
+
+            const wd = completionsByWeekday(habit);
+            const wdTotal = wd.reduce((a, b) => a + b, 0);
+            let peakDay = null;
+            if (wdTotal >= 7) {
+                const mi = wd.indexOf(Math.max(...wd));
+                if (wd[mi] >= (wdTotal / 7) * 1.6) peakDay = DAY_NAMES_FULL[mi];
+            }
+
+            const { current } = completionStreaks(habit, todayStr);
+
+            const parts = [];
+            if (current >= 2) parts.push(`🔥 ${current}-day streak`);
+            if (perWeek > 0) parts.push(`~${perWeek}×/wk`);
+            if (when) parts.push(`mostly ${when}s`);
+            if (peakDay) parts.push(`peaks ${peakDay}`);
+            if (trend) parts.push(trend === 'up' ? '📈 trending up'
+                : trend === 'down' ? '📉 trending down' : 'steady');
+            return { total: dated.length, perWeek, trend, when, peakDay, current, weekly: wk, parts };
+        }
+
+        // Tiny inline sparkline (no axes) of recent weekly completions.
+        function renderMicroSparkline(values) {
+            const n = values.length;
+            const w = 84, h = 22, pad = 2;
+            const max = Math.max(1, ...values);
+            if (n < 2) return '';
+            const pts = values.map((v, i) => {
+                const x = pad + (i / (n - 1)) * (w - 2 * pad);
+                const y = pad + (1 - v / max) * (h - 2 * pad);
+                return `${x.toFixed(1)},${y.toFixed(1)}`;
+            }).join(' ');
+            return `<svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none" aria-hidden="true">
+                <polyline points="${pts}" fill="none" stroke="#7c6cff" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"></polyline>
+            </svg>`;
+        }
+
+        // The whole feature: one always-visible line, no taps, no chrome.
+        function renderInlineInsight(habit, todayStr) {
+            const ins = habitInsight(habit, todayStr);
+            if (ins.total < 1 || !ins.parts.length) return '';
+            const spark = ins.weekly ? renderMicroSparkline(ins.weekly) : '';
+            return `<div class="insight">
+                <span class="insight-text">${ins.parts.join(' · ')}</span>
+                ${spark}
+            </div>`;
+        }
+
         // Check if a date was snoozed (for pausing momentum during snooze)
         function wasDateSnoozed(habit, dateStr) {
             if (!habit.snoozeHistory || !habit.snoozeHistory.length) return false;
@@ -4696,6 +4775,7 @@
                         <div class="stat-box"><div class="stat-number">${rate}%</div><div class="stat-label">Rate</div></div>
                         <div class="stat-box"><div class="stat-number">${avgInterval}</div><div class="stat-label">Avg Gap</div></div>
                     </div>` : ''}
+                    ${!isReminder ? renderInlineInsight(habit, today) : ''}
                     ${habit.subtasks && habit.subtasks.length > 0 ? `
                     <div class="subtask-list" style="margin:10px 0">
                         <div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Subtasks</div>
