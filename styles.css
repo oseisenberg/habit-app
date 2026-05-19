@@ -399,6 +399,31 @@
         .stat-number { font-size: 1rem; font-weight: 700; color: #fff; }
         .stat-label { font-size: 0.55rem; color: #666; margin-top: 1px; }
 
+        /* Stats screen (Approach B) */
+        .stats-section { background: #1a1a2e; border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+        .stats-section-title {
+            font-size: 0.62rem; font-weight: 600; color: #888;
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;
+        }
+        .stats-empty { text-align: center; color: #555; font-size: 0.85rem; line-height: 1.5; }
+        .trend { display: block; width: 100%; height: auto; }
+        .wd-row { display: flex; align-items: flex-end; gap: 6px; }
+        .wd-col { flex: 1; display: flex; flex-direction: column; align-items: center; }
+        .wd-track {
+            width: 70%; height: 56px; background: #0f0f1a; border-radius: 3px;
+            display: flex; align-items: flex-end; overflow: hidden;
+        }
+        .wd-fill { width: 100%; background: linear-gradient(#7c6cff, #667eea); border-radius: 3px 3px 0 0; }
+        .wd-label { font-size: 0.62rem; color: #777; margin-top: 5px; line-height: 1; }
+        .habit-stat-list { display: flex; flex-direction: column; gap: 8px; }
+        .habit-stat-row { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
+        .hsr-icon { font-size: 1rem; flex-shrink: 0; width: 20px; text-align: center; }
+        .hsr-name { flex: 1; min-width: 0; color: #ddd; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hsr-streak { font-size: 0.72rem; color: #f59e0b; flex-shrink: 0; min-width: 30px; text-align: right; }
+        .hsr-barwrap { flex: 0 0 84px; height: 6px; background: #0f0f1a; border-radius: 3px; overflow: hidden; }
+        .hsr-bar { display: block; height: 100%; background: linear-gradient(90deg, #667eea, #7c6cff); }
+        .hsr-rate { flex: 0 0 34px; text-align: right; color: #aaa; font-size: 0.75rem; }
+
         .action-buttons { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
         .action-buttons .submit-btn { padding: 10px; font-size: 0.85rem; min-width: 88px; }
         .action-row { display: flex; gap: 6px; }

@@ -4788,6 +4788,106 @@
             allHabitsSearchQuery = '';
         }
 
+        // ========================================
+        // STATS SCREEN (Approach B: dedicated overlay)
+        // ========================================
+        // A single place for "when / how often over time" across all
+        // habits, kept off the main flow so nothing else gets busier.
+
+        // Merge every habit's completions into one synthetic record so the
+        // shared analytics functions give aggregate (all-habits) results.
+        function aggregateCompletionHabit(habits) {
+            const completions = [];
+            let born = null;
+            for (const h of habits) {
+                for (const c of (h.completions || [])) completions.push(c);
+                const b = (h.createdAt || '').slice(0, 10);
+                if (b && (!born || b < born)) born = b;
+            }
+            return { completions, createdAt: born || '' };
+        }
+
+        // Minimal SVG line+area chart, no axes (clean). values oldest->newest.
+        function renderTrendLine(values) {
+            const n = values.length;
+            if (n < 2 || values.every(v => v === 0)) {
+                return `<div class="stats-empty">Not enough history yet</div>`;
+            }
+            const w = 300, h = 72, pad = 4;
+            const max = Math.max(1, ...values);
+            const pt = (v, i) => {
+                const x = pad + (i / (n - 1)) * (w - 2 * pad);
+                const y = pad + (1 - v / max) * (h - 2 * pad);
+                return [x, y];
+            };
+            const pts = values.map(pt);
+            const line = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+            const area = `${pad},${h - pad} ${line} ${(w - pad)},${h - pad}`;
+            const [lx, ly] = pts[n - 1];
+            return `<svg class="trend" viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" role="img" aria-label="Completions per week trend">
+                <polygon points="${area}" fill="rgba(102,126,234,0.18)"></polygon>
+                <polyline points="${line}" fill="none" stroke="#7c6cff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
+                <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.5" fill="#7c6cff"></circle>
+            </svg>`;
+        }
+
+        function renderWeekdayBars(counts) {
+            const max = Math.max(1, ...counts);
+            const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+            return `<div class="wd-row">` + counts.map((v, i) => {
+                const pct = v ? Math.max(6, Math.round((v / max) * 100)) : 0;
+                return `<div class="wd-col" title="${labels[i]}: ${v}">
+                    <div class="wd-track"><div class="wd-fill" style="height:${pct}%"></div></div>
+                    <div class="wd-label">${labels[i]}</div></div>`;
+            }).join('') + `</div>`;
+        }
+
+        function renderStats() {
+            const today = getTodayString();
+            const habits = loadHabits().filter(h => !h.archived);
+            const tracked = habits.filter(h => !h.isReminder && (h.completions || []).length > 0);
+            const agg = aggregateCompletionHabit(habits);
+            const weekly = completionWeeklyTotals(agg, today, 12);
+            const weekday = completionsByWeekday(agg);
+            const totalDone = (agg.completions || []).filter(c => c && c.date).length;
+
+            const rows = tracked
+                .map(h => ({ h, rate: recentActiveRate(h, today, 30), streak: completionStreaks(h, today).current }))
+                .sort((a, b) => b.rate - a.rate)
+                .map(({ h, rate, streak }) => `<div class="habit-stat-row">
+                    <span class="hsr-icon">${h.icon || '📌'}</span>
+                    <span class="hsr-name">${escapeHtml(h.name)}</span>
+                    <span class="hsr-streak">${streak ? `🔥${streak}` : ''}</span>
+                    <span class="hsr-barwrap"><span class="hsr-bar" style="width:${rate}%"></span></span>
+                    <span class="hsr-rate">${rate}%</span>
+                </div>`).join('');
+
+            const body = totalDone === 0
+                ? `<div class="stats-empty" style="padding:40px 0">No completions logged yet.<br>Come back once you've built some history.</div>`
+                : `<div class="stats-section">
+                        <div class="stats-section-title">Completions per week · 12 wks</div>
+                        ${renderTrendLine(weekly)}
+                    </div>
+                    <div class="stats-section">
+                        <div class="stats-section-title">By weekday · all habits</div>
+                        ${renderWeekdayBars(weekday)}
+                    </div>
+                    <div class="stats-section">
+                        <div class="stats-section-title">By habit · active days last 30</div>
+                        <div class="habit-stat-list">${rows || '<div class="stats-empty">No tracked habits yet</div>'}</div>
+                    </div>`;
+
+            const header = `<div class="modal-header">
+                    <span class="modal-title">📊 Stats</span>
+                    <button class="modal-close" onclick="closeStats()">&times;</button>
+                </div>`;
+            document.getElementById('statsModal').innerHTML =
+                `<div class="overlay-fixed-header">${header}</div><div class="overlay-scroll">${body}</div>`;
+        }
+
+        function openStats() { renderStats(); showOverlay('statsOverlay'); }
+        function closeStats() { hideOverlay('statsOverlay'); }
+
         // Simple fuzzy match - checks if all characters appear in order
         function fuzzyMatch(text, query) {
             if (!query) return true;
@@ -5064,6 +5164,7 @@
                 ['detailsOverlay', closeDetails],
                 ['modalOverlay', closeModal],
                 ['allHabitsOverlay', closeAllHabits],
+                ['statsOverlay', closeStats],
             ];
             for (const [id, close] of closers) {
                 if (isOverlayActive(id)) {

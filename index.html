@@ -16,6 +16,7 @@
         <div class="header">
             <h1>Habits</h1>
             <div style="display:flex;gap:4px">
+                <button class="settings-btn" onclick="openStats()">📊</button>
                 <button class="settings-btn" onclick="openAllHabits()">📋</button>
                 <button class="settings-btn" onclick="openSettings()">⚙️</button>
                 <button class="settings-btn" id="debugToggle" onclick="toggleDebug()">🐛</button>
@@ -80,6 +81,11 @@
     <!-- All Habits View -->
     <div class="modal-overlay" id="allHabitsOverlay" onclick="handleOverlayClick(event, 'allHabitsOverlay', closeAllHabits)">
         <div class="modal modal--full" id="allHabitsModal"></div>
+    </div>
+
+    <!-- Stats View -->
+    <div class="modal-overlay" id="statsOverlay" onclick="handleOverlayClick(event, 'statsOverlay', closeStats)">
+        <div class="modal modal--full" id="statsModal"></div>
     </div>
 
     <!-- Debug -->

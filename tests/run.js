@@ -521,5 +521,54 @@ console.log('\nN. completion analytics');
      mkHabit({ completions: [{ date: D }, { date: D }] }), D, 10), 10);
 }
 
+// === O. Stats screen (Approach B) ===================================
+console.log('\nO. stats screen');
+{
+  const D = '2024-03-13';
+  const back = n => F.shiftYMD(D, -n);
+
+  // Distinct raw icons: escapeHtml() returns '' under the stub DOM, so
+  // assert ordering on the unescaped icon instead of the name.
+  const h1 = mkHabit({ id: 1, name: 'A', icon: 'AA', createdAt: back(40),
+    completions: [{ date: D }, { date: back(1) }, { date: back(8) }] });
+  const h2 = mkHabit({ id: 2, name: 'B', icon: 'BB', createdAt: back(40),
+    completions: [{ date: back(2) }] });
+
+  const agg = F.aggregateCompletionHabit([h1, h2]);
+  eq('aggregate merges all completions', agg.completions.length, 4);
+  eq('aggregate createdAt = earliest', agg.createdAt, back(40));
+
+  const wk = F.completionWeeklyTotals(agg, D, 12);
+  eq('aggregate weekly length', wk.length, 12);
+  eq('aggregate weekly sum = all completions in window', wk.reduce((a, b) => a + b, 0), 4);
+
+  ok('trendLine renders an svg path with enough data',
+     /<svg class="trend"[\s\S]*<polyline/.test(F.renderTrendLine([1, 2, 0, 3, 2])));
+  ok('trendLine guards tiny/empty data',
+     /Not enough/.test(F.renderTrendLine([0, 0, 0])) && /Not enough/.test(F.renderTrendLine([5])));
+  ok('weekdayBars has 7 columns',
+     (F.renderWeekdayBars([1, 0, 2, 0, 3, 0, 1]).match(/wd-col/g) || []).length === 7);
+
+  const els = {};
+  const realGEI = F.document.getElementById;
+  F.document.getElementById = id => (els[id] || (els[id] = makeEl()));
+  seed([h1, h2]);
+  let threw = null;
+  try { F.renderStats(); } catch (e) { threw = e; }
+  ok('renderStats does not throw', !threw, threw && String(threw));
+  const sm = els['statsModal'].innerHTML || '';
+  ok('renderStats shows the three sections + habit rows',
+     /Completions per week/.test(sm) && /By weekday/.test(sm) && /habit-stat-row/.test(sm), sm.slice(0, 80));
+  // sorted by 30d active rate desc: h1 (3 active days) before h2 (1)
+  ok('habit rows sorted by rate desc',
+     sm.indexOf('AA') !== -1 && sm.indexOf('AA') < sm.indexOf('BB'), [sm.indexOf('AA'), sm.indexOf('BB')]);
+
+  seed([]);
+  F.renderStats();
+  ok('renderStats handles no-data gracefully',
+     /No completions logged yet/.test(els['statsModal'].innerHTML || ''));
+  F.document.getElementById = realGEI;
+}
+
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
 if (fail) { console.log('FAILED:', fails.join(', ')); process.exit(1); }
