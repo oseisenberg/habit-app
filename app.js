@@ -1227,7 +1227,7 @@
                 title,
                 onClose: 'closeDialog()',
                 bodyHtml: message ? `<div style="color:#ccc;font-size:0.9rem;line-height:1.45;white-space:pre-line">${escapeHtml(message)}</div>` : '',
-                footerHtml: `<div style="display:flex;gap:8px;padding:12px 16px">${btns}</div>`
+                footerHtml: `<div style="display:flex;gap:8px;padding:10px 14px">${btns}</div>`
             });
             showOverlay('dialogOverlay');
             // Focus the first (safe / non-destructive) action so keyboard
