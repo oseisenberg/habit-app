@@ -2713,6 +2713,83 @@
             return Math.round((active / days) * 100);
         }
 
+        // --- Analytics renderers (pure string builders) -------------------
+        // Hand-rolled SVG/CSS so the no-build, zero-dependency setup holds.
+
+        const HEAT_LEVELS = ['#191926', '#2e2a55', '#443c87', '#5b4fc0', '#7c6cff'];
+        function heatLevel(count, max) {
+            if (count <= 0) return 0;
+            if (max <= 1) return 4;
+            return Math.min(4, Math.ceil((count / max) * 4));
+        }
+
+        function renderHeatmapSvg(hm) {
+            const cell = 11, gap = 3, pitch = cell + gap;
+            const w = hm.weeks * pitch - gap, h = hm.rows * pitch - gap;
+            let rects = '';
+            hm.cells.forEach((c, i) => {
+                const col = Math.floor(i / 7), row = i % 7;
+                const fill = c.future ? '#141420' : HEAT_LEVELS[heatLevel(c.count, hm.maxCount)];
+                rects += `<rect x="${col * pitch}" y="${row * pitch}" width="${cell}" height="${cell}" rx="2" fill="${fill}"></rect>`;
+            });
+            return `<svg class="heatmap" viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Completion calendar, last ${hm.weeks} weeks">${rects}</svg>`;
+        }
+
+        // items: [{label, value}]. Compact CSS bar row, no axes.
+        function renderMiniBars(title, items) {
+            const max = Math.max(1, ...items.map(it => it.value));
+            const bars = items.map(it => {
+                const pct = Math.round((it.value / max) * 100);
+                return `<div class="mb-col" title="${it.label}: ${it.value}">
+                    <div class="mb-track"><div class="mb-fill" style="height:${it.value ? Math.max(6, pct) : 0}%"></div></div>
+                    <div class="mb-label">${it.label}</div>
+                </div>`;
+            }).join('');
+            return `<div class="mini-bars"><div class="mb-title">${title}</div><div class="mb-row">${bars}</div></div>`;
+        }
+
+        // The single, adaptive entry point. Returns '' when there's nothing
+        // worth showing; reveals weekday/time-of-day only once there's
+        // enough data so sparse habits stay clean. Collapsed by default
+        // (native <details>) so the Details view isn't cluttered.
+        function renderActivitySection(habit, todayStr) {
+            const total = (habit.completions || []).filter(c => c && c.date).length;
+            if (total < 1) return '';
+            const { current, longest } = completionStreaks(habit, todayStr);
+            const rate = recentActiveRate(habit, todayStr, 30);
+            const hm = completionHeatmap(habit, todayStr, 16);
+
+            const headline = `<div class="activity-headline">`
+                + `<span>🔥 ${current}d streak</span><span>best ${longest}</span>`
+                + `<span>${rate}% / 30d</span><span>${total} total</span></div>`;
+
+            let charts = '';
+            if (total >= 5) {
+                const wd = completionsByWeekday(habit);
+                charts += renderMiniBars('Weekday', ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+                    .map((l, i) => ({ label: l, value: wd[i] })));
+                const tod = completionsByTimeOfDay(habit);
+                const todTotal = tod.morning + tod.afternoon + tod.evening + tod.night;
+                if (todTotal > 0) {
+                    charts += renderMiniBars('Time of day', [
+                        { label: '🌅', value: tod.morning },
+                        { label: '☀️', value: tod.afternoon },
+                        { label: '🌆', value: tod.evening },
+                        { label: '🌙', value: tod.night },
+                    ]);
+                }
+            }
+
+            return `<details class="activity">
+                <summary>Activity</summary>
+                <div class="activity-body">
+                    ${headline}
+                    ${renderHeatmapSvg(hm)}
+                    ${charts ? `<div class="activity-charts">${charts}</div>` : ''}
+                </div>
+            </details>`;
+        }
+
         // Check if a date was snoozed (for pausing momentum during snooze)
         function wasDateSnoozed(habit, dateStr) {
             if (!habit.snoozeHistory || !habit.snoozeHistory.length) return false;
@@ -4696,6 +4773,7 @@
                         <div class="stat-box"><div class="stat-number">${rate}%</div><div class="stat-label">Rate</div></div>
                         <div class="stat-box"><div class="stat-number">${avgInterval}</div><div class="stat-label">Avg Gap</div></div>
                     </div>` : ''}
+                    ${!isReminder ? renderActivitySection(habit, today) : ''}
                     ${habit.subtasks && habit.subtasks.length > 0 ? `
                     <div class="subtask-list" style="margin:10px 0">
                         <div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Subtasks</div>

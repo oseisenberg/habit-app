@@ -521,5 +521,45 @@ console.log('\nN. completion analytics');
      mkHabit({ completions: [{ date: D }, { date: D }] }), D, 10), 10);
 }
 
+// === O. Analytics renderers (structure + adaptive behavior) =========
+console.log('\nO. analytics renderers');
+{
+  const D = '2024-03-13';
+  const back = n => F.shiftYMD(D, -n);
+  const tsAt = (ymd, h) => { const [y, m, d] = ymd.split('-').map(Number); return new Date(y, m - 1, d, h).getTime(); };
+  const rectCount = s => (s.match(/<rect/g) || []).length;
+  const colCount = s => (s.match(/mb-col/g) || []).length;
+
+  const hm = F.completionHeatmap(mkHabit({ completions: [{ date: D }] }), D, 16);
+  const svg = F.renderHeatmapSvg(hm);
+  ok('heatmap svg well-formed', /^<svg[\s\S]*<\/svg>$/.test(svg));
+  eq('heatmap svg rect count = weeks*7', rectCount(svg), 16 * 7);
+  ok('heatmap future cells use the blank fill', svg.includes('#141420'));
+
+  const bars = F.renderMiniBars('Weekday', [{ label: 'M', value: 3 }, { label: 'T', value: 0 }]);
+  ok('miniBars has title + one col per item', /mb-title/.test(bars) && colCount(bars) === 2, colCount(bars));
+  ok('zero-value bar has 0 height', /height:0%/.test(bars));
+
+  eq('no completions -> no activity section',
+     F.renderActivitySection(mkHabit({ completions: [] }), D), '');
+
+  const sparse = F.renderActivitySection(mkHabit({ completions: [{ date: D }, { date: back(2) }] }), D);
+  ok('sparse: details present, collapsed, heatmap shown',
+     /<details class="activity">/.test(sparse) && !/<details[^>]*\bopen\b/.test(sparse) && /<svg/.test(sparse));
+  ok('sparse (<5): weekday/time charts withheld', !/mini-bars/.test(sparse));
+
+  const many = [];
+  for (let i = 0; i < 6; i++) many.push({ date: back(i), timestamp: tsAt(back(i), 9) });
+  const rich = F.renderActivitySection(mkHabit({ completions: many }), D);
+  ok('rich (>=5, timestamped): weekday + time-of-day shown',
+     (rich.match(/mini-bars/g) || []).length === 2 && /streak/.test(rich), rich.slice(0, 60));
+
+  const legacy = [];
+  for (let i = 0; i < 6; i++) legacy.push({ date: back(i) }); // no timestamps
+  const richLegacy = F.renderActivitySection(mkHabit({ completions: legacy }), D);
+  ok('rich legacy: weekday shown, time-of-day withheld (no timestamps)',
+     (richLegacy.match(/mini-bars/g) || []).length === 1);
+}
+
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
 if (fail) { console.log('FAILED:', fails.join(', ')); process.exit(1); }
