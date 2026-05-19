@@ -251,7 +251,7 @@
            body->footer gaps that the shared (sheet-sized) padding leaves
            too airy. Scoped to .popup so bottom sheets keep their spacing. */
         .popup .overlay-fixed-header { padding-bottom: 6px; }
-        .popup .overlay-scroll { padding-top: 8px; padding-bottom: 8px; }
+        .popup .overlay-scroll { padding-top: 8px; padding-bottom: 6px; }
         .overlay-scroll {
             flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
             padding: 14px 18px 14px;
