@@ -215,8 +215,10 @@
                 + `<div class="task-options">${inactiveChips || '<span style="color:#666;font-size:0.85rem">None</span>'}</div>`;
         }
 
-        function renderSettings() {
-            const generalRows = `
+        // Static markup blocks for the Settings sheet. Pure constants —
+        // split out so renderSettings is just the view switch.
+        function settingsGeneralRowsHtml() {
+            return `
                 <div class="settings-row">
                     <span class="settings-label">Morning starts at</span>
                     <div class="settings-value">
@@ -238,7 +240,9 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>`;
-            const notificationsBlock = `
+        }
+        function settingsNotificationsHtml() {
+            return `
                 <div class="settings-row">
                     <span class="settings-label">Notifications</span>
                     <label class="toggle-switch">
@@ -284,18 +288,11 @@
                         </div>
                     </div>
                 </div>`;
-            const navRow = (label, view) => `<div class="settings-row settings-nav" onclick="settingsNavigate('${view}')" style="cursor:pointer;margin-top:8px;padding-top:10px">
-                    <span class="settings-label">${label}</span>
-                    <span style="color:#666;font-size:1.2rem;line-height:1">›</span>
-                </div>`;
-            const subHeader = (title) => `<div class="modal-header">
-                    <button class="modal-close" onclick="settingsNavigate('main')" aria-label="Back" style="font-size:1.5rem;line-height:1">‹</button>
-                    <span class="modal-title">${title}</span>
-                    <button class="modal-close" onclick="closeSettings()">&times;</button>
-                </div>`;
-            // #2: one Export (scope chosen by a "tasks only" toggle) paired
-            // with Import on a single row, instead of two Export buttons.
-            const dataSection = `
+        }
+        // #2: one Export (scope chosen by a "tasks only" toggle) paired
+        // with Import on a single row, instead of two Export buttons.
+        function settingsDataSectionHtml() {
+            return `
                 <div style="display:flex;gap:8px">
                     <button class="submit-btn secondary" style="flex:1;font-size:0.85rem" onclick="chooseExport()">Export</button>
                     <button class="submit-btn secondary" style="flex:1;font-size:0.85rem" onclick="triggerImport()">Import</button>
@@ -306,23 +303,38 @@
                     <button class="danger-zone-btn" onclick="resetAllMomentum()">Reset All Momentum</button>
                     <button class="danger-zone-btn" onclick="reloadDefaultTasks()">Reload Default Tasks</button>
                 </div>`;
+        }
+        function settingsNavRow(label, view) {
+            return `<div class="settings-row settings-nav" onclick="settingsNavigate('${view}')" style="cursor:pointer;margin-top:8px;padding-top:10px">
+                    <span class="settings-label">${label}</span>
+                    <span style="color:#666;font-size:1.2rem;line-height:1">›</span>
+                </div>`;
+        }
+        function settingsSubHeader(title) {
+            return `<div class="modal-header">
+                    <button class="modal-close" onclick="settingsNavigate('main')" aria-label="Back" style="font-size:1.5rem;line-height:1">‹</button>
+                    <span class="modal-title">${title}</span>
+                    <button class="modal-close" onclick="closeSettings()">&times;</button>
+                </div>`;
+        }
 
+        function renderSettings() {
             let headerHtml, bodyHtml;
             if (settingsView === 'notifications') {
-                headerHtml = subHeader('Notifications');
-                bodyHtml = notificationsBlock;
+                headerHtml = settingsSubHeader('Notifications');
+                bodyHtml = settingsNotificationsHtml();
             } else if (settingsView === 'data') {
-                headerHtml = subHeader('Data & Backup');
-                bodyHtml = dataSection;
+                headerHtml = settingsSubHeader('Data & Backup');
+                bodyHtml = settingsDataSectionHtml();
             } else if (settingsView === 'tags') {
-                headerHtml = subHeader('Tags');
+                headerHtml = settingsSubHeader('Tags');
                 bodyHtml = buildTagsSettingsBody();
             } else {
                 headerHtml = popupHeader({ title: 'Settings', onClose: 'closeSettings()' });
-                bodyHtml = generalRows
-                    + navRow('Notifications', 'notifications')
-                    + navRow('Tags', 'tags')
-                    + navRow('Data & Backup', 'data');
+                bodyHtml = settingsGeneralRowsHtml()
+                    + settingsNavRow('Notifications', 'notifications')
+                    + settingsNavRow('Tags', 'tags')
+                    + settingsNavRow('Data & Backup', 'data');
             }
             document.getElementById('settingsModal').innerHTML = renderSheet({ headerHtml, bodyHtml });
         }
