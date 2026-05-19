@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 
 rm -rf www
 mkdir -p www
-cp index.html app.js platform.js default-habits.js styles.css sw.js manifest.json www/
+cp index.html app-core.js app-logic.js app-render.js app-bootstrap.js platform.js default-habits.js styles.css sw.js manifest.json www/
 cp -R icons www/icons
 echo "www/ assembled:"
 ls -1 www

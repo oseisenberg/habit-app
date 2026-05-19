@@ -76,7 +76,12 @@ vm.createContext(sandbox);
 // default-habits.js defines getDefaultHabits(); load it first so app.js
 // has it even though we pre-seed storage (defensive).
 const defaults = fs.readFileSync(path.join(__dirname, '..', 'default-habits.js'), 'utf8');
-const appSrc = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+// app.js was split into ordered global scripts; concatenate in the same
+// order the browser loads them (constants/state → logic → render →
+// bootstrap) so the vm sandbox sees an identical single program.
+const appSrc = ['app-core.js', 'app-logic.js', 'app-render.js', 'app-bootstrap.js']
+    .map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8'))
+    .join('\n');
 vm.runInContext(defaults + '\n' + appSrc, sandbox, { filename: 'app.bundle.js' });
 
 // --- test helpers ----------------------------------------------------
@@ -445,6 +450,89 @@ console.log('\nM. shared overlay factories & dialogs');
   let threw = false;
   try { F.notify('hi'); } catch (e) { threw = true; }
   ok('notify does not throw', !threw);
+
+  F.document.getElementById = realGEI;
+}
+
+// === N. Split load-order invariant (browser <script> safety) =========
+// The harness concatenates the four files, so it cannot by itself catch
+// the one real risk of the split: a top-level executed statement in an
+// earlier <script> forward-referencing a symbol a later <script> hasn't
+// defined yet. Enforce the safety-by-construction invariant statically
+// instead: only app-bootstrap.js (loaded last) may contain load-time
+// side effects; the rest must be pure declarations, with the shared
+// constants declared in the first script.
+console.log('\nN. split load-order invariant');
+{
+  const read = f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const declOnly = ['app-core.js', 'app-logic.js', 'app-render.js'];
+  const declOrComment = /^ {8}(function |async function |const |let |var |class |\/\/|\/\*|\*)/;
+  const execStart =
+    /^ {8}(if|for|while|switch|do|return|throw|await)\b|^ {8}\(|^ {8}[A-Za-z_$][\w$.]*\s*\(/;
+  for (const f of declOnly) {
+    const offenders = [];
+    read(f).split('\n').forEach((line, i) => {
+      if (!/^ {8}\S/.test(line)) return;       // not a top-level line
+      if (declOrComment.test(line)) return;    // declaration / comment
+      if (/^ {8}[}\])`]/.test(line)) return;   // close of a multi-line decl
+      if (execStart.test(line)) offenders.push((i + 1) + ': ' + line.trim().slice(0, 60));
+    });
+    ok(`${f} has no top-level executed code`, offenders.length === 0, offenders);
+  }
+  const core = read('app-core.js');
+  ok('app-core.js (first script) declares FREQ/DEFAULTS/PERIOD',
+     /\bconst FREQ\s*=/.test(core) && /\bconst DEFAULTS\s*=/.test(core) && /\bconst PERIOD\s*=/.test(core));
+  const boot = read('app-bootstrap.js');
+  ok('app-bootstrap.js (last script) owns the load-time bootstrap',
+     /setInterval\(/.test(boot) && /addEventListener\(/.test(boot));
+}
+
+// === O. Decomposed render paths (exercise extracted helpers) =========
+// Drives the decomposed render functions against the stub DOM and unit-
+// tests the pure helpers pulled out of them, so the refactor's output is
+// actually executed rather than only parsed.
+console.log('\nO. decomposed render smoke');
+{
+  const realGEI = F.document.getElementById;
+  const els = {};
+  F.document.getElementById = id => (els[id] || (els[id] = makeEl()));
+
+  const h  = mkHabit({ id: 7, name: 'Floss', frequency: { type: 'daily' },
+                        linkedHabit: 8, completions: [{ date: today }] });
+  const h2 = mkHabit({ id: 8, name: 'Brush', frequency: { type: 'daily' },
+                        linkedHabit: 7, completions: [{ date: today }] });
+  seed([h, h2]);
+
+  let threw = null;
+  try { F.renderHabits(); } catch (e) { threw = e; }
+  ok('renderHabits() does not throw', !threw, threw && String(threw));
+  ok('renderHabits() emits markup', /habits-section/.test(els['habitsContainer'] && els['habitsContainer'].innerHTML || ''));
+
+  threw = null;
+  try { F.renderSettings(); } catch (e) { threw = e; }
+  ok('renderSettings() does not throw', !threw, threw && String(threw));
+  ok('renderSettings() emits a sheet', /settings-row|modal-header/.test(els['settingsModal'] && els['settingsModal'].innerHTML || ''));
+
+  const cat = F.categorizeHabits(F.loadHabits());
+  const consumed = F.computeConsumedLinkedIds(F.loadHabits(), cat);
+  ok('computeConsumedLinkedIds returns a Set that dedups the pair',
+     consumed instanceof Set && consumed.size === 1, [...consumed]);
+
+  const st = F.computeHabitStatus(mkHabit({ snoozedUntil: 'night' }), today);
+  ok('computeHabitStatus snoozed-night', st.habitStatus === 'Snoozed until tonight' && st.statusColor === '#f59e0b', st);
+  eq('computeHabitStatus done',
+     F.computeHabitStatus(mkHabit({ completions: [{ date: today }] }), today).habitStatus, 'Done');
+
+  const rs = F.computeRingState(mkHabit(), { completed: true }, false, false, 0, false);
+  ok('computeRingState status.completed -> completed/100%', rs.ringClass === 'completed' && rs.progress === '100%', rs);
+  eq('computeNeglectLevel non-reminder no-history -> 0',
+     F.computeNeglectLevel(mkHabit({ lastScoreUpdate: null, createdAt: null }), false, false, { display: -5 }), 0);
+
+  ok('buildTagsSettingsBody returns chip markup', /task-options/.test(F.buildTagsSettingsBody()));
+  ok('buildFreqInputsHtml(daily) returns an input',
+     /frequency-input/.test(F.buildFreqInputsHtml({ frequency: 'daily', dailyTimesValue: 2 }, null, false, '')));
+  eq('buildFormSubtasksHtml empty when no subtasks',
+     F.buildFormSubtasksHtml(mkHabit({ subtasks: [] }), true, { showSubtasks: false }), '');
 
   F.document.getElementById = realGEI;
 }

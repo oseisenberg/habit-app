@@ -1,5 +1,5 @@
 // Service Worker for Habit Tracker PWA
-const CACHE_NAME = 'habit-tracker-v14';
+const CACHE_NAME = 'habit-tracker-v15';
 const urlsToCache = [
   './',
   './index.html',
@@ -33,7 +33,7 @@ self.addEventListener('activate', event => {
 
 // Fetch strategy:
 // - Navigations / HTML (index.html): network-first, fall back to cache.
-//   This keeps the HTML in sync with the network-served app.js so a
+//   This keeps the HTML in sync with the network-served app scripts so a
 //   stale cached page can never reference removed/renamed elements
 //   (which previously broke things like opening Settings).
 // - Everything else: cache-first, fall back to network.
