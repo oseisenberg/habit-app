@@ -561,5 +561,34 @@ console.log('\nO. analytics renderers');
      (richLegacy.match(/mini-bars/g) || []).length === 1);
 }
 
+// === P. Analytics v2 refinements ====================================
+console.log('\nP. analytics v2 refinements');
+{
+  const D = '2024-03-13';
+  const back = n => F.shiftYMD(D, -n);
+
+  // heatLevel: a logged day always reads clearly (>=3); busiest = 4
+  eq('heatLevel empty', F.heatLevel(0, 5), 0);
+  eq('heatLevel single, binary habit', F.heatLevel(1, 1), 4);
+  ok('heatLevel single vs large max still clear', F.heatLevel(1, 8) >= 3, F.heatLevel(1, 8));
+  eq('heatLevel busiest day = 4', F.heatLevel(8, 8), 4);
+
+  // pre-creation cells are flagged and blanked, not shown as misses
+  const h = mkHabit({ createdAt: back(3), completions: [{ date: D }, { date: back(1) }] });
+  const hm = F.completionHeatmap(h, D, 16);
+  ok('cells before createdAt flagged pre', hm.cells.some(c => c.pre) &&
+     hm.cells.filter(c => c.date < back(3)).every(c => c.pre));
+  ok('on/after createdAt not pre', hm.cells.filter(c => c.date >= back(3) && c.date <= D).every(c => !c.pre));
+  ok('done day still counts despite young habit',
+     hm.cells.find(c => c.date === D).count === 1 && hm.maxCount === 1);
+
+  // headline no longer duplicates the stats-grid "total"
+  const many = [];
+  for (let i = 0; i < 6; i++) many.push({ date: back(i) });
+  const sec = F.renderActivitySection(mkHabit({ completions: many }), D);
+  ok('headline keeps streak/best/30d, drops "total"',
+     /streak/.test(sec) && /30d/.test(sec) && !/\btotal\b/.test(sec), sec.match(/activity-headline[\s\S]*?<\/div>/));
+}
+
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
 if (fail) { console.log('FAILED:', fails.join(', ')); process.exit(1); }

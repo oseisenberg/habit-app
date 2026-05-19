@@ -2653,6 +2653,7 @@
         // rectangular without implying missed days.
         function completionHeatmap(habit, todayStr, weeks = 16) {
             const counts = completionCountsByDate(habit);
+            const born = (habit.createdAt || '').slice(0, 10);
             const today = new Date(todayStr + 'T00:00:00');
             const dowMonFirst = (today.getDay() + 6) % 7;
             const start = new Date(today);
@@ -2666,7 +2667,9 @@
                     const ds = toDateString(day);
                     const count = counts.get(ds) || 0;
                     if (ds <= todayStr && count > maxCount) maxCount = count;
-                    cells.push({ date: ds, count, future: ds > todayStr });
+                    // `pre` = before the habit existed: blanked like future
+                    // days so empty pre-history doesn't read as missed.
+                    cells.push({ date: ds, count, future: ds > todayStr, pre: !!born && ds < born });
                 }
             }
             return { cells, weeks, rows: 7, maxCount };
@@ -2717,10 +2720,13 @@
         // Hand-rolled SVG/CSS so the no-build, zero-dependency setup holds.
 
         const HEAT_LEVELS = ['#191926', '#2e2a55', '#443c87', '#5b4fc0', '#7c6cff'];
+        // A logged day should always read as clearly "done" (>= level 3),
+        // with the busiest days brightest — rather than a ratio scale that
+        // made an ordinary single completion look dim next to a rare double.
         function heatLevel(count, max) {
             if (count <= 0) return 0;
             if (max <= 1) return 4;
-            return Math.min(4, Math.ceil((count / max) * 4));
+            return Math.min(4, 2 + Math.ceil((count / max) * 2));
         }
 
         function renderHeatmapSvg(hm) {
@@ -2729,7 +2735,7 @@
             let rects = '';
             hm.cells.forEach((c, i) => {
                 const col = Math.floor(i / 7), row = i % 7;
-                const fill = c.future ? '#141420' : HEAT_LEVELS[heatLevel(c.count, hm.maxCount)];
+                const fill = (c.future || c.pre) ? '#141420' : HEAT_LEVELS[heatLevel(c.count, hm.maxCount)];
                 rects += `<rect x="${col * pitch}" y="${row * pitch}" width="${cell}" height="${cell}" rx="2" fill="${fill}"></rect>`;
             });
             return `<svg class="heatmap" viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Completion calendar, last ${hm.weeks} weeks">${rects}</svg>`;
@@ -2759,9 +2765,11 @@
             const rate = recentActiveRate(habit, todayStr, 30);
             const hm = completionHeatmap(habit, todayStr, 16);
 
+            // `total` is already shown in the stats grid above — keep the
+            // headline to the things that grid doesn't cover.
             const headline = `<div class="activity-headline">`
                 + `<span>🔥 ${current}d streak</span><span>best ${longest}</span>`
-                + `<span>${rate}% / 30d</span><span>${total} total</span></div>`;
+                + `<span>${rate}% active / 30d</span></div>`;
 
             let charts = '';
             if (total >= 5) {
