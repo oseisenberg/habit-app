@@ -2596,6 +2596,104 @@
         }
         function daysBetween(d1, d2) { return Math.floor((new Date(d2) - new Date(d1)) / 86400000); }
 
+        // ========================================
+        // COMPLETION ANALYTICS (pure, headless-testable)
+        // ========================================
+        // Every function takes an explicit todayStr where "now" matters, so
+        // results are deterministic in tests and immune to the time-of-day
+        // rollover in getEffectiveDate(). Legacy taps with no timestamp are
+        // skipped only for time-of-day (their date is still always counted).
+
+        function shiftYMD(ds, n) {
+            const d = new Date(ds + 'T00:00:00');
+            d.setDate(d.getDate() + n);
+            return toDateString(d);
+        }
+
+        // Map 'YYYY-MM-DD' -> number of completions logged that day.
+        function completionCountsByDate(habit) {
+            const m = new Map();
+            for (const c of (habit.completions || [])) {
+                if (!c || !c.date) continue;
+                m.set(c.date, (m.get(c.date) || 0) + 1);
+            }
+            return m;
+        }
+
+        // Completions per weekday, Monday-first: [Mon,Tue,...,Sun].
+        function completionsByWeekday(habit) {
+            const out = [0, 0, 0, 0, 0, 0, 0];
+            for (const c of (habit.completions || [])) {
+                if (!c || !c.date) continue;
+                const d = new Date(c.date + 'T00:00:00');
+                if (isNaN(d)) continue;
+                out[(d.getDay() + 6) % 7]++;
+            }
+            return out;
+        }
+
+        // Completions per part of day, from the ms timestamp. Untimestamped
+        // (legacy) taps can't be placed and are excluded.
+        function completionsByTimeOfDay(habit) {
+            const out = { morning: 0, afternoon: 0, evening: 0, night: 0 };
+            for (const c of (habit.completions || [])) {
+                if (!c || !c.timestamp) continue;
+                const h = new Date(c.timestamp).getHours();
+                if (h >= 5 && h < 12) out.morning++;
+                else if (h >= 12 && h < 17) out.afternoon++;
+                else if (h >= 17 && h < 22) out.evening++;
+                else out.night++;
+            }
+            return out;
+        }
+
+        // Trailing Monday-aligned grid for a calendar heatmap: `weeks`
+        // columns x 7 rows in column-major order (col 0 = oldest week,
+        // row 0 = Monday). Future days are flagged so the grid stays
+        // rectangular without implying missed days.
+        function completionHeatmap(habit, todayStr, weeks = 16) {
+            const counts = completionCountsByDate(habit);
+            const today = new Date(todayStr + 'T00:00:00');
+            const dowMonFirst = (today.getDay() + 6) % 7;
+            const start = new Date(today);
+            start.setDate(today.getDate() - dowMonFirst - (weeks - 1) * 7);
+            const cells = [];
+            let maxCount = 0;
+            for (let w = 0; w < weeks; w++) {
+                for (let d = 0; d < 7; d++) {
+                    const day = new Date(start);
+                    day.setDate(start.getDate() + w * 7 + d);
+                    const ds = toDateString(day);
+                    const count = counts.get(ds) || 0;
+                    if (ds <= todayStr && count > maxCount) maxCount = count;
+                    cells.push({ date: ds, count, future: ds > todayStr });
+                }
+            }
+            return { cells, weeks, rows: 7, maxCount };
+        }
+
+        // Per-week completion totals (oldest first) over the same
+        // Monday-aligned window as the heatmap — for a trend sparkline.
+        function completionWeeklyTotals(habit, todayStr, weeks = 12) {
+            const hm = completionHeatmap(habit, todayStr, weeks);
+            const totals = new Array(weeks).fill(0);
+            hm.cells.forEach((c, i) => { if (!c.future) totals[Math.floor(i / 7)] += c.count; });
+            return totals;
+        }
+
+        // Headline rate: share of the last `days` calendar days (ending
+        // today) that have >=1 completion. Simple, schedule-agnostic, and
+        // honest for "how often lately" without the expected-occurrence
+        // math the Details "Rate" stat uses.
+        function recentActiveRate(habit, todayStr, days = 30) {
+            const counts = completionCountsByDate(habit);
+            let active = 0;
+            for (let i = 0; i < days; i++) {
+                if (counts.has(shiftYMD(todayStr, -i))) active++;
+            }
+            return Math.round((active / days) * 100);
+        }
+
         // Check if a date was snoozed (for pausing momentum during snooze)
         function wasDateSnoozed(habit, dateStr) {
             if (!habit.snoozeHistory || !habit.snoozeHistory.length) return false;
@@ -4671,6 +4769,105 @@
             allHabitsSearchQuery = '';
         }
 
+        // ========================================
+        // STATS SCREEN (Approach B: dedicated overlay)
+        // ========================================
+        // A single place for "when / how often over time" across all
+        // habits, kept off the main flow so nothing else gets busier.
+
+        // Merge every habit's completions into one synthetic record so the
+        // shared analytics functions give aggregate (all-habits) results.
+        function aggregateCompletionHabit(habits) {
+            const completions = [];
+            let born = null;
+            for (const h of habits) {
+                for (const c of (h.completions || [])) completions.push(c);
+                const b = (h.createdAt || '').slice(0, 10);
+                if (b && (!born || b < born)) born = b;
+            }
+            return { completions, createdAt: born || '' };
+        }
+
+        // Minimal SVG line+area chart, no axes (clean). values oldest->newest.
+        function renderTrendLine(values) {
+            const n = values.length;
+            if (n < 2 || values.every(v => v === 0)) {
+                return `<div class="stats-empty">Not enough history yet</div>`;
+            }
+            const w = 300, h = 72, pad = 4;
+            const max = Math.max(1, ...values);
+            const pt = (v, i) => {
+                const x = pad + (i / (n - 1)) * (w - 2 * pad);
+                const y = pad + (1 - v / max) * (h - 2 * pad);
+                return [x, y];
+            };
+            const pts = values.map(pt);
+            const line = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+            const area = `${pad},${h - pad} ${line} ${(w - pad)},${h - pad}`;
+            const [lx, ly] = pts[n - 1];
+            return `<svg class="trend" viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" role="img" aria-label="Completions per week trend">
+                <polygon points="${area}" fill="rgba(102,126,234,0.18)"></polygon>
+                <polyline points="${line}" fill="none" stroke="#7c6cff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
+                <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.5" fill="#7c6cff"></circle>
+            </svg>`;
+        }
+
+        function renderWeekdayBars(counts) {
+            const max = Math.max(1, ...counts);
+            const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+            return `<div class="wd-row">` + counts.map((v, i) => {
+                const pct = v ? Math.max(6, Math.round((v / max) * 100)) : 0;
+                return `<div class="wd-col" title="${labels[i]}: ${v}">
+                    <div class="wd-track"><div class="wd-fill" style="height:${pct}%"></div></div>
+                    <div class="wd-label">${labels[i]}</div></div>`;
+            }).join('') + `</div>`;
+        }
+
+        function renderStats() {
+            const today = getTodayString();
+            const habits = loadHabits().filter(h => !h.archived);
+            const tracked = habits.filter(h => !h.isReminder && (h.completions || []).length > 0);
+            const agg = aggregateCompletionHabit(habits);
+            const weekly = completionWeeklyTotals(agg, today, 12);
+            const weekday = completionsByWeekday(agg);
+            const totalDone = (agg.completions || []).filter(c => c && c.date).length;
+
+            const rows = tracked
+                .map(h => ({ h, rate: recentActiveRate(h, today, 30) }))
+                .sort((a, b) => b.rate - a.rate)
+                .map(({ h, rate }) => `<div class="habit-stat-row">
+                    <span class="hsr-icon">${h.icon || '📌'}</span>
+                    <span class="hsr-name">${escapeHtml(h.name)}</span>
+                    <span class="hsr-barwrap"><span class="hsr-bar" style="width:${rate}%"></span></span>
+                    <span class="hsr-rate">${rate}%</span>
+                </div>`).join('');
+
+            const body = totalDone === 0
+                ? `<div class="stats-empty" style="padding:40px 0">No completions logged yet.<br>Come back once you've built some history.</div>`
+                : `<div class="stats-section">
+                        <div class="stats-section-title">Completions per week · 12 wks</div>
+                        ${renderTrendLine(weekly)}
+                    </div>
+                    <div class="stats-section">
+                        <div class="stats-section-title">By weekday · all habits</div>
+                        ${renderWeekdayBars(weekday)}
+                    </div>
+                    <div class="stats-section">
+                        <div class="stats-section-title">By habit · active days last 30</div>
+                        <div class="habit-stat-list">${rows || '<div class="stats-empty">No tracked habits yet</div>'}</div>
+                    </div>`;
+
+            const header = `<div class="modal-header">
+                    <span class="modal-title">📊 Stats</span>
+                    <button class="modal-close" onclick="closeStats()">&times;</button>
+                </div>`;
+            document.getElementById('statsModal').innerHTML =
+                `<div class="overlay-fixed-header">${header}</div><div class="overlay-scroll">${body}</div>`;
+        }
+
+        function openStats() { renderStats(); showOverlay('statsOverlay'); }
+        function closeStats() { hideOverlay('statsOverlay'); }
+
         // Simple fuzzy match - checks if all characters appear in order
         function fuzzyMatch(text, query) {
             if (!query) return true;
@@ -4947,6 +5144,7 @@
                 ['detailsOverlay', closeDetails],
                 ['modalOverlay', closeModal],
                 ['allHabitsOverlay', closeAllHabits],
+                ['statsOverlay', closeStats],
             ];
             for (const [id, close] of closers) {
                 if (isOverlayActive(id)) {
