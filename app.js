@@ -2596,6 +2596,123 @@
         }
         function daysBetween(d1, d2) { return Math.floor((new Date(d2) - new Date(d1)) / 86400000); }
 
+        // ========================================
+        // COMPLETION ANALYTICS (pure, headless-testable)
+        // ========================================
+        // Every function takes an explicit todayStr where "now" matters, so
+        // results are deterministic in tests and immune to the time-of-day
+        // rollover in getEffectiveDate(). Legacy taps with no timestamp are
+        // skipped only for time-of-day (their date is still always counted).
+
+        function shiftYMD(ds, n) {
+            const d = new Date(ds + 'T00:00:00');
+            d.setDate(d.getDate() + n);
+            return toDateString(d);
+        }
+
+        // Map 'YYYY-MM-DD' -> number of completions logged that day.
+        function completionCountsByDate(habit) {
+            const m = new Map();
+            for (const c of (habit.completions || [])) {
+                if (!c || !c.date) continue;
+                m.set(c.date, (m.get(c.date) || 0) + 1);
+            }
+            return m;
+        }
+
+        // Completions per weekday, Monday-first: [Mon,Tue,...,Sun].
+        function completionsByWeekday(habit) {
+            const out = [0, 0, 0, 0, 0, 0, 0];
+            for (const c of (habit.completions || [])) {
+                if (!c || !c.date) continue;
+                const d = new Date(c.date + 'T00:00:00');
+                if (isNaN(d)) continue;
+                out[(d.getDay() + 6) % 7]++;
+            }
+            return out;
+        }
+
+        // Completions per part of day, from the ms timestamp. Untimestamped
+        // (legacy) taps can't be placed and are excluded.
+        function completionsByTimeOfDay(habit) {
+            const out = { morning: 0, afternoon: 0, evening: 0, night: 0 };
+            for (const c of (habit.completions || [])) {
+                if (!c || !c.timestamp) continue;
+                const h = new Date(c.timestamp).getHours();
+                if (h >= 5 && h < 12) out.morning++;
+                else if (h >= 12 && h < 17) out.afternoon++;
+                else if (h >= 17 && h < 22) out.evening++;
+                else out.night++;
+            }
+            return out;
+        }
+
+        // Trailing Monday-aligned grid for a calendar heatmap: `weeks`
+        // columns x 7 rows in column-major order (col 0 = oldest week,
+        // row 0 = Monday). Future days are flagged so the grid stays
+        // rectangular without implying missed days.
+        function completionHeatmap(habit, todayStr, weeks = 16) {
+            const counts = completionCountsByDate(habit);
+            const today = new Date(todayStr + 'T00:00:00');
+            const dowMonFirst = (today.getDay() + 6) % 7;
+            const start = new Date(today);
+            start.setDate(today.getDate() - dowMonFirst - (weeks - 1) * 7);
+            const cells = [];
+            let maxCount = 0;
+            for (let w = 0; w < weeks; w++) {
+                for (let d = 0; d < 7; d++) {
+                    const day = new Date(start);
+                    day.setDate(start.getDate() + w * 7 + d);
+                    const ds = toDateString(day);
+                    const count = counts.get(ds) || 0;
+                    if (ds <= todayStr && count > maxCount) maxCount = count;
+                    cells.push({ date: ds, count, future: ds > todayStr });
+                }
+            }
+            return { cells, weeks, rows: 7, maxCount };
+        }
+
+        // Per-week completion totals (oldest first) over the same
+        // Monday-aligned window as the heatmap — for a trend sparkline.
+        function completionWeeklyTotals(habit, todayStr, weeks = 12) {
+            const hm = completionHeatmap(habit, todayStr, weeks);
+            const totals = new Array(weeks).fill(0);
+            hm.cells.forEach((c, i) => { if (!c.future) totals[Math.floor(i / 7)] += c.count; });
+            return totals;
+        }
+
+        // Longest / current run of consecutive calendar days with >=1
+        // completion. The current streak stays alive if yesterday is done
+        // and today simply hasn't been logged yet.
+        function completionStreaks(habit, todayStr) {
+            const counts = completionCountsByDate(habit);
+            if (!counts.size) return { current: 0, longest: 0 };
+            const dates = [...counts.keys()].sort();
+            let longest = 0, run = 0, prev = null;
+            for (const ds of dates) {
+                run = (prev && daysBetween(prev, ds) === 1) ? run + 1 : 1;
+                if (run > longest) longest = run;
+                prev = ds;
+            }
+            let cursor = counts.has(todayStr) ? todayStr : shiftYMD(todayStr, -1);
+            let current = 0;
+            while (counts.has(cursor)) { current++; cursor = shiftYMD(cursor, -1); }
+            return { current, longest };
+        }
+
+        // Headline rate: share of the last `days` calendar days (ending
+        // today) that have >=1 completion. Simple, schedule-agnostic, and
+        // honest for "how often lately" without the expected-occurrence
+        // math the Details "Rate" stat uses.
+        function recentActiveRate(habit, todayStr, days = 30) {
+            const counts = completionCountsByDate(habit);
+            let active = 0;
+            for (let i = 0; i < days; i++) {
+                if (counts.has(shiftYMD(todayStr, -i))) active++;
+            }
+            return Math.round((active / days) * 100);
+        }
+
         // Check if a date was snoozed (for pausing momentum during snooze)
         function wasDateSnoozed(habit, dateStr) {
             if (!habit.snoozeHistory || !habit.snoozeHistory.length) return false;
