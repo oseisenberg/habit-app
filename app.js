@@ -2959,7 +2959,7 @@
                 items: [],
                 marker: 'bullet',
                 preamble: descSection + linkedAutoInfoHtml(habit),
-                footer: `<div style="display:flex;gap:8px;padding:0 14px 4px">
+                footer: `<div style="display:flex;gap:8px;padding:0 14px 12px">
                     <button class="submit-btn secondary" onclick="closeConfirmDescPopup()" style="flex:1">Cancel</button>
                     <button class="submit-btn" onclick="confirmAndCompleteHabit()" style="flex:1;background:#4ade80">Complete</button>
                 </div>`
