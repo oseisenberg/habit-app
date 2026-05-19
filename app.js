@@ -1087,6 +1087,7 @@
         function showUndoToast() {
             const toast = document.getElementById('undoToast');
             toast.classList.add('visible');
+            document.body.classList.add('undo-toast-active');
 
             // Clear existing timeout
             if (undoTimeout) clearTimeout(undoTimeout);
@@ -1100,6 +1101,7 @@
         function hideUndoToast() {
             const toast = document.getElementById('undoToast');
             toast.classList.remove('visible');
+            document.body.classList.remove('undo-toast-active');
             if (undoTimeout) {
                 clearTimeout(undoTimeout);
                 undoTimeout = null;
@@ -1227,7 +1229,7 @@
                 title,
                 onClose: 'closeDialog()',
                 bodyHtml: message ? `<div style="color:#ccc;font-size:0.9rem;line-height:1.45;white-space:pre-line">${escapeHtml(message)}</div>` : '',
-                footerHtml: `<div style="display:flex;gap:8px;padding:12px 16px">${btns}</div>`
+                footerHtml: `<div style="display:flex;gap:8px;padding:10px 14px">${btns}</div>`
             });
             showOverlay('dialogOverlay');
             // Focus the first (safe / non-destructive) action so keyboard
@@ -2957,7 +2959,7 @@
                 items: [],
                 marker: 'bullet',
                 preamble: descSection + linkedAutoInfoHtml(habit),
-                footer: `<div style="display:flex;gap:8px;margin-top:12px">
+                footer: `<div style="display:flex;gap:8px;padding:0 14px 12px">
                     <button class="submit-btn secondary" onclick="closeConfirmDescPopup()" style="flex:1">Cancel</button>
                     <button class="submit-btn" onclick="confirmAndCompleteHabit()" style="flex:1;background:#4ade80">Complete</button>
                 </div>`
