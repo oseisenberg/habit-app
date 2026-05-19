@@ -449,5 +449,77 @@ console.log('\nM. shared overlay factories & dialogs');
   F.document.getElementById = realGEI;
 }
 
+// === N. Completion analytics (pure, deterministic) ==================
+console.log('\nN. completion analytics');
+{
+  const D = '2024-03-13';                 // anchor "today"
+  const back = n => F.shiftYMD(D, -n);
+  // local-time timestamp at a given hour, TZ-independent for getHours()
+  const tsAt = (ymd, h) => {
+    const [y, m, d] = ymd.split('-').map(Number);
+    return new Date(y, m - 1, d, h, 0, 0).getTime();
+  };
+
+  // shiftYMD round-trips and steps real calendar days
+  eq('shiftYMD -1 then +1 is identity', F.shiftYMD(F.shiftYMD(D, -1), 1), D);
+  eq('shiftYMD crosses month boundary', F.shiftYMD('2024-03-01', -1), '2024-02-29');
+
+  const h = mkHabit({ completions: [
+    { date: D,        timestamp: tsAt(D, 8) },     // morning
+    { date: D,        timestamp: tsAt(D, 8) },     // 2nd same day
+    { date: back(1),  timestamp: tsAt(back(1), 14) }, // afternoon
+    { date: back(2),  timestamp: tsAt(back(2), 19) }, // evening
+    { date: back(3),  timestamp: tsAt(back(3), 1) },  // night
+    { date: back(8) },                              // legacy: no timestamp
+  ]});
+
+  const counts = F.completionCountsByDate(h);
+  eq('countsByDate dedups same-day', counts.get(D), 2);
+  eq('countsByDate distinct days', counts.size, 5);
+
+  const tod = F.completionsByTimeOfDay(h);
+  ok('timeOfDay buckets from timestamps (legacy skipped)',
+     tod.morning === 2 && tod.afternoon === 1 && tod.evening === 1 && tod.night === 1, tod);
+
+  const wd = F.completionsByWeekday(h);
+  eq('weekday buckets sum = dated completions', wd.reduce((a, b) => a + b, 0), 6);
+  ok('weekday index is Monday-first 0..6', wd.length === 7);
+  // two completions exactly 7 days apart fall in the same weekday bucket
+  const h7 = mkHabit({ completions: [{ date: D }, { date: F.shiftYMD(D, -7) }] });
+  const wd7 = F.completionsByWeekday(h7);
+  ok('same weekday 7d apart -> one bucket = 2', wd7.some(v => v === 2) && wd7.filter(v => v).length === 1, wd7);
+
+  const hm = F.completionHeatmap(h, D, 16);
+  eq('heatmap cell count = weeks*7', hm.cells.length, 16 * 7);
+  ok('heatmap col0 row0 is a Monday',
+     (new Date(hm.cells[0].date + 'T00:00:00').getDay() + 6) % 7 === 0, hm.cells[0].date);
+  eq('heatmap maxCount = busiest day', hm.maxCount, 2);
+  const todayCell = hm.cells.find(c => c.date === D);
+  ok('today cell present, counted, not future',
+     todayCell && todayCell.count === 2 && todayCell.future === false, todayCell);
+  ok('future days flagged', hm.cells.some(c => c.future) &&
+     hm.cells.filter(c => c.date > D).every(c => c.future));
+
+  const wk = F.completionWeeklyTotals(h, D, 12);
+  eq('weeklyTotals length = weeks', wk.length, 12);
+  eq('weeklyTotals sum = completions in window', wk.reduce((a, b) => a + b, 0), 6);
+
+  const streakHabit = mkHabit({ completions: [
+    { date: D }, { date: back(1) }, { date: back(2) },   // current run 3
+    { date: back(5) }, { date: back(6) },                // older run 2
+  ]});
+  const st = F.completionStreaks(streakHabit, D);
+  ok('streaks current=3 longest=3', st.current === 3 && st.longest === 3, st);
+  // grace: today not logged yet but yesterday is -> streak still alive
+  const grace = mkHabit({ completions: [{ date: back(1) }, { date: back(2) }] });
+  eq('streak grace (today pending)', F.completionStreaks(grace, D).current, 2);
+  eq('empty streaks', F.completionStreaks(mkHabit({ completions: [] }), D).current, 0);
+
+  eq('recentActiveRate 2/10 days', F.recentActiveRate(
+     mkHabit({ completions: [{ date: D }, { date: back(1) }] }), D, 10), 20);
+  eq('recentActiveRate dedups same day', F.recentActiveRate(
+     mkHabit({ completions: [{ date: D }, { date: D }] }), D, 10), 10);
+}
+
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
 if (fail) { console.log('FAILED:', fails.join(', ')); process.exit(1); }
