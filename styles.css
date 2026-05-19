@@ -399,6 +399,45 @@
         .stat-number { font-size: 1rem; font-weight: 700; color: #fff; }
         .stat-label { font-size: 0.55rem; color: #666; margin-top: 1px; }
 
+        /* Activity disclosure: collapsed by default so Details stays clean */
+        .activity { margin: 8px 0; background: #0f0f1a; border-radius: 8px; }
+        .activity > summary {
+            list-style: none; cursor: pointer; user-select: none;
+            display: flex; align-items: center; gap: 6px;
+            padding: 9px 12px; font-size: 0.62rem; font-weight: 600;
+            color: #888; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .activity > summary::-webkit-details-marker { display: none; }
+        .activity > summary::before {
+            content: '▸'; color: #555; font-size: 0.7rem;
+            transition: transform 0.15s ease;
+        }
+        .activity[open] > summary::before { transform: rotate(90deg); }
+        .activity-body { padding: 2px 12px 12px; display: flex; flex-direction: column; gap: 12px; }
+        .activity-headline {
+            display: flex; flex-wrap: wrap; gap: 6px 14px;
+            font-size: 0.7rem; color: #aaa;
+        }
+        .activity-headline span { white-space: nowrap; }
+        .heatmap { display: block; width: 100%; max-width: 340px; height: auto; }
+        .activity-charts { display: flex; flex-wrap: wrap; gap: 18px; }
+        .mini-bars { flex: 1; min-width: 130px; }
+        .mb-title {
+            font-size: 0.58rem; color: #666; text-transform: uppercase;
+            letter-spacing: 0.5px; margin-bottom: 5px;
+        }
+        .mb-row { display: flex; align-items: flex-end; gap: 5px; }
+        .mb-col { flex: 1; display: flex; flex-direction: column; align-items: center; }
+        .mb-track {
+            width: 70%; height: 40px; background: #191926; border-radius: 3px;
+            display: flex; align-items: flex-end; overflow: hidden;
+        }
+        .mb-fill {
+            width: 100%; background: linear-gradient(#7c6cff, #667eea);
+            border-radius: 3px 3px 0 0;
+        }
+        .mb-label { font-size: 0.62rem; color: #777; margin-top: 4px; line-height: 1; }
+
         .action-buttons { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
         .action-buttons .submit-btn { padding: 10px; font-size: 0.85rem; min-width: 88px; }
         .action-row { display: flex; gap: 6px; }

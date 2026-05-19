@@ -2596,6 +2596,187 @@
         }
         function daysBetween(d1, d2) { return Math.floor((new Date(d2) - new Date(d1)) / 86400000); }
 
+        // ========================================
+        // COMPLETION ANALYTICS (pure, headless-testable)
+        // ========================================
+        // Every function takes an explicit todayStr where "now" matters, so
+        // results are deterministic in tests and immune to the time-of-day
+        // rollover in getEffectiveDate(). Legacy taps with no timestamp are
+        // skipped only for time-of-day (their date is still always counted).
+
+        function shiftYMD(ds, n) {
+            const d = new Date(ds + 'T00:00:00');
+            d.setDate(d.getDate() + n);
+            return toDateString(d);
+        }
+
+        // Map 'YYYY-MM-DD' -> number of completions logged that day.
+        function completionCountsByDate(habit) {
+            const m = new Map();
+            for (const c of (habit.completions || [])) {
+                if (!c || !c.date) continue;
+                m.set(c.date, (m.get(c.date) || 0) + 1);
+            }
+            return m;
+        }
+
+        // Completions per weekday, Monday-first: [Mon,Tue,...,Sun].
+        function completionsByWeekday(habit) {
+            const out = [0, 0, 0, 0, 0, 0, 0];
+            for (const c of (habit.completions || [])) {
+                if (!c || !c.date) continue;
+                const d = new Date(c.date + 'T00:00:00');
+                if (isNaN(d)) continue;
+                out[(d.getDay() + 6) % 7]++;
+            }
+            return out;
+        }
+
+        // Completions per part of day, from the ms timestamp. Untimestamped
+        // (legacy) taps can't be placed and are excluded.
+        function completionsByTimeOfDay(habit) {
+            const out = { morning: 0, afternoon: 0, evening: 0, night: 0 };
+            for (const c of (habit.completions || [])) {
+                if (!c || !c.timestamp) continue;
+                const h = new Date(c.timestamp).getHours();
+                if (h >= 5 && h < 12) out.morning++;
+                else if (h >= 12 && h < 17) out.afternoon++;
+                else if (h >= 17 && h < 22) out.evening++;
+                else out.night++;
+            }
+            return out;
+        }
+
+        // Trailing Monday-aligned grid for a calendar heatmap: `weeks`
+        // columns x 7 rows in column-major order (col 0 = oldest week,
+        // row 0 = Monday). Future days are flagged so the grid stays
+        // rectangular without implying missed days.
+        function completionHeatmap(habit, todayStr, weeks = 16) {
+            const counts = completionCountsByDate(habit);
+            const born = (habit.createdAt || '').slice(0, 10);
+            const today = new Date(todayStr + 'T00:00:00');
+            const dowMonFirst = (today.getDay() + 6) % 7;
+            const start = new Date(today);
+            start.setDate(today.getDate() - dowMonFirst - (weeks - 1) * 7);
+            const cells = [];
+            let maxCount = 0;
+            for (let w = 0; w < weeks; w++) {
+                for (let d = 0; d < 7; d++) {
+                    const day = new Date(start);
+                    day.setDate(start.getDate() + w * 7 + d);
+                    const ds = toDateString(day);
+                    const count = counts.get(ds) || 0;
+                    if (ds <= todayStr && count > maxCount) maxCount = count;
+                    // `pre` = before the habit existed: blanked like future
+                    // days so empty pre-history doesn't read as missed.
+                    cells.push({ date: ds, count, future: ds > todayStr, pre: !!born && ds < born });
+                }
+            }
+            return { cells, weeks, rows: 7, maxCount };
+        }
+
+        // Per-week completion totals (oldest first) over the same
+        // Monday-aligned window as the heatmap — for a trend sparkline.
+        function completionWeeklyTotals(habit, todayStr, weeks = 12) {
+            const hm = completionHeatmap(habit, todayStr, weeks);
+            const totals = new Array(weeks).fill(0);
+            hm.cells.forEach((c, i) => { if (!c.future) totals[Math.floor(i / 7)] += c.count; });
+            return totals;
+        }
+
+        // Headline rate: share of the last `days` calendar days (ending
+        // today) that have >=1 completion. Simple, schedule-agnostic, and
+        // honest for "how often lately" without the expected-occurrence
+        // math the Details "Rate" stat uses.
+        function recentActiveRate(habit, todayStr, days = 30) {
+            const counts = completionCountsByDate(habit);
+            let active = 0;
+            for (let i = 0; i < days; i++) {
+                if (counts.has(shiftYMD(todayStr, -i))) active++;
+            }
+            return Math.round((active / days) * 100);
+        }
+
+        // --- Analytics renderers (pure string builders) -------------------
+        // Hand-rolled SVG/CSS so the no-build, zero-dependency setup holds.
+
+        const HEAT_LEVELS = ['#191926', '#2e2a55', '#443c87', '#5b4fc0', '#7c6cff'];
+        // A logged day should always read as clearly "done" (>= level 3),
+        // with the busiest days brightest — rather than a ratio scale that
+        // made an ordinary single completion look dim next to a rare double.
+        function heatLevel(count, max) {
+            if (count <= 0) return 0;
+            if (max <= 1) return 4;
+            return Math.min(4, 2 + Math.ceil((count / max) * 2));
+        }
+
+        function renderHeatmapSvg(hm) {
+            const cell = 11, gap = 3, pitch = cell + gap;
+            const w = hm.weeks * pitch - gap, h = hm.rows * pitch - gap;
+            let rects = '';
+            hm.cells.forEach((c, i) => {
+                const col = Math.floor(i / 7), row = i % 7;
+                const fill = (c.future || c.pre) ? '#141420' : HEAT_LEVELS[heatLevel(c.count, hm.maxCount)];
+                rects += `<rect x="${col * pitch}" y="${row * pitch}" width="${cell}" height="${cell}" rx="2" fill="${fill}"></rect>`;
+            });
+            return `<svg class="heatmap" viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Completion calendar, last ${hm.weeks} weeks">${rects}</svg>`;
+        }
+
+        // items: [{label, value}]. Compact CSS bar row, no axes.
+        function renderMiniBars(title, items) {
+            const max = Math.max(1, ...items.map(it => it.value));
+            const bars = items.map(it => {
+                const pct = Math.round((it.value / max) * 100);
+                return `<div class="mb-col" title="${it.label}: ${it.value}">
+                    <div class="mb-track"><div class="mb-fill" style="height:${it.value ? Math.max(6, pct) : 0}%"></div></div>
+                    <div class="mb-label">${it.label}</div>
+                </div>`;
+            }).join('');
+            return `<div class="mini-bars"><div class="mb-title">${title}</div><div class="mb-row">${bars}</div></div>`;
+        }
+
+        // The single, adaptive entry point. Returns '' when there's nothing
+        // worth showing; reveals weekday/time-of-day only once there's
+        // enough data so sparse habits stay clean. Collapsed by default
+        // (native <details>) so the Details view isn't cluttered.
+        function renderActivitySection(habit, todayStr) {
+            const total = (habit.completions || []).filter(c => c && c.date).length;
+            if (total < 1) return '';
+            const rate = recentActiveRate(habit, todayStr, 30);
+            const hm = completionHeatmap(habit, todayStr, 16);
+
+            // `total` is already shown in the stats grid above — keep the
+            // headline to the things that grid doesn't cover.
+            const headline = `<div class="activity-headline">`
+                + `<span>${rate}% active / 30d</span></div>`;
+
+            let charts = '';
+            if (total >= 5) {
+                const wd = completionsByWeekday(habit);
+                charts += renderMiniBars('Weekday', ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+                    .map((l, i) => ({ label: l, value: wd[i] })));
+                const tod = completionsByTimeOfDay(habit);
+                const todTotal = tod.morning + tod.afternoon + tod.evening + tod.night;
+                if (todTotal > 0) {
+                    charts += renderMiniBars('Time of day', [
+                        { label: '🌅', value: tod.morning },
+                        { label: '☀️', value: tod.afternoon },
+                        { label: '🌆', value: tod.evening },
+                        { label: '🌙', value: tod.night },
+                    ]);
+                }
+            }
+
+            return `<details class="activity">
+                <summary>Activity</summary>
+                <div class="activity-body">
+                    ${headline}
+                    ${renderHeatmapSvg(hm)}
+                    ${charts ? `<div class="activity-charts">${charts}</div>` : ''}
+                </div>
+            </details>`;
+        }
+
         // Check if a date was snoozed (for pausing momentum during snooze)
         function wasDateSnoozed(habit, dateStr) {
             if (!habit.snoozeHistory || !habit.snoozeHistory.length) return false;
@@ -4579,6 +4760,7 @@
                         <div class="stat-box"><div class="stat-number">${rate}%</div><div class="stat-label">Rate</div></div>
                         <div class="stat-box"><div class="stat-number">${avgInterval}</div><div class="stat-label">Avg Gap</div></div>
                     </div>` : ''}
+                    ${!isReminder ? renderActivitySection(habit, today) : ''}
                     ${habit.subtasks && habit.subtasks.length > 0 ? `
                     <div class="subtask-list" style="margin:10px 0">
                         <div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Subtasks</div>
