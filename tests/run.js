@@ -504,17 +504,6 @@ console.log('\nN. completion analytics');
   eq('weeklyTotals length = weeks', wk.length, 12);
   eq('weeklyTotals sum = completions in window', wk.reduce((a, b) => a + b, 0), 6);
 
-  const streakHabit = mkHabit({ completions: [
-    { date: D }, { date: back(1) }, { date: back(2) },   // current run 3
-    { date: back(5) }, { date: back(6) },                // older run 2
-  ]});
-  const st = F.completionStreaks(streakHabit, D);
-  ok('streaks current=3 longest=3', st.current === 3 && st.longest === 3, st);
-  // grace: today not logged yet but yesterday is -> streak still alive
-  const grace = mkHabit({ completions: [{ date: back(1) }, { date: back(2) }] });
-  eq('streak grace (today pending)', F.completionStreaks(grace, D).current, 2);
-  eq('empty streaks', F.completionStreaks(mkHabit({ completions: [] }), D).current, 0);
-
   eq('recentActiveRate 2/10 days', F.recentActiveRate(
      mkHabit({ completions: [{ date: D }, { date: back(1) }] }), D, 10), 20);
   eq('recentActiveRate dedups same day', F.recentActiveRate(
@@ -552,7 +541,7 @@ console.log('\nO. analytics renderers');
   for (let i = 0; i < 6; i++) many.push({ date: back(i), timestamp: tsAt(back(i), 9) });
   const rich = F.renderActivitySection(mkHabit({ completions: many }), D);
   ok('rich (>=5, timestamped): weekday + time-of-day shown',
-     (rich.match(/mini-bars/g) || []).length === 2 && /streak/.test(rich), rich.slice(0, 60));
+     (rich.match(/mini-bars/g) || []).length === 2 && /30d/.test(rich), rich.slice(0, 60));
 
   const legacy = [];
   for (let i = 0; i < 6; i++) legacy.push({ date: back(i) }); // no timestamps
@@ -582,12 +571,12 @@ console.log('\nP. analytics v2 refinements');
   ok('done day still counts despite young habit',
      hm.cells.find(c => c.date === D).count === 1 && hm.maxCount === 1);
 
-  // headline no longer duplicates the stats-grid "total"
+  // headline shows the 30d rate only — no streaks, no duplicated "total"
   const many = [];
   for (let i = 0; i < 6; i++) many.push({ date: back(i) });
   const sec = F.renderActivitySection(mkHabit({ completions: many }), D);
-  ok('headline keeps streak/best/30d, drops "total"',
-     /streak/.test(sec) && /30d/.test(sec) && !/\btotal\b/.test(sec), sec.match(/activity-headline[\s\S]*?<\/div>/));
+  ok('headline is 30d rate only (no streak, no "total")',
+     /30d/.test(sec) && !/streak/.test(sec) && !/\btotal\b/.test(sec), sec.match(/activity-headline[\s\S]*?<\/div>/));
 }
 
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);

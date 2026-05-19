@@ -2684,25 +2684,6 @@
             return totals;
         }
 
-        // Longest / current run of consecutive calendar days with >=1
-        // completion. The current streak stays alive if yesterday is done
-        // and today simply hasn't been logged yet.
-        function completionStreaks(habit, todayStr) {
-            const counts = completionCountsByDate(habit);
-            if (!counts.size) return { current: 0, longest: 0 };
-            const dates = [...counts.keys()].sort();
-            let longest = 0, run = 0, prev = null;
-            for (const ds of dates) {
-                run = (prev && daysBetween(prev, ds) === 1) ? run + 1 : 1;
-                if (run > longest) longest = run;
-                prev = ds;
-            }
-            let cursor = counts.has(todayStr) ? todayStr : shiftYMD(todayStr, -1);
-            let current = 0;
-            while (counts.has(cursor)) { current++; cursor = shiftYMD(cursor, -1); }
-            return { current, longest };
-        }
-
         // Headline rate: share of the last `days` calendar days (ending
         // today) that have >=1 completion. Simple, schedule-agnostic, and
         // honest for "how often lately" without the expected-occurrence
@@ -2761,14 +2742,12 @@
         function renderActivitySection(habit, todayStr) {
             const total = (habit.completions || []).filter(c => c && c.date).length;
             if (total < 1) return '';
-            const { current, longest } = completionStreaks(habit, todayStr);
             const rate = recentActiveRate(habit, todayStr, 30);
             const hm = completionHeatmap(habit, todayStr, 16);
 
             // `total` is already shown in the stats grid above — keep the
             // headline to the things that grid doesn't cover.
             const headline = `<div class="activity-headline">`
-                + `<span>🔥 ${current}d streak</span><span>best ${longest}</span>`
                 + `<span>${rate}% active / 30d</span></div>`;
 
             let charts = '';
