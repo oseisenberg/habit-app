@@ -6,6 +6,7 @@
             min-height: 100vh;
             padding: 12px;
             padding-bottom: 80px;
+            transition: padding-bottom 0.2s ease-out;
             -webkit-tap-highlight-color: transparent;
         }
         .container { max-width: 500px; margin: 0 auto; }
@@ -606,6 +607,11 @@
             pointer-events: none;
         }
         .undo-toast.visible { opacity: 1; pointer-events: auto; }
+        /* While the toast is up it floats over the bottom of the list;
+           reserve extra scroll space so the last habits can clear it. */
+        body.undo-toast-active {
+            padding-bottom: calc(132px + env(safe-area-inset-bottom, 0px));
+        }
         .undo-toast-btn {
             background: #667eea; border: none; border-radius: 10px;
             color: #fff; padding: 10px 20px; font-size: 0.9rem; cursor: pointer;

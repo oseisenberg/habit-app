@@ -1087,6 +1087,7 @@
         function showUndoToast() {
             const toast = document.getElementById('undoToast');
             toast.classList.add('visible');
+            document.body.classList.add('undo-toast-active');
 
             // Clear existing timeout
             if (undoTimeout) clearTimeout(undoTimeout);
@@ -1100,6 +1101,7 @@
         function hideUndoToast() {
             const toast = document.getElementById('undoToast');
             toast.classList.remove('visible');
+            document.body.classList.remove('undo-toast-active');
             if (undoTimeout) {
                 clearTimeout(undoTimeout);
                 undoTimeout = null;
