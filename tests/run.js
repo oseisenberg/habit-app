@@ -504,63 +504,50 @@ console.log('\nN. completion analytics');
   eq('weeklyTotals length = weeks', wk.length, 12);
   eq('weeklyTotals sum = completions in window', wk.reduce((a, b) => a + b, 0), 6);
 
-  const streakHabit = mkHabit({ completions: [
-    { date: D }, { date: back(1) }, { date: back(2) },   // current run 3
-    { date: back(5) }, { date: back(6) },                // older run 2
-  ]});
-  const st = F.completionStreaks(streakHabit, D);
-  ok('streaks current=3 longest=3', st.current === 3 && st.longest === 3, st);
-  // grace: today not logged yet but yesterday is -> streak still alive
-  const grace = mkHabit({ completions: [{ date: back(1) }, { date: back(2) }] });
-  eq('streak grace (today pending)', F.completionStreaks(grace, D).current, 2);
-  eq('empty streaks', F.completionStreaks(mkHabit({ completions: [] }), D).current, 0);
-
   eq('recentActiveRate 2/10 days', F.recentActiveRate(
      mkHabit({ completions: [{ date: D }, { date: back(1) }] }), D, 10), 20);
   eq('recentActiveRate dedups same day', F.recentActiveRate(
      mkHabit({ completions: [{ date: D }, { date: D }] }), D, 10), 10);
 }
 
-// === O. Inline insight (Approach C) =================================
-console.log('\nO. inline insight');
+// === O. Month-calendar popup (Approach C) ===========================
+console.log('\nO. month calendar');
 {
-  const D = '2024-03-13';
-  const back = n => F.shiftYMD(D, -n);
-  const tsAt = (ymd, h) => { const [y, m, d] = ymd.split('-').map(Number); return new Date(y, m - 1, d, h).getTime(); };
+  // March 2024: 31 days, Mar 1 is a Friday (Mon-first idx 4) -> 4 blanks
+  const mar = F.monthGrid(mkHabit({ completions: [
+    { date: '2024-03-13' }, { date: '2024-03-13' }, { date: '2024-03-20' },
+    { date: '2024-02-28' },                       // prior month, ignored
+  ]}), 2024, 2, '2024-03-13');
 
-  eq('no completions -> empty insight',
-     F.renderInlineInsight(mkHabit({ completions: [] }), D), '');
-  ok('no completions -> habitInsight total 0 / no parts',
-     F.habitInsight(mkHabit({ completions: [] }), D).parts.length === 0);
+  eq('label is Month Year', mar.label, 'March 2024');
+  eq('grid is whole weeks', mar.cells.length % 7, 0);
+  eq('leading blanks before Fri-the-1st', mar.cells.findIndex(c => !c.blank), 4);
+  const day13 = mar.cells.find(c => c.date === '2024-03-13');
+  ok('day cell carries its completion count', day13 && day13.count === 2, day13);
+  ok('today flagged on the right cell', day13 && day13.today === true);
+  eq('monthTotal counts only in-month completions', mar.monthTotal, 3);
+  eq('activeDays = distinct in-month days done', mar.activeDays, 2);
+  ok('future days flagged', mar.cells.some(c => c.future) &&
+     mar.cells.filter(c => c.date && c.date > '2024-03-13').every(c => c.future));
 
-  // sparse: just a 2-day streak, nothing else claimed
-  const sparse = F.habitInsight(mkHabit({ completions: [{ date: D }, { date: back(1) }] }), D);
-  ok('sparse: streak claimed, time/peak/trend withheld',
-     sparse.parts.some(p => /streak/.test(p)) && sparse.when === null && sparse.peakDay === null,
-     sparse.parts);
+  // empty month -> grid still whole weeks, zero totals
+  const empty = F.monthGrid(mkHabit({ completions: [] }), 2024, 0, '2024-03-13');
+  ok('empty month grid valid', empty.cells.length % 7 === 0 &&
+     empty.monthTotal === 0 && empty.activeDays === 0);
 
-  // rich morning habit, ~daily for 8 weeks, timestamped at 8am
-  const many = [];
-  for (let i = 0; i < 56; i++) many.push({ date: back(i), timestamp: tsAt(back(i), 8) });
-  const rich = F.habitInsight(mkHabit({ completions: many }), D);
-  eq('rich perWeek ~7', rich.perWeek, 7);
-  eq('rich dominant time = morning', rich.when, 'morning');
-  ok('rich parts include pace + time', rich.parts.some(p => /×\/wk/.test(p)) &&
-     rich.parts.some(p => /mostly mornings/.test(p)), rich.parts);
-
-  // trend up: nothing older, lots newer
-  const up = [];
-  for (let i = 0; i < 14; i++) up.push({ date: back(i) });   // last 2 weeks only
-  eq('trend up detected', F.habitInsight(mkHabit({ completions: up }), D).trend, 'up');
-
-  ok('microSparkline is an svg polyline for >=2 pts',
-     /<svg class="spark"[\s\S]*polyline/.test(F.renderMicroSparkline([1, 3, 2, 4])));
-  eq('microSparkline empty for <2 pts', F.renderMicroSparkline([5]), '');
-
-  const html = F.renderInlineInsight(mkHabit({ completions: many }), D);
-  ok('inline insight renders one .insight line with text + spark',
-     /class="insight"/.test(html) && /insight-text/.test(html) && /class="spark"/.test(html) &&
-     !/<details/.test(html), html.slice(0, 60));
+  // render + open/nav don't throw and produce a real calendar
+  const els = {};
+  const realGEI = F.document.getElementById;
+  F.document.getElementById = id => (els[id] || (els[id] = makeEl()));
+  seed([mkHabit({ id: 7, name: 'Run', completions: [{ date: '2024-03-13' }] })]);
+  let threw = null;
+  try { F.openHabitCalendar(7); F.habitCalShift(-1); F.habitCalShift(1); } catch (e) { threw = e; }
+  ok('open + month nav do not throw', !threw, threw && String(threw));
+  const html = els['habitCalPopup'].innerHTML || '';
+  ok('calendar popup has nav + grid, no streak/insight chrome',
+     /cal-grid/.test(html) && /cal-arrow/.test(html) && /habitCalShift/.test(html) &&
+     !/streak/.test(html) && !/class="insight"/.test(html), html.slice(0, 80));
+  F.document.getElementById = realGEI;
 }
 
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);

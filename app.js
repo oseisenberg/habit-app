@@ -2681,25 +2681,6 @@
             return totals;
         }
 
-        // Longest / current run of consecutive calendar days with >=1
-        // completion. The current streak stays alive if yesterday is done
-        // and today simply hasn't been logged yet.
-        function completionStreaks(habit, todayStr) {
-            const counts = completionCountsByDate(habit);
-            if (!counts.size) return { current: 0, longest: 0 };
-            const dates = [...counts.keys()].sort();
-            let longest = 0, run = 0, prev = null;
-            for (const ds of dates) {
-                run = (prev && daysBetween(prev, ds) === 1) ? run + 1 : 1;
-                if (run > longest) longest = run;
-                prev = ds;
-            }
-            let cursor = counts.has(todayStr) ? todayStr : shiftYMD(todayStr, -1);
-            let current = 0;
-            while (counts.has(cursor)) { current++; cursor = shiftYMD(cursor, -1); }
-            return { current, longest };
-        }
-
         // Headline rate: share of the last `days` calendar days (ending
         // today) that have >=1 completion. Simple, schedule-agnostic, and
         // honest for "how often lately" without the expected-occurrence
@@ -2713,83 +2694,85 @@
             return Math.round((active / days) * 100);
         }
 
-        // --- Approach C: one-line auto insight + micro sparkline ----------
+        // --- Approach C: navigable month-calendar popup ------------------
+        // "When did I actually do this?" answered on a familiar month grid
+        // you can page through. Lives behind the Details ⋮ menu, so it
+        // adds nothing to any always-visible surface.
 
-        const DAY_NAMES_FULL = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const CAL_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May',
+            'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-        // Distil a habit's history into a short, honest summary. Each field
-        // is null when there isn't enough data to claim it, so sparse
-        // habits get a short line instead of a wrong one.
-        function habitInsight(habit, todayStr) {
-            const dated = (habit.completions || []).filter(c => c && c.date);
-            if (!dated.length) return { total: 0, parts: [] };
-
+        // Pure: a Monday-first month grid. Returns leading/trailing blanks
+        // so the grid is always whole weeks, each in-month day carrying its
+        // completion count. `todayStr` keeps it deterministic for tests.
+        function monthGrid(habit, year, month, todayStr) {
             const counts = completionCountsByDate(habit);
-            let recent = 0;
-            for (let i = 0; i < 56; i++) recent += counts.get(shiftYMD(todayStr, -i)) || 0;
-            const perWeek = Math.round((recent / 8) * 10) / 10;
-
-            const wk = completionWeeklyTotals(habit, todayStr, 8);
-            const older = wk.slice(0, 4).reduce((a, b) => a + b, 0);
-            const newer = wk.slice(4).reduce((a, b) => a + b, 0);
-            let trend = null;
-            if (older + newer >= 4) {
-                trend = newer > older * 1.15 ? 'up' : newer < older * 0.85 ? 'down' : 'steady';
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // Mon=0
+            const cells = [];
+            for (let i = 0; i < firstDow; i++) cells.push({ blank: true });
+            let monthTotal = 0, activeDays = 0;
+            for (let d = 1; d <= daysInMonth; d++) {
+                const ds = toDateString(new Date(year, month, d));
+                const count = counts.get(ds) || 0;
+                if (count > 0) { monthTotal += count; activeDays++; }
+                cells.push({ day: d, date: ds, count,
+                    today: ds === todayStr, future: ds > todayStr });
             }
-
-            const tod = completionsByTimeOfDay(habit);
-            const todTotal = tod.morning + tod.afternoon + tod.evening + tod.night;
-            let when = null;
-            if (todTotal >= 4) {
-                const top = Object.entries(tod).sort((a, b) => b[1] - a[1])[0];
-                if (top[1] / todTotal >= 0.4) when = top[0];
-            }
-
-            const wd = completionsByWeekday(habit);
-            const wdTotal = wd.reduce((a, b) => a + b, 0);
-            let peakDay = null;
-            if (wdTotal >= 7) {
-                const mi = wd.indexOf(Math.max(...wd));
-                if (wd[mi] >= (wdTotal / 7) * 1.6) peakDay = DAY_NAMES_FULL[mi];
-            }
-
-            const { current } = completionStreaks(habit, todayStr);
-
-            const parts = [];
-            if (current >= 2) parts.push(`🔥 ${current}-day streak`);
-            if (perWeek > 0) parts.push(`~${perWeek}×/wk`);
-            if (when) parts.push(`mostly ${when}s`);
-            if (peakDay) parts.push(`peaks ${peakDay}`);
-            if (trend) parts.push(trend === 'up' ? '📈 trending up'
-                : trend === 'down' ? '📉 trending down' : 'steady');
-            return { total: dated.length, perWeek, trend, when, peakDay, current, weekly: wk, parts };
+            while (cells.length % 7 !== 0) cells.push({ blank: true });
+            return { label: `${CAL_MONTH_NAMES[month]} ${year}`, year, month,
+                cells, weeks: cells.length / 7, monthTotal, activeDays, daysInMonth };
         }
 
-        // Tiny inline sparkline (no axes) of recent weekly completions.
-        function renderMicroSparkline(values) {
-            const n = values.length;
-            const w = 84, h = 22, pad = 2;
-            const max = Math.max(1, ...values);
-            if (n < 2) return '';
-            const pts = values.map((v, i) => {
-                const x = pad + (i / (n - 1)) * (w - 2 * pad);
-                const y = pad + (1 - v / max) * (h - 2 * pad);
-                return `${x.toFixed(1)},${y.toFixed(1)}`;
-            }).join(' ');
-            return `<svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none" aria-hidden="true">
-                <polyline points="${pts}" fill="none" stroke="#7c6cff" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"></polyline>
-            </svg>`;
+        let calHabitId = null, calYear = 0, calMonth = 0;
+
+        function renderHabitCalendar() {
+            const habit = loadHabits().find(h => h.id === calHabitId);
+            if (!habit) return;
+            const g = monthGrid(habit, calYear, calMonth, getTodayString());
+            const dow = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+                .map(l => `<div class="cal-dow">${l}</div>`).join('');
+            const grid = g.cells.map(c => {
+                if (c.blank) return `<div class="cal-cell cal-blank"></div>`;
+                const cls = ['cal-cell'];
+                if (c.count > 0) cls.push(c.count > 1 ? 'cal-done cal-done2' : 'cal-done');
+                if (c.today) cls.push('cal-today');
+                if (c.future) cls.push('cal-future');
+                const badge = c.count > 1 ? `<span class="cal-badge">${c.count}</span>` : '';
+                return `<div class="${cls.join(' ')}">${c.day}${badge}</div>`;
+            }).join('');
+            const summary = g.monthTotal === 0
+                ? `No completions in ${CAL_MONTH_NAMES[calMonth]}`
+                : `${g.activeDays} active ${g.activeDays === 1 ? 'day' : 'days'} · ${g.monthTotal} completion${g.monthTotal === 1 ? '' : 's'}`;
+            const header = `<div class="modal-header">
+                    <span class="modal-title">${habit.icon || '📌'} ${escapeHtml(habit.name)}</span>
+                    <button class="modal-close" onclick="closeHabitCalendar()">&times;</button>
+                </div>`;
+            const body = `<div class="cal-nav">
+                    <button class="cal-arrow" aria-label="Previous month" onclick="habitCalShift(-1)">‹</button>
+                    <span class="cal-month">${g.label}</span>
+                    <button class="cal-arrow" aria-label="Next month" onclick="habitCalShift(1)">›</button>
+                </div>
+                <div class="cal-grid">${dow}${grid}</div>
+                <div class="cal-summary">${summary}</div>`;
+            document.getElementById('habitCalPopup').innerHTML =
+                `<div class="overlay-fixed-header">${header}</div><div class="overlay-scroll">${body}</div>`;
         }
 
-        // The whole feature: one always-visible line, no taps, no chrome.
-        function renderInlineInsight(habit, todayStr) {
-            const ins = habitInsight(habit, todayStr);
-            if (ins.total < 1 || !ins.parts.length) return '';
-            const spark = ins.weekly ? renderMicroSparkline(ins.weekly) : '';
-            return `<div class="insight">
-                <span class="insight-text">${ins.parts.join(' · ')}</span>
-                ${spark}
-            </div>`;
+        function openHabitCalendar(id) {
+            calHabitId = id;
+            const now = new Date();
+            calYear = now.getFullYear();
+            calMonth = now.getMonth();
+            renderHabitCalendar();
+            showOverlay('habitCalPopupOverlay');
+        }
+        function closeHabitCalendar() { hideOverlay('habitCalPopupOverlay'); }
+        function habitCalShift(delta) {
+            calMonth += delta;
+            if (calMonth < 0) { calMonth = 11; calYear--; }
+            else if (calMonth > 11) { calMonth = 0; calYear++; }
+            renderHabitCalendar();
         }
 
         // Check if a date was snoozed (for pausing momentum during snooze)
@@ -4430,6 +4413,7 @@
             // is nothing to move (e.g. already due/completed today).
             const moveFutureDue = habit.completions.some(c => c.date !== getTodayString()) && !isDueToday(habit);
             menu.innerHTML = `
+                ${!habit.isReminder ? `<button onclick="closeDetailsMoreMenu();openHabitCalendar(${id})">Calendar</button>` : ''}
                 <button onclick="closeDetailsMoreMenu();${moveFutureDue ? `moveScheduleToToday(${id})` : `moveCompletionToToday(${id})`}">Move to Today</button>
                 <button onclick="closeDetailsMoreMenu();freshStartHabit(${id})">Reset Momentum</button>
                 <button onclick="closeDetailsMoreMenu();resetHabitStats(${id})">Reset Stats</button>
@@ -4775,7 +4759,6 @@
                         <div class="stat-box"><div class="stat-number">${rate}%</div><div class="stat-label">Rate</div></div>
                         <div class="stat-box"><div class="stat-number">${avgInterval}</div><div class="stat-label">Avg Gap</div></div>
                     </div>` : ''}
-                    ${!isReminder ? renderInlineInsight(habit, today) : ''}
                     ${habit.subtasks && habit.subtasks.length > 0 ? `
                     <div class="subtask-list" style="margin:10px 0">
                         <div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Subtasks</div>
@@ -5135,6 +5118,7 @@
             const closers = [
                 ['dialogOverlay', closeDialog],
                 ['tagGlossaryOverlay', closeTagGlossary],
+                ['habitCalPopupOverlay', closeHabitCalendar],
                 ['confirmDescPopupOverlay', closeConfirmDescPopup],
                 ['snoozePopupOverlay', closeSnoozePopup],
                 ['emojiPopupOverlay', closeEmojiPopup],

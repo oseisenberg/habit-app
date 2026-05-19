@@ -399,17 +399,44 @@
         .stat-number { font-size: 1rem; font-weight: 700; color: #fff; }
         .stat-label { font-size: 0.55rem; color: #666; margin-top: 1px; }
 
-        /* Approach C: one-line inline insight + micro sparkline */
-        .insight {
-            display: flex; align-items: center; gap: 10px;
-            background: #0f0f1a; border-radius: 8px;
-            padding: 9px 12px; margin: 8px 0;
+        /* Approach C: navigable month-calendar popup */
+        .cal-nav {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 12px;
         }
-        .insight-text {
-            flex: 1; min-width: 0; font-size: 0.78rem;
-            color: #bbb; line-height: 1.35;
+        .cal-month { font-size: 0.95rem; font-weight: 600; color: #fff; }
+        .cal-arrow {
+            background: #0f0f1a; border: none; color: #aaa;
+            width: 34px; height: 34px; border-radius: 8px;
+            font-size: 1.1rem; cursor: pointer;
         }
-        .spark { flex: 0 0 auto; display: block; opacity: 0.9; }
+        .cal-arrow:active { background: #2a2a3e; }
+        .cal-grid {
+            display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+        }
+        .cal-dow {
+            font-size: 0.6rem; color: #666; text-align: center;
+            padding-bottom: 4px; text-transform: uppercase;
+        }
+        .cal-cell {
+            position: relative; aspect-ratio: 1; display: flex;
+            align-items: center; justify-content: center;
+            font-size: 0.78rem; color: #888;
+            background: #0f0f1a; border-radius: 7px;
+        }
+        .cal-blank { background: transparent; }
+        .cal-done { background: #5b4fc0; color: #fff; font-weight: 600; }
+        .cal-done2 { background: #7c6cff; }
+        .cal-today { outline: 2px solid #4ade80; outline-offset: -2px; }
+        .cal-future { opacity: 0.35; }
+        .cal-badge {
+            position: absolute; top: 2px; right: 3px;
+            font-size: 0.5rem; color: #d8d2ff;
+        }
+        .cal-summary {
+            margin-top: 14px; text-align: center;
+            font-size: 0.78rem; color: #aaa;
+        }
 
         .action-buttons { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
         .action-buttons .submit-btn { padding: 10px; font-size: 0.85rem; min-width: 88px; }
